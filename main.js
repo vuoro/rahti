@@ -18,7 +18,7 @@ export const rerun = (context) =>
 const createContext = (body, type) => ({
   argumentCache: new Map(),
   children: [],
-  cleanUps: new Set(),
+  cleanups: new Set(),
   value: null,
   type,
   body,
@@ -125,7 +125,7 @@ export const effect = (thing, compare = defaultCompare) => {
       indexStack.push(-1);
 
       // try {
-      runCleanUp(context);
+      runCleanup(context);
       context.value = thing.apply(null, arguments);
       // } catch (error) {
       console.error(error);
@@ -151,7 +151,7 @@ export const effect = (thing, compare = defaultCompare) => {
 };
 
 const destroy = (context) => {
-  runCleanUp(context, true);
+  runCleanup(context, true);
   context.parent = null;
   context.argumentCache.clear();
 
@@ -161,15 +161,15 @@ const destroy = (context) => {
   context.children.splice(0);
 };
 
-const runCleanUp = ({ cleanUps }, isFinal = false) => {
-  for (const cleanUp of cleanUps) {
-    cleanUp(isFinal);
+const runCleanup = ({ cleanups }, isFinal = false) => {
+  for (const cleanup of cleanups) {
+    cleanup(isFinal);
   }
-  cleanUps.clear();
+  cleanups.clear();
 };
 
-export const onCleanUp = (cleanUp) => {
-  stack[stack.length - 1].cleanUps.add(cleanUp);
+export const onCleanup = (cleanup) => {
+  stack[stack.length - 1].cleanups.add(cleanup);
 };
 
 export const html = {};
