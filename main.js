@@ -23,11 +23,13 @@ const createContext = (body, type) => ({
   type,
   body,
 });
+
 const rootContext = createContext(() => {}, "__0__");
 const stateType = "__1__";
 let effectTypeCounter = 1;
 const indexStack = [-1];
 const stack = [rootContext];
+
 export const getContext = (type) => {
   let context;
 
@@ -36,10 +38,20 @@ export const getContext = (type) => {
 
   indexStack[indexStack.length - 1]++;
   const currentIndex = indexStack[indexStack.length - 1];
-  const nextChild = children[currentIndex];
+  const currentChild = children[currentIndex];
 
-  if (nextChild && nextChild.type === type) {
-    context = children[currentIndex];
+  if (currentChild && currentChild.type === type) {
+    // If the current child looks like this one, use it
+    context = currentChild;
+  } else {
+    // Try to find the next matching child
+    for (let index = currentIndex, { length } = children; index < length; index++) {
+      const child = children[index];
+      if (child.type === type) {
+        context = child;
+        break;
+      }
+    }
   }
 
   return context;
@@ -112,8 +124,12 @@ export const effect = (thing, compare = defaultCompare) => {
       stack.push(context);
       indexStack.push(-1);
 
+      // try {
       runCleanUp(context);
       context.value = thing.apply(null, arguments);
+      // } catch (error) {
+      console.error(error);
+      // }
 
       // Destroy children that were not visited on this execution
       const { children } = context;
