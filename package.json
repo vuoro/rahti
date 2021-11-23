@@ -1,0 +1,42 @@
+{
+  "name": "bad-react",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "main": "main.js",
+  "exports": {
+    ".": "./main.js"
+  },
+  "scripts": {
+    "start": "npx @web/dev-server --open --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuoro/bad-react.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuoro/bad-react/issues"
+  },
+  "homepage": "https://github.com/vuoro/bad-react#readme",
+  "dependencies": {
+    "eslint": "^8.3.0"
+  },
+  "eslint": {
+    "env": {
+      "browser": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-unused-vars": 1
+    }
+  }
+}

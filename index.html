@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script type="module">
+      import { state, effect, onCleanup, html, event, getEffect, createRoot } from "./main.js";
+      const { p, strong, ul, li, button } = html;
+
+      const counter = state(0, (get, set) => ({
+        increment: () => set(get() + 1),
+        decrement: () => set(get() - 1),
+      }));
+      const interval = effect((what) => {
+        const timer = setTimeout(() => (console.log("timer firing"), what()), 3000);
+        onCleanup(() => {
+          console.log("clearing");
+          clearTimeout(timer);
+        });
+      });
+
+      const app = effect((root) => {
+        const [count, { increment, decrement }] = counter(1);
+
+        // interval(increment);
+
+        root(
+          button("Increment ", count, event("click", increment)),
+          button("Decrement ", count, event("click", decrement)),
+          count === 0
+            ? strong("Plz start")
+            : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
+        );
+      });
+
+      const listItem = effect((number) => {
+        const [count, { increment }] = counter(0);
+        return li(number, button(count, event("click", increment)));
+      });
+
+      app(createRoot(document.getElementById("root")));
+    </script>
+
+    <div id="root"></div>
+  </body>
+</html>
