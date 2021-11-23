@@ -151,7 +151,7 @@ export const effect = (thing, compare = defaultCompare) => {
 };
 
 const destroy = (context) => {
-  runCleanUp(context);
+  runCleanUp(context, true);
   context.parent = null;
   context.argumentCache.clear();
 
@@ -161,9 +161,9 @@ const destroy = (context) => {
   context.children.splice(0);
 };
 
-const runCleanUp = ({ cleanUps }) => {
+const runCleanUp = ({ cleanUps }, isFinal = false) => {
   for (const cleanUp of cleanUps) {
-    cleanUp();
+    cleanUp(isFinal);
   }
   cleanUps.clear();
 };
