@@ -25,7 +25,7 @@
           interval(increment);
 
           root(
-            button(buttonAttributes, "Increment ", count, event("click", increment)),
+            html.button(buttonAttributes, "Increment ", count, event("click", increment)),
             button(buttonAttributes, "Decrement ", count, event("click", decrement)),
             count === 0
               ? h1("Plz start")

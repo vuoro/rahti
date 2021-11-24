@@ -50,7 +50,7 @@ export const rerun = (context, shouldUpdate = false) => {
 
   stack.push(contextToRerun.parent);
   indexStack.push(-1);
-  contextToRerun.body.call(null, ...context.argumentCache.values());
+  contextToRerun.body.call(null, ...contextToRerun.argumentCache.values());
   stack.pop();
   indexStack.pop();
 };
@@ -151,6 +151,7 @@ export const effect = (thing, compare = defaultCompare) => {
     for (let index = 0; index < Math.max(arguments.length, argumentCache.size); index++) {
       const argument = argumentCache.get(index);
       const newArgument = arguments[index];
+      // console.log(argument, newArgument);
       if (!compare || !compare(argument, newArgument, index)) {
         argumentCache.set(index, newArgument);
         context.shouldUpdate = true;
@@ -338,4 +339,4 @@ export const event = effect(function event(event, handler, options) {
   return { __event__: event, handler, ...options };
 });
 
-export const createRoot = (element) => createTagEffect("createdRoot", element);
+export const createRoot = (element) => createTagEffect("(root) " + element.tagName, element);
