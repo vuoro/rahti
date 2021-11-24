@@ -17,26 +17,38 @@
         });
       });
 
-      const app = effect((root) => {
-        const [count, { increment, decrement }] = counter(1);
+      const buttonAttributes = { type: "button" };
+      const root = createRoot(document.getElementById("root"));
 
-        // interval(increment);
+      const app = effect(
+        () => {
+          const [count, { increment, decrement }] = counter(1);
 
-        root(
-          button("Increment ", count, event("click", increment)),
-          button("Decrement ", count, event("click", decrement)),
-          count === 0
-            ? strong("Plz start")
-            : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
-        );
-      });
+          // interval(increment);
 
-      const listItem = effect((number) => {
-        const [count, { increment }] = counter(0);
-        return li(number, button(count, event("click", increment)));
-      });
+          root(
+            button(buttonAttributes, "Increment ", count, event("click", increment)),
+            button(buttonAttributes, "Decrement ", count, event("click", decrement)),
+            count === 0
+              ? strong("Plz start")
+              : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
+          );
+        },
+        undefined,
+        "app"
+      );
 
-      app(createRoot(document.getElementById("root")));
+      const listItem = effect(
+        (number) => {
+          const [count, { increment }] = counter(0);
+          // if (count === 0) increment();
+          return li(number, button(buttonAttributes, count, event("click", increment)));
+        },
+        undefined,
+        "listItem"
+      );
+
+      app();
     </script>
 
     <div id="root"></div>
