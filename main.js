@@ -266,7 +266,7 @@ const createTagEffect = (tagName, elementEffect = htmlElement, overrideElement) 
       if (argument instanceof Node || type === "string" || type === "number") {
         communalSet.add(argument);
         hasChildren = true;
-      } else if (Symbol.iterator in argument) {
+      } else if (type === "object" && Symbol.iterator in argument) {
         for (const what of argument) {
           if (what instanceof Node || type === "string" || type === "number") {
             communalSet.add(what);
