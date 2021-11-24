@@ -98,8 +98,8 @@ app();
 
 # To-do list
 
-- [] Keys
-- [] Global state
-- [] Fewer bugs
-- [] Less stupid "reconciler"
-- [] Server-side rendering with Astro
+- [ ] Keys
+- [ ] Global state
+- [ ] Fewer bugs
+- [ ] Less stupid "reconciler"
+- [ ] Server-side rendering with Astro
