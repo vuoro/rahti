@@ -161,12 +161,12 @@ export const effect = (thing, compare = defaultCompare, name = "") => {
       stack.push(context);
       indexStack.push(-1);
 
-      // try {
       runCleanup(context);
-      context.value = thing.apply(null, arguments);
-      // } catch (error) {
-      // console.error(error);
-      // }
+      try {
+        context.value = thing.apply(null, arguments);
+      } catch (error) {
+        console.error(error);
+      }
 
       if (!context.hasReturned) context.hasReturned = context.value !== undefined;
       context.shouldUpdate = false;
@@ -210,7 +210,11 @@ const destroy = (context) => {
 const runCleanup = ({ cleanups }, isFinal = false) => {
   for (const cleanup of cleanups) {
     console.log(isFinal ? "running final cleanup" : "running cleanup", cleanup);
-    cleanup(isFinal);
+    try {
+      cleanup(isFinal);
+    } catch (error) {
+      console.error(error);
+    }
   }
   cleanups.clear();
 };

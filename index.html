@@ -10,10 +10,9 @@
         decrement: () => set(get() - 1),
       }));
       const interval = effect((what) => {
-        const timer = setTimeout(() => (console.log("timer firing"), what()), 3000);
+        const timer = setInterval(() => (console.log("timer firing"), what()), 3000);
         onCleanup(() => {
-          console.log("clearing");
-          clearTimeout(timer);
+          clearInterval(timer);
         });
       });
 
@@ -24,12 +23,12 @@
         () => {
           const [count, { increment, decrement }] = counter(1);
 
-          // interval(increment);
+          interval(increment);
 
           root(
             button(buttonAttributes, "Increment ", count, event("click", increment)),
             button(buttonAttributes, "Decrement ", count, event("click", decrement)),
-            count <= 0
+            count === 0
               ? h1("Plz start")
               : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
           );
