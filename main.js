@@ -239,10 +239,24 @@ export const html = new Proxy(
     },
   }
 );
+export const svg = new Proxy(
+  {},
+  {
+    get: function (target, tagName) {
+      const cached = htmlCache.get(tagName);
+      if (cached) return cached;
 
-const createTagEffect = (tagName, overrideElement) => {
+      const tagEffect = createTagEffect(tagName, svgElement);
+
+      htmlCache.set(tagName, tagEffect);
+      return tagEffect;
+    },
+  }
+);
+
+const createTagEffect = (tagName, elementEffect = htmlElement, overrideElement) => {
   const result = function () {
-    const element = overrideElement || htmlElement(tagName);
+    const element = overrideElement || elementEffect(tagName);
     let hasChildren = false;
 
     for (let index = 0, { length } = arguments; index < length; index++) {
@@ -282,6 +296,9 @@ const createTagEffect = (tagName, overrideElement) => {
 
 const htmlElement = effect(function htmlElement(tagName) {
   return document.createElement(tagName);
+});
+const svgElement = effect(function svgElement(tagName) {
+  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
 });
 const htmlChildren = effect(function htmlChildren() {
   const element = arguments[0];
@@ -344,4 +361,5 @@ export const event = effect(function event(event, handler, options) {
   return { __event__: event, handler, ...options };
 });
 
-export const createRoot = (element) => createTagEffect("(root) " + element.tagName, element);
+export const createRoot = (element) =>
+  createTagEffect("(root) " + element.tagName, undefined, element);
