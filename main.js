@@ -107,7 +107,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
 
       const get = () => body[0];
       const set = (newValue) => {
-        if (!compare(body[0], newValue)) {
+        if (!compare || !compare(body[0], newValue)) {
           if (stack.length > 1) {
             console.log("========================= setting later", newValue);
             updateQueue.add(context);
@@ -151,7 +151,7 @@ export const effect = (thing, compare = defaultCompare, name = "") => {
     for (let index = 0; index < Math.max(arguments.length, argumentCache.size); index++) {
       const argument = argumentCache.get(index);
       const newArgument = arguments[index];
-      if (!compare(argument, newArgument, index)) {
+      if (!compare || !compare(argument, newArgument, index)) {
         argumentCache.set(index, newArgument);
         context.shouldUpdate = true;
       }

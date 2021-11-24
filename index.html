@@ -3,7 +3,7 @@
   <body>
     <script type="module">
       import { state, effect, onCleanup, html, event, getEffect, createRoot } from "./main.js";
-      const { p, strong, ul, li, button } = html;
+      const { p, h1, ul, li, button } = html;
 
       const counter = state(0, (get, set) => ({
         increment: () => set(get() + 1),
@@ -29,8 +29,8 @@
           root(
             button(buttonAttributes, "Increment ", count, event("click", increment)),
             button(buttonAttributes, "Decrement ", count, event("click", decrement)),
-            count === 0
-              ? strong("Plz start")
+            count <= 0
+              ? h1("Plz start")
               : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
           );
         },
@@ -44,7 +44,7 @@
           // if (count === 0) increment();
           return li(number, button(buttonAttributes, count, event("click", increment)));
         },
-        undefined,
+        false,
         "listItem"
       );
 
