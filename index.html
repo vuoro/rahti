@@ -2,46 +2,51 @@
 <html>
   <body>
     <script type="module">
-      import { state, effect, onCleanup, html, svg, event, getEffect, createRoot } from "./main.js";
-      const { p, h1, ul, li, button } = html;
+      import { state, effect, html, svg, onCleanup, event, createRoot } from "./main.js";
+      const { h1, button, p, ol, li, strong, div } = html;
+
+      const app = effect((root) => {
+        const [count, { increment, decrement }] = counter(0);
+
+        const numbers = [];
+        for (let index = 0; index < count; index++) {
+          numbers.push(listItem(index + 1));
+        }
+
+        root(
+          h1("Count: ", count),
+          button("+1", event("click", increment)),
+          button("-1", event("click", decrement)),
+          count === 0 && p("Try the buttons!"),
+          count > 0 && ol(...numbers),
+          count < 0 &&
+            div(
+              svg.svg(
+                svg.rect({ width: 300, height: 300, fill: "red" }),
+                svg.text("Surprise svg!", { x: 50, y: 50, fill: "white" })
+              )
+            )
+        );
+      });
 
       const counter = state(0, (get, set) => ({
         increment: () => set(get() + 1),
         decrement: () => set(get() - 1),
       }));
-      const interval = effect(function interval(what) {
-        const timer = setTimeout(() => what, 5000);
-        onCleanup(() => {
-          clearInterval(timer);
-        });
-      });
 
-      const buttonAttributes = { type: "button" };
-
-      const app = effect(function app(root) {
-        const [count, { increment, decrement }] = counter(1);
-
-        interval(increment);
-
-        root(
-          html.button(buttonAttributes, "Increment ", count, event("click", increment)),
-          button(buttonAttributes, "Decrement ", count, event("click", decrement)),
-          count === 0
-            ? h1("Plz start")
-            : ul(...[...Array(count)].map((v, index) => listItem(index + 1))),
-          svg.svg(svg.rect({ width: 100, height: 100 }))
-        );
-      });
-
-      const listItem = effect(function listItem(number) {
+      const listItem = effect((number) => {
         const [count, { increment }] = counter(0);
-        // if (count === 0) increment();
-        return [li(number), li(button(buttonAttributes, count, event("click", increment)))];
+
+        // const timer = setInterval(increment, 1000);
+        onCleanup(() => {
+          increment();
+          //   clearInterval(timer);
+        });
+
+        return li("has cleaned ", strong(`${count} times`));
       });
 
-      app(createRoot(document.getElementById("root")));
+      app(createRoot(document.body));
     </script>
-
-    <div id="root"></div>
   </body>
 </html>
