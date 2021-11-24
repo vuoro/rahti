@@ -65,18 +65,16 @@ const getContext = (type) => {
   const currentIndex = indexStack[indexStack.length - 1];
   const currentChild = children[currentIndex];
 
-  console.log("get", `${type} at ${indexStack}`);
-
   if (currentChild && currentChild.type === type) {
     // If the current child looks like this one, use it
-    console.log("found here");
+    console.log("found here", `${type} at ${indexStack}`);
     context = currentChild;
   } else {
     // Try to find the next matching child
     for (let index = currentIndex + 1, { length } = children; index < length; index++) {
       const child = children[index];
       if (child.type === type) {
-        console.log("found later at", index);
+        console.log("found later at", index, `${type} at ${indexStack}`);
         context = child;
         // Move it into its new place
         children.splice(index, 1);
@@ -254,6 +252,13 @@ const createTagEffect = (tagName, overrideElement) => {
       if (argument instanceof Node || type === "string" || type === "number") {
         communalSet.add(argument);
         hasChildren = true;
+      } else if (Symbol.iterator in argument) {
+        for (const what of argument) {
+          if (what instanceof Node || type === "string" || type === "number") {
+            communalSet.add(what);
+            hasChildren = true;
+          }
+        }
       } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
         if (argument.__event__) {
           htmlEventHandler(element, argument);

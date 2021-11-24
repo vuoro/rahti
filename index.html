@@ -18,33 +18,25 @@
 
       const buttonAttributes = { type: "button" };
 
-      const app = effect(
-        function app(root) {
-          const [count, { increment, decrement }] = counter(1);
+      const app = effect(function app(root) {
+        const [count, { increment, decrement }] = counter(1);
 
-          interval(increment);
+        interval(increment);
 
-          root(
-            html.button(buttonAttributes, "Increment ", count, event("click", increment)),
-            button(buttonAttributes, "Decrement ", count, event("click", decrement)),
-            count === 0
-              ? h1("Plz start")
-              : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
-          );
-        },
-        undefined,
-        "app"
-      );
+        root(
+          html.button(buttonAttributes, "Increment ", count, event("click", increment)),
+          button(buttonAttributes, "Decrement ", count, event("click", decrement)),
+          count === 0
+            ? h1("Plz start")
+            : ul(...[...Array(count)].map((v, index) => listItem(index + 1)))
+        );
+      });
 
-      const listItem = effect(
-        function listItem(number) {
-          const [count, { increment }] = counter(0);
-          // if (count === 0) increment();
-          return li(number, button(buttonAttributes, count, event("click", increment)));
-        },
-        false,
-        "listItem"
-      );
+      const listItem = effect(function listItem(number) {
+        const [count, { increment }] = counter(0);
+        // if (count === 0) increment();
+        return [li(number), li(button(buttonAttributes, count, event("click", increment)))];
+      });
 
       app(createRoot(document.getElementById("root")));
     </script>
