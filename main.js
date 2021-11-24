@@ -134,8 +134,8 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
   return body;
 };
 
-export const effect = (thing, compare = defaultCompare, name = "") => {
-  const type = `${name} (${effectTypeCounter++})`;
+export const effect = (thing, compare = defaultCompare) => {
+  const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
 
   const body = function () {
     let context = getContext(type);
@@ -241,59 +241,57 @@ export const html = new Proxy(
   }
 );
 
-const createTagEffect = (tagName, overrideElement) =>
-  effect(
-    function () {
-      const element = overrideElement || htmlElement(tagName);
-      let hasChildren = false;
+const createTagEffect = (tagName, overrideElement) => {
+  const result = function () {
+    const element = overrideElement || htmlElement(tagName);
+    let hasChildren = false;
 
-      for (let index = 0, { length } = arguments; index < length; index++) {
-        const argument = arguments[index];
-        const type = typeof argument;
+    for (let index = 0, { length } = arguments; index < length; index++) {
+      const argument = arguments[index];
+      const type = typeof argument;
 
-        if (argument instanceof Node || type === "string" || type === "number") {
-          communalSet.add(argument);
-          hasChildren = true;
-        } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
-          if (argument.__event__) {
-            htmlEventHandler(element, argument);
-          } else {
-            htmlAttributes(element, argument);
-          }
+      if (argument instanceof Node || type === "string" || type === "number") {
+        communalSet.add(argument);
+        hasChildren = true;
+      } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
+        if (argument.__event__) {
+          htmlEventHandler(element, argument);
+        } else {
+          htmlAttributes(element, argument);
         }
       }
-
-      if (hasChildren) {
-        htmlChildren(element, ...communalSet);
-        communalSet.clear();
-      }
-
-      return element;
-    },
-    undefined,
-    tagName
-  );
-
-const htmlElement = effect((tagName) => document.createElement(tagName), undefined, "htmlElement");
-const htmlChildren = effect(
-  function () {
-    const element = arguments[0];
-
-    for (let index = 1, { length } = arguments; index < length; index++) {
-      const child = arguments[index];
-      const type = typeof child;
-
-      const node = type === "string" || type === "number" ? new Text(child) : child;
-      communalFragment.append(node);
     }
 
-    element.replaceChildren(communalFragment);
-  },
-  undefined,
-  "htmlChildren"
-);
+    if (hasChildren) {
+      htmlChildren(element, ...communalSet);
+      communalSet.clear();
+    }
+
+    return element;
+  };
+  Object.defineProperty(result, "name", { value: tagName, configurable: true });
+
+  return effect(result);
+};
+
+const htmlElement = effect(function htmlElement(tagName) {
+  return document.createElement(tagName);
+});
+const htmlChildren = effect(function htmlChildren() {
+  const element = arguments[0];
+
+  for (let index = 1, { length } = arguments; index < length; index++) {
+    const child = arguments[index];
+    const type = typeof child;
+
+    const node = type === "string" || type === "number" ? new Text(child) : child;
+    communalFragment.append(node);
+  }
+
+  element.replaceChildren(communalFragment);
+});
 const htmlAttributes = effect(
-  (element, attributes) => {
+  function htmlAttributes(element, attributes) {
     for (const key in attributes) {
       const value = attributes[key];
       if (key === "style") {
@@ -322,28 +320,22 @@ const htmlAttributes = effect(
     }
 
     return a === b;
-  },
-  "htmlAttributes"
+  }
 );
-const htmlEventHandler = effect(
-  (element, { __event__: event, handler: handler, ...options }) => {
-    console.log("attaching handler", event);
-    element.addEventListener(event, handler, options);
-    onCleanup(() => {
-      console.log("removing handler", event);
-      element.removeEventListener(event, handler);
-    });
-  },
-  undefined,
-  "htmlEventHandler"
-);
+const htmlEventHandler = effect(function htmlEventHandler(
+  element,
+  { __event__: event, handler: handler, ...options }
+) {
+  console.log("attaching handler", event);
+  element.addEventListener(event, handler, options);
+  onCleanup(() => {
+    console.log("removing handler", event);
+    element.removeEventListener(event, handler);
+  });
+});
 
-export const event = effect(
-  (event, handler, options) => {
-    return { __event__: event, handler, ...options };
-  },
-  undefined,
-  "event"
-);
+export const event = effect(function event(event, handler, options) {
+  return { __event__: event, handler, ...options };
+});
 
 export const createRoot = (element) => createTagEffect("createdRoot", element);

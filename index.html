@@ -9,18 +9,17 @@
         increment: () => set(get() + 1),
         decrement: () => set(get() - 1),
       }));
-      const interval = effect((what) => {
-        const timer = setInterval(() => (console.log("timer firing"), what()), 3000);
+      const interval = effect(function interval(what) {
+        const timer = setTimeout(() => what, 5000);
         onCleanup(() => {
           clearInterval(timer);
         });
       });
 
       const buttonAttributes = { type: "button" };
-      const root = createRoot(document.getElementById("root"));
 
       const app = effect(
-        () => {
+        function app(root) {
           const [count, { increment, decrement }] = counter(1);
 
           interval(increment);
@@ -38,7 +37,7 @@
       );
 
       const listItem = effect(
-        (number) => {
+        function listItem(number) {
           const [count, { increment }] = counter(0);
           // if (count === 0) increment();
           return li(number, button(buttonAttributes, count, event("click", increment)));
@@ -47,7 +46,7 @@
         "listItem"
       );
 
-      app();
+      app(createRoot(document.getElementById("root")));
     </script>
 
     <div id="root"></div>
