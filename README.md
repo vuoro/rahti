@@ -1,8 +1,8 @@
 # bad-react (working title)
 
-This is a reactive JS library.
+A reactive JS library, with the goals of: composing reactive JS without JSX or tagged template literals, having no compile step, and having low garbage generation at runtime.
 
-It has State and Effects. If you've used something like React, S.js, or SolidJS you'll probably know how these work. State can change its value and re-runs the Effects the change impacts. (In React terms, Effects do the job of both Components and Hooks.)
+There are State and Effects. If you've used something like React, S.js, or SolidJS you'll probably know how these work. State can change its value and re-runs the Effects the change impacts. (In React terms, Effects do the job of both Components and Hooks.)
 
 ```js
 import { state, effect } from "bad-react";
@@ -18,22 +18,7 @@ const app = effect(() => {
 app();
 ```
 
-# Cleanups
-
-Effects can contain cleanups. They run just before the Effect re-runs or gets destroyed. (This is the same as when React Hooks return a cleanup function.)
-
-```js
-import { effect, onCleanup } from "bad-react";
-
-const app = effect(() => {
-  const interval = setInterval(() => console.log("Hi!"), 1000);
-  onCleanup(() => clearInterval(interval));
-});
-
-app();
-```
-
-# Rendering HTML and SVG
+## Rendering HTML and SVG
 
 There are built-in DOM Effects for rendering HTML and SVG. They're not going to top any benchmarks though. There's no "VDOM", "fine reactivity", or anything like that. The "reconciler" — if you can call it that — is also really dumb.
 
@@ -75,9 +60,24 @@ const app = (root) => {
 app(createRoot(document.body));
 ```
 
-# Custom state setters/actions
+## Cleanups
 
-State "setters" can be customized.
+Effects can contain cleanups. They run just before the Effect re-runs or gets destroyed. (This is the same as when React Hooks return a cleanup function.)
+
+```js
+import { effect, onCleanup } from "bad-react";
+
+const app = effect(() => {
+  const interval = setInterval(() => console.log("Hi!"), 1000);
+  onCleanup(() => clearInterval(interval));
+});
+
+app();
+```
+
+## Custom state setters/actions
+
+The `setState` function returned by State can be replaced, with for example an object containing "actions" similar to what you see in many third-party React state management libraries.
 
 ```js
 import { state, effect } from "bad-react";
@@ -95,6 +95,54 @@ const app = effect(() => {
 
 app();
 ```
+
+## Setting state during rendering
+
+Much like in React, you can use `setState` during "rendering": while an Effect is executing. The new value won't take effect or cause reruns immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not available). If you use this feature, be careful of infinite loops!
+
+```js
+import { state, effect } from "bad-react";
+
+const counter = state(0);
+
+const app = effect(() => {
+  const [count, setCount] = counter();
+  if (count === 0) {
+    // protect against infinite loop
+    setCount(1); // nothing will happen yet
+  }
+  console.log(count); // `count` is still `0` here
+  // a bit later `app` will rerun and `count` will be `1`
+});
+
+app();
+```
+
+<!-- ## Global state
+
+A special kind of State where one value is shared by each Effect that accesses it.
+
+```js
+import { globalState, effect } from "bad-react";
+
+const counter = globalState(0);
+
+const app = effect(() => {
+  for (let index = 0; index < 10; index++) {
+    child();
+  }
+});
+
+const child = effect(() => {
+  const [count] = counter();
+  console.log(count);
+});
+
+app();
+
+const [count, setCount] = counter();
+setCount(1); // all 10 children will log "1"
+``` -->
 
 # To-do list
 

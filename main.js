@@ -107,6 +107,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
       const set = (newValue) => {
         if (!compare || !compare(body[0], newValue)) {
           if (stack.length > 1) {
+            // TODO: this might break on initial execution
             console.log("========================= setting later", newValue);
             updateQueue.add(context);
             body.nextValue = newValue;
