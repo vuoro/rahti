@@ -281,8 +281,8 @@ root(
   button(
     "Click me!",
     { type: "button", style: "color: red;" },
-    // sets an event handler on its parent
-    event("click", () => console.log("Clicked me!"))
+    // maintains an event handler on its parent, same API as addEventListener
+    event("click", () => console.log("Clicked me!"), { passive: true })
   )
 );
 ```
