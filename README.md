@@ -240,6 +240,7 @@ const counter = state(
   (get, set) => set,
   // comparison function used when a new value is set,
   // to determine if the new value should take effect and Effects should re-run
+  // can be set to `false` to disable checking
   (oldValue, newValue) => oldValue === newValue
 );
 
@@ -258,6 +259,7 @@ const app = effect(
   },
   // comparison function used to check if previous and new arguments match
   // if they match, your function will not re-run and the effect will return its previous value
+  // can be set to `false` to disable checking
   (oldValue, newValue) => oldValue === newValue
 );
 
