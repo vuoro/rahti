@@ -37,7 +37,7 @@ Note that these are not going to top any benchmarks. There's no "VDOM", "fine re
 import { createRoot, effect, html, svg, event } from "bad-react";
 const { p, button } = html;
 
-const app = (root) => {
+const app = effect((root) => {
   root(
     // Either of these will work, but the first one runs a little faster,
     // because `html` & `svg` are Proxies.
@@ -55,9 +55,13 @@ const app = (root) => {
       svg.text("Surprise svg!", { x: 50, y: 50, fill: "white" })
     ),
 
-    [p("contrived"), p("array"), p("example")]
+    customEffect()
   );
-};
+});
+
+const customEffect = effect(() => {
+  return [p("Hello"), p("Multiple."), p("Effects.")]
+});
 
 app(createRoot(document.body));
 ```
