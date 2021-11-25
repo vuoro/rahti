@@ -284,3 +284,10 @@ root(
   )
 );
 ```
+
+## Inspirations
+
+- <https://reactjs.org>
+- <https://github.com/adamhaile/S>
+- <https://developer.apple.com/xcode/swiftui/>
+- <https://www.solidjs.com>
