@@ -22,7 +22,7 @@ app();
 
 ## Rendering HTML and SVG
 
-There are built-in DOM Effects for rendering HTML and SVG. They're built using the public API of this library, so there's no magic. They follow the same rules as your code.
+The library comes with DOM Effects for rendering HTML and SVG.
 
 One rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't know where to mount. There also needs to be a root DOM Effect, created using `createRoot`.
 
@@ -33,7 +33,7 @@ DOM Effects also accept other arguments:
 - arrays containing DOM Effects are also accepted (works like React's Fragments)
 - `event` maintains an event handler on its parent DOM Effect
 
-Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", or anything like that, and the "reconciler" is not the smartest.
+Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", or anything like that, and the "reconciler" is not the smartest. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
 
 ```js
 import { createRoot, effect, html, svg, event } from "bad-react";
