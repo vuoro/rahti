@@ -22,7 +22,7 @@ app();
 
 ## Rendering HTML and SVG with DOM Effects
 
-Just one rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't know where to mount. There also needs to be a root DOM Effect wrapping them, created using `createRoot`.
+Just one rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't get added to the document. There also needs to be a root DOM Effect wrapping them, created using `createRoot`.
 
 DOM Effects also accept arguments other than DOM Effects:
 
