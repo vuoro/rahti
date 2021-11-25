@@ -31,7 +31,7 @@ DOM Effects also accept arguments other than DOM Effects:
 - arrays containing DOM Effects are also accepted (works like React's Fragments)
 - `event` Effects maintain an event handler on its parent DOM Effect
 
-Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", or anything like that, and the "reconciler" is not the smartest. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
+Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", "Suspense", or advanced scheduling. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
 
 ```js
 import { createRoot, effect, html, svg, event } from "bad-react";
