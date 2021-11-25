@@ -20,18 +20,16 @@ const app = effect(() => {
 app();
 ```
 
-## Rendering HTML and SVG
+## Rendering HTML and SVG with DOM Effects
 
-The library comes with DOM Effects for rendering HTML and SVG.
+Just one rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't know where to mount. There also needs to be a root DOM Effect wrapping them, created using `createRoot`.
 
-One rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't know where to mount. There also needs to be a root DOM Effect, created using `createRoot`.
-
-DOM Effects also accept other arguments:
+DOM Effects also accept arguments other than DOM Effects:
 
 - text/numbers turn into text fragments
-- objects will be set as attributes
+- object properties will be set as attributes
 - arrays containing DOM Effects are also accepted (works like React's Fragments)
-- `event` maintains an event handler on its parent DOM Effect
+- `event` Effects maintain an event handler on its parent DOM Effect
 
 Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", or anything like that, and the "reconciler" is not the smartest. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
 
