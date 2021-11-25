@@ -284,11 +284,3 @@ root(
   )
 );
 ```
-
-# To-do list
-
-- [ ] Keys
-- [ ] Global state
-- [x] Fewer bugs
-- [ ] Less stupid "reconciler"
-- [ ] Server-side rendering with Astro
