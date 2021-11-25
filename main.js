@@ -36,7 +36,7 @@ let effectTypeCounter = 0;
 const indexStack = [-1];
 const stack = [rootContext];
 
-export const rerun = (context, shouldUpdate = false) => {
+const rerun = (context, shouldUpdate = false) => {
   let contextToRerun = context;
   contextToRerun.shouldUpdate = shouldUpdate;
 
@@ -94,7 +94,7 @@ const addContext = (context) => {
   context.parent = parent;
 };
 
-export const getEffect = () => stack[stack.length - 1];
+const getEffect = () => stack[stack.length - 1];
 
 export const state = (defaultInitialValue, getSetter, compare = defaultCompare) => {
   const body = (initialValue = defaultInitialValue) => {

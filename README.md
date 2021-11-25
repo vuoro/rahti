@@ -22,7 +22,7 @@ app();
 
 ## Rendering HTML and SVG
 
-There are built-in DOM Effects for rendering HTML and SVG. They're not going to top any benchmarks though. There's no "VDOM", "fine reactivity", or anything like that. The "reconciler" — if you can call it that — is also really dumb.
+There are built-in DOM Effects for rendering HTML and SVG. They're built using the public API of this library, so there's no magic. They follow the same rules as your code.
 
 One rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't know where to mount. There also needs to be a root DOM Effect, created using `createRoot`.
 
@@ -32,6 +32,8 @@ DOM Effects also accept other arguments:
 - objects will be set as attributes
 - arrays containing DOM Effects are also accepted (works like React's Fragments)
 - `event` maintains an event handler on its parent DOM Effect
+
+Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", or anything like that, and the "reconciler" is not the smartest.
 
 ```js
 import { createRoot, effect, html, svg, event } from "bad-react";
@@ -155,7 +157,7 @@ const child = effect(
     console.log(hello); // this should only get logged once
   },
   // custom comparison function
-  (old, new) => old.hello === new.hello
+  (oldValue, newValue) => oldValue.hello === newValue.hello
 );
 
 app();
@@ -225,6 +227,61 @@ app();
 const [count, setCount] = counter();
 setCount(1); // all 10 children will log "1"
 ``` -->
+
+## API
+
+```js
+import { state, effect, onCleanup, html, svg, event, createRoot } from "bad-react";
+
+const counter = state(
+  // the default initial value
+  0,
+  // whatever this function returns replaces the "setState": [value, THIS_HERE]
+  (get, set) => set,
+  // comparison function used when a new value is set,
+  // to determine if the new value should take effect and Effects should re-run
+  (oldValue, newValue) => oldValue === newValue
+);
+
+const [value, setValue] = counter();
+
+const app = effect(
+  // your function
+  () => {
+    console.log("Hello world");
+
+    // Run before the effect is re-run and when it gets destroyed
+    onCleanup((isFinal) => {
+      // isFinal is true when the effect is being destroyed
+      console.log(isFinal ? "Bye world" : "Still here!");
+    });
+  },
+  // comparison function used to check if previous and new arguments match
+  // if they match, your function will not re-run and the effect will return its previous value
+  (oldValue, newValue) => oldValue === newValue
+);
+
+// these are proxies, so you can destructure any DOM Effect you want out of them
+const { h1, p, button, "my-web-component": myWebComponent } = html;
+const { svg: svgRoot, rect } = svg;
+
+// this creates a DOM Effect out of an element of your choosing
+const root = createRoot(document.getElementById("root"));
+
+// DOM Effects accept strings, numbers, attributes as objects, event Effects, and other DOM Effects
+root(
+  h1("Hello"),
+  p("World!"),
+  myWebComponent("Fancy!"),
+  svgRoot(rect({ width: 100, height: 100, fill: "red" })),
+  button(
+    "Click me!",
+    { type: "button", style: "color: red;" },
+    // sets an event handler on its parent
+    event("click", () => console.log("Clicked me!"))
+  )
+);
+```
 
 # To-do list
 
