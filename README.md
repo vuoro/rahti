@@ -91,7 +91,7 @@ app(createRoot(document.body));
 
 ## Custom State setters/actions, and initial values
 
-The `setState` function of a State can be replaced, with for example an object containing "actions" similar to what you see in many third-party React state management libraries.
+The `setState` function of a State can be replaced, with for example an object containing "actions" similar to what you see in many JS state management libraries.
 
 Also, the default initial value of a State can be set when defining the it: `const counter = state(0)`, but it can be overridden when first using it: `const [count, setCount] = counter(100)`.
 
@@ -114,7 +114,7 @@ app();
 
 ## Setting state during rendering
 
-Much like in React, you can update State during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not available).
+Much like in React, you can update State during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not supported).
 
 If you use this feature, be careful of infinite loops!
 
@@ -142,7 +142,7 @@ app();
 
 When setting a new value for a State, or passing new arguments to an Effect, the library checks whether the new value matches the previous value. By default they're checked for strict equality: `(oldValue, newValue) => oldValue === newValue`.
 
-This comparison function can be replaced (pass a function), or turned off altogether (pass `false`). (DOM Effects use this feature to check for changed attributes and event handlers.)
+This comparison function can be replaced (pass a function), or turned off altogether (pass `false`). DOM Effects use this feature to check for changed attributes and event handlers.
 
 For State, if the new value matches the current value, the new value won't be set, and no re-runs will occur. For Effects, if all new arguments match the old arguments, the Effect will skip running and instead return its previous return value.
 
@@ -234,6 +234,7 @@ import { globalState, effect } from "bad-react";
 const counter = globalState(0);
 
 const app = effect(() => {
+  console.log("this will only log once")
   for (let index = 0; index < 10; index++) {
     child();
   }
