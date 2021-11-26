@@ -4,7 +4,10 @@
 - No compile steps.
 - Low garbage generation at runtime.
 - Simple API: `import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "bad-react";`
-- Supports any DOM elements: `const { h1, p, nav } = html;`, `html["my-web-component"]`, `const { rect, text } = svg;`
+- Supports any DOM elements: 
+  - `const { h1, p, nav } = html;`
+  - `const { "my-web-component": myWebComponent } = html;`
+  - `const { rect, text } = svg;`
 
 ## State and Effects
 
