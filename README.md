@@ -1,6 +1,10 @@
 # bad-react (working title)
 
-A reactive JS library, with the goals of: composing reactive JS without JSX or tagged template literals, having no compile step, and having low garbage generation at runtime.
+- Write reactive JS `p("like this")`.
+- No compile steps.
+- Low garbage generation at runtime.
+- Simple API: `import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "bad-react";`
+- Supports any DOM elements: `const { h1, p, nav } = html;`, `html["my-web-component"]`, `const { rect, text } = svg;`
 
 ## State and Effects
 
