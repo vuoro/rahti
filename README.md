@@ -3,8 +3,8 @@
 - Write reactive JS `p("like this")`.
 - No compile steps.
 - Low garbage generation at runtime.
-- Simple API: `import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "bad-react";`
-- Supports any DOM elements: 
+- Simple API: `import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";`
+- Supports any DOM elements:
   - `const { h1, p, nav } = html;`
   - `const { "my-web-component": myWebComponent } = html;`
   - `const { rect, text } = svg;`
@@ -14,7 +14,7 @@
 If you've used something like React, S.js, or SolidJS you'll probably know how these work. State can change its value and re-runs the Effects the change impacts. (In React terms, Effects do the job of both Components and Hooks.)
 
 ```js
-import { state, effect } from "bad-react";
+import { state, effect } from "rahti";
 
 const counter = state(0);
 
@@ -32,7 +32,7 @@ app();
 Effects can contain cleanups. They run just before the Effect re-runs or gets destroyed. (This is the same as when React Hooks return a cleanup function.)
 
 ```js
-import { effect, onCleanup } from "bad-react";
+import { effect, onCleanup } from "rahti";
 
 const app = effect(() => {
   const interval = setInterval(() => console.log("Hi!"), 1000);
@@ -57,7 +57,7 @@ DOM Effects take any number of these kinds of arguments:
 Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", "Suspense", or advanced scheduling. The nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you can even replace them if you want to.
 
 ```js
-import { createRoot, effect, html, svg, event } from "bad-react";
+import { createRoot, effect, html, svg, event } from "rahti";
 const { p, button } = html;
 
 const app = effect((root) => {
@@ -96,7 +96,7 @@ The `setState` function of a State can be replaced, with for example an object c
 Also, the default initial value of a State can be set when defining the it: `const counter = state(0)`, but it can be overridden when first using it: `const [count, setCount] = counter(100)`.
 
 ```js
-import { state, effect } from "bad-react";
+import { state, effect } from "rahti";
 
 const counter = state(0, (get, set) => ({
   increment: () => set(get() + 1),
@@ -119,7 +119,7 @@ Much like in React, you can update State during "rendering": while an Effect is 
 If you use this feature, be careful of infinite loops!
 
 ```js
-import { state, effect } from "bad-react";
+import { state, effect } from "rahti";
 
 const counter = state(0);
 
@@ -147,7 +147,7 @@ This comparison function can be replaced (pass a function), or turned off altoge
 For State, if the new value matches the current value, the new value won't be set, and no re-runs will occur. For Effects, if all new arguments match the old arguments, the Effect will skip running and instead return its previous return value.
 
 ```js
-import { state, effect } from "bad-react";
+import { state, effect } from "rahti";
 
 const counter = state(
   0,
@@ -184,7 +184,7 @@ Also similar to React is that Effects of a different type (like p() and strong()
 If you want to turn keys off for an effect, set the third argument to false.
 
 ```js
-import { effect, state, createRoot } from "bad-react";
+import { effect, state, createRoot } from "rahti";
 
 const data = [];
 for (let index = 0; index < 10; index++) {
@@ -229,12 +229,12 @@ app(createRoot(document.body));
 A special kind of State where one value is shared by each Effect that accesses it.
 
 ```js
-import { globalState, effect } from "bad-react";
+import { globalState, effect } from "rahti";
 
 const counter = globalState(0);
 
 const app = effect(() => {
-  console.log("this will only log once")
+  console.log("this will only log once");
   for (let index = 0; index < 10; index++) {
     child();
   }
@@ -254,7 +254,7 @@ setCount(1); // all 10 children will log "1"
 ## API
 
 ```js
-import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "bad-react";
+import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
 
 const counter = state(
   // the default initial value

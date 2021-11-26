@@ -1,5 +1,5 @@
 {
-  "name": "bad-react",
+  "name": "rahti",
   "version": "0.0.1",
   "description": "",
   "type": "module",
@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuoro/bad-react.git"
+    "url": "git+https://github.com/vuoro/rahti.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuoro/bad-react/issues"
+    "url": "https://github.com/vuoro/rahti/issues"
   },
-  "homepage": "https://github.com/vuoro/bad-react#readme",
-  "dependencies": {
+  "homepage": "https://github.com/vuoro/rahti#readme",
+  "devDependencies": {
     "eslint": "^8.3.0"
   },
   "eslint": {
