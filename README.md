@@ -28,8 +28,8 @@ DOM Effects also accept arguments other than DOM Effects:
 
 - text/numbers turn into text fragments
 - object properties will be set as attributes
-- arrays containing DOM Effects are also accepted (works like React's Fragments)
-- `event` Effects maintain an event handler on its parent DOM Effect
+- `event()` Effects maintain an event handler on its parent DOM Effect
+- Arrays or Sets containing any of the above (works kinda like React's Fragments)
 
 Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", "Suspense", or advanced scheduling. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
 
