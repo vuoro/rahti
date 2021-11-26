@@ -84,9 +84,9 @@ app();
 
 ## Custom State setters/actions, and initial values
 
-The `setState` function returned by State can be replaced, with for example an object containing "actions" similar to what you see in many third-party React state management libraries.
+The `setState` function of a State can be replaced, with for example an object containing "actions" similar to what you see in many third-party React state management libraries.
 
-The default initial value of a State can be set when defining the it: `const counter = state(0)`, but it can be overridden when first using it: `counter(100)`.
+Also, the default initial value of a State can be set when defining the it: `const counter = state(0)`, but it can be overridden when first using it: `const [count, setCount] = counter(100)`.
 
 ```js
 import { state, effect } from "bad-react";
@@ -107,7 +107,7 @@ app();
 
 ## Setting state during rendering
 
-Much like in React, you can use `setState` during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not available).
+Much like in React, you can update State during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not available).
 
 If you use this feature, be careful of infinite loops!
 
@@ -131,13 +131,13 @@ const app = effect(() => {
 app();
 ```
 
-## Custom new vs. old value comparison functions
+## Custom old vs. new value comparison functions
 
-When setting a new value for a State, or passing new arguments to an Effect, the library checks whether the new value matches the previous value. By default they're checked for strict equality: `(new, old) => new === old`.
+When setting a new value for a State, or passing new arguments to an Effect, the library checks whether the new value matches the previous value. By default they're checked for strict equality: `(oldValue, newValue) => oldValue === newValue`.
 
-This comparison function can be replaced (pass a function), or turned off altogether (pass `false`).
+This comparison function can be replaced (pass a function), or turned off altogether (pass `false`). (DOM Effects use this feature to check for changed attributes and event handlers.)
 
-For State, if the new value matches the current value, the new value won't be set, and no re-runs will occur. For Effects, if all new arguments match the old arguments, the Effect will skip running and instead return its previous return value. (The DOM Effects use this feature to check for changed attributes and event handlers.)
+For State, if the new value matches the current value, the new value won't be set, and no re-runs will occur. For Effects, if all new arguments match the old arguments, the Effect will skip running and instead return its previous return value.
 
 ```js
 import { state, effect } from "bad-react";
@@ -151,13 +151,13 @@ const counter = state(
 const app = effect(() => {
   const [count, setCount] = counter();
   if (count === 0) setCount(1);
-
+  console.log("this should get logged twice")
   child({ hello: "world" });
 });
 
 const child = effect(
   ({ hello }) => {
-    console.log(hello); // this should only get logged once
+    console.log("this should only get logged once");
   },
   // custom comparison function
   (oldValue, newValue) => oldValue.hello === newValue.hello
@@ -168,9 +168,9 @@ app();
 
 ## Keyed Effects
 
-The first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops keys help prevent useless re-runs and re-initializations.
+The first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops, keys will help prevent useless re-runs and re-initializations.
 
-If you're familiar with keys in React components, this works the same way. The only difference is that instead of `<YourComponent key={"blah"}/>`, you do `yourEffect("blah")`.
+If you're familiar with keys in React components, this works the same way. The only difference is that instead of `<YourComponent key="blah"/>`, you do `yourEffect("blah")`.
 
 Also similar to React is that Effects of a different type (like p() and strong()) that share the same key won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
 
