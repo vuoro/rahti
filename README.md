@@ -24,14 +24,15 @@ app();
 
 Just one rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't get added to the document. There also needs to be a root DOM Effect wrapping them, created using `createRoot`.
 
-DOM Effects also accept arguments other than DOM Effects:
+DOM Effects any number of these kinds of arguments:
 
-- text/numbers turn into text fragments
-- object properties will be set as attributes
-- `event()` Effects maintain an event handler on its parent DOM Effect
+- other DOM Effects
+- strings and numbers: they turn into text fragments
+- objects: their properties will be set as attributes
+- `event()` Effects: they maintain an event handler on their parent DOM Effect
 - Arrays or Sets containing any of the above (works kinda like React's Fragments)
 
-Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", "Suspense", or advanced scheduling. But the nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you could even replace them if you wanted to.
+Note that these are not going to top any benchmarks. There's no "VDOM", "fine reactivity", "Suspense", or advanced scheduling. The nice thing is they're built using the public API of this library, so there's no magic. They follow the same rules as your code, so you can even replace them if you want to.
 
 ```js
 import { createRoot, effect, html, svg, event } from "bad-react";
@@ -55,12 +56,12 @@ const app = effect((root) => {
       svg.text("Surprise svg!", { x: 50, y: 50, fill: "white" })
     ),
 
-    customEffect()
+    customHelloWorld()
   );
 });
 
-const customEffect = effect(() => {
-  return [p("Hello"), p("Multiple."), p("Effects.")];
+const customHelloWorld = effect(() => {
+  return [p("Hello."), p("World.")];
 });
 
 app(createRoot(document.body));
