@@ -11,7 +11,16 @@ const processQueue = () => {
 const updateState = (context, newValue) => {
   console.log("================ setting", newValue);
   context.body[0] = newValue;
-  rerun(context.parent, true);
+
+  const { globalParents } = context.body;
+
+  if (globalParents) {
+    for (const parent of globalParents) {
+      rerun(parent, true);
+    }
+  } else {
+    rerun(context.parent, true);
+  }
 };
 
 const createContext = (body, type, key) => {
@@ -29,13 +38,10 @@ const createContext = (body, type, key) => {
   };
 };
 
-const rootContext = createContext(() => {
-  const { shouldUpdate } = rootContext;
-  for (const child of rootContext.children) {
-    rerun(child, shouldUpdate);
-  }
-}, "rootContext");
+const rootContext = createContext(() => {}, "rootContext");
 const stateType = "state";
+const globalStateType = "globalState";
+const globalStateAccessorType = "globalStateAccessor";
 const eventKey = "__vuoro_event__";
 let effectTypeCounter = 0;
 const indexStack = [-1];
@@ -127,7 +133,45 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
       addContext(context);
     }
 
-    console.log("getting state", context.body);
+    return context.body;
+  };
+
+  return body;
+};
+
+export const globalState = (initialValue, getSetter, compare = defaultCompare) => {
+  const storage = [initialValue];
+  const globalParents = new Set();
+  storage.globalParents = globalParents;
+
+  const context = createContext(storage, globalStateType, storage);
+  addContext(context);
+
+  const get = () => storage[0];
+  const set = (newValue) => {
+    if (!compare || !compare(storage[0], newValue)) {
+      if (stack.length > 1) {
+        // TODO: this might break on initial execution
+        console.log("========================= setting later", newValue);
+        updateQueue.add(context);
+        storage.nextValue = newValue;
+        later = later || schedule(processQueue);
+      } else {
+        updateState(context, newValue);
+      }
+    }
+  };
+
+  storage[1] = getSetter ? getSetter(get, set) : set;
+
+  const body = () => {
+    let context = getContext(globalStateAccessorType, storage);
+
+    if (!context) {
+      context = createContext(storage, globalStateAccessorType, storage);
+      addContext(context);
+      globalParents.add(context.parent);
+    }
 
     return context.body;
   };
@@ -205,6 +249,9 @@ const destroy = (context) => {
   context.key = null;
 
   for (const child of context.children) {
+    if (child.type === globalStateAccessorType) {
+      child.body.globalParents.delete(context);
+    }
     destroy(child);
   }
   context.children.splice(0);

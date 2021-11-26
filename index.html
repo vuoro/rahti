@@ -2,7 +2,16 @@
 <html>
   <body>
     <script type="module">
-      import { state, effect, html, svg, onCleanup, event, createRoot } from "./main.js";
+      import {
+        state,
+        globalState,
+        effect,
+        html,
+        svg,
+        onCleanup,
+        event,
+        createRoot,
+      } from "./main.js";
       const { h1, button, p, ul, li, strong, div, header } = html;
 
       const app = effect((root) => {
@@ -48,11 +57,17 @@
         decrement: () => set(get() - 1),
       }));
 
+      const globalStateTest = globalState(false);
+
       const listItem = effect(function listItem(number) {
+        if (number < 3) globalStateTest();
         return [li(), li(`${number} last ran at `, (Date.now() - today) / 1000)];
       });
 
       app(createRoot(document.body));
+
+      const [, setTest] = globalStateTest();
+      setInterval(() => setTest(Date.now()), 2000);
     </script>
   </body>
 </html>
