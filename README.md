@@ -27,11 +27,26 @@ const app = effect(() => {
 app();
 ```
 
+## Cleanups
+
+Effects can contain cleanups. They run just before the Effect re-runs or gets destroyed. (This is the same as when React Hooks return a cleanup function.)
+
+```js
+import { effect, onCleanup } from "bad-react";
+
+const app = effect(() => {
+  const interval = setInterval(() => console.log("Hi!"), 1000);
+  onCleanup(() => clearInterval(interval));
+});
+
+app();
+```
+
 ## Rendering HTML and SVG with DOM Effects
 
 Just one rule to remember: DOM Effects must be passed as arguments to another DOM Effect. Otherwise they won't get added to the document. There also needs to be a root DOM Effect wrapping them, created using `createRoot`.
 
-DOM Effects any number of these kinds of arguments:
+DOM Effects take any number of these kinds of arguments:
 
 - other DOM Effects
 - strings and numbers: they turn into text fragments
@@ -72,21 +87,6 @@ const customHelloWorld = effect(() => {
 });
 
 app(createRoot(document.body));
-```
-
-## Cleanups
-
-Effects can contain cleanups. They run just before the Effect re-runs or gets destroyed. (This is the same as when React Hooks return a cleanup function.)
-
-```js
-import { effect, onCleanup } from "bad-react";
-
-const app = effect(() => {
-  const interval = setInterval(() => console.log("Hi!"), 1000);
-  onCleanup(() => clearInterval(interval));
-});
-
-app();
 ```
 
 ## Custom State setters/actions, and initial values
