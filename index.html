@@ -3,22 +3,27 @@
   <body>
     <script type="module">
       import { state, effect, html, svg, onCleanup, event, createRoot } from "./main.js";
-      const { h1, button, p, ol, li, strong, div } = html;
+      const { h1, button, p, ul, li, strong, div } = html;
 
       const app = effect((root) => {
-        const [count, { increment, decrement }] = counter(0);
+        const [count, { increment, decrement }] = counter(20);
+        const [deleted, setDeleted] = container();
 
         const numbers = [];
         for (let index = 0; index < count; index++) {
-          numbers.push(listItem(index + 1));
+          if (deleted !== index) numbers.push(listItem(index + 1));
         }
 
         root(
           h1("Count: ", count),
-          button("+1", event("click", increment)),
-          button("-1", event("click", decrement)),
+          button("Increment +1", event("click", increment)),
+          button("Decrement -1", event("click", decrement)),
+          button(
+            "Skip random",
+            event("click", () => setDeleted(Math.floor(Math.random() * count)))
+          ),
           count === 0 && p("Try the buttons!"),
-          count > 0 && ol(...numbers),
+          count > 0 && ul(...numbers),
           count < 0 &&
             div(
               svg.svg(
@@ -29,21 +34,16 @@
         );
       });
 
+      const container = state();
+      const today = Date.now();
+
       const counter = state(0, (get, set) => ({
         increment: () => set(get() + 1),
         decrement: () => set(get() - 1),
       }));
 
       const listItem = effect((number) => {
-        const [count, { increment }] = counter(0);
-
-        // const timer = setInterval(increment, 1000);
-        onCleanup(() => {
-          increment();
-          //   clearInterval(timer);
-        });
-
-        return li("has cleaned ", strong(`${count} times`));
+        return li(`${number} last ran at `, (Date.now() - today) / 1000);
       });
 
       app(createRoot(document.body));
