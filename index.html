@@ -3,10 +3,10 @@
   <body>
     <script type="module">
       import { state, effect, html, svg, onCleanup, event, createRoot } from "./main.js";
-      const { h1, button, p, ul, li, strong, div } = html;
+      const { h1, button, p, ul, li, strong, div, header } = html;
 
       const app = effect((root) => {
-        const [count, { increment, decrement }] = counter(20);
+        const [count, { increment, decrement }] = counter(5);
         const [deleted, setDeleted] = container();
 
         const numbers = [];
@@ -15,13 +15,7 @@
         }
 
         root(
-          h1("Count: ", count),
-          button("Increment +1", event("click", increment)),
-          button("Decrement -1", event("click", decrement)),
-          button(
-            "Skip random",
-            event("click", () => setDeleted(Math.floor(Math.random() * count)))
-          ),
+          masthead(increment, decrement, count, setDeleted),
           count === 0 && p("Try the buttons!"),
           count > 0 && ul(...numbers),
           count < 0 &&
@@ -34,6 +28,18 @@
         );
       });
 
+      const masthead = effect(function masthead(increment, decrement, count, setDeleted) {
+        return header(
+          h1("Count: ", count),
+          button("Increment +1", event("click", increment)),
+          button("Decrement -1", event("click", decrement)),
+          button(
+            "Skip random",
+            event("click", () => setDeleted(Math.floor(Math.random() * count)))
+          )
+        );
+      });
+
       const container = state();
       const today = Date.now();
 
@@ -42,7 +48,7 @@
         decrement: () => set(get() - 1),
       }));
 
-      const listItem = effect((number) => {
+      const listItem = effect(function listItem(number) {
         return li(`${number} last ran at `, (Date.now() - today) / 1000);
       });
 

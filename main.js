@@ -14,16 +14,20 @@ const updateState = (context, newValue) => {
   rerun(context.parent, true);
 };
 
-const createContext = (body, type) => ({
-  argumentCache: new Map(),
-  children: [],
-  cleanups: new Set(),
-  value: null,
-  shouldUpdate: true,
-  hasReturned: false,
-  type,
-  body,
-});
+const createContext = (body, type, key) => {
+  console.log("create", type, key);
+  return {
+    argumentCache: new Map(),
+    children: [],
+    cleanups: new Set(),
+    value: null,
+    shouldUpdate: true,
+    hasReturned: false,
+    key,
+    type,
+    body,
+  };
+};
 
 const rootContext = createContext(() => {
   const { shouldUpdate } = rootContext;
@@ -32,6 +36,7 @@ const rootContext = createContext(() => {
   }
 }, "rootContext");
 const stateType = "state";
+const eventKey = "__vuoro_event__";
 let effectTypeCounter = 0;
 const indexStack = [-1];
 const stack = [rootContext];
@@ -55,7 +60,7 @@ const rerun = (context, shouldUpdate = false) => {
   indexStack.pop();
 };
 
-const getContext = (type) => {
+const getContext = (type, key) => {
   let context;
 
   const parent = stack[stack.length - 1];
@@ -65,16 +70,16 @@ const getContext = (type) => {
   const currentIndex = indexStack[indexStack.length - 1];
   const currentChild = children[currentIndex];
 
-  if (currentChild && currentChild.type === type) {
+  if (currentChild && currentChild.type === type && currentChild.key === key) {
     // If the current child looks like this one, use it
-    console.log("found here", `${type} at ${indexStack}`);
+    console.log("found here", `${type}:${key} at ${indexStack}`);
     context = currentChild;
   } else {
     // Try to find the next matching child
     for (let index = currentIndex + 1, { length } = children; index < length; index++) {
       const child = children[index];
-      if (child.type === type) {
-        console.log("found later at", index, `${type} at ${indexStack}`);
+      if (child.type === type && child.key === key) {
+        console.log("found later at", index, `${type}:${key} at ${indexStack}`);
         context = child;
         // Move it into its new place
         children.splice(index, 1);
@@ -93,8 +98,6 @@ const addContext = (context) => {
   parent.children.splice(index, 0, context);
   context.parent = parent;
 };
-
-const getEffect = () => stack[stack.length - 1];
 
 export const state = (defaultInitialValue, getSetter, compare = defaultCompare) => {
   const body = (initialValue = defaultInitialValue) => {
@@ -120,7 +123,6 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
 
       body[1] = getSetter ? getSetter(get, set) : set;
 
-      console.log("create state");
       context = createContext(body, stateType);
       addContext(context);
     }
@@ -133,15 +135,15 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
   return body;
 };
 
-export const effect = (thing, compare = defaultCompare) => {
+export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => {
   const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
 
   const body = function () {
-    let context = getContext(type);
+    const key = shouldUseKey ? arguments[0] : undefined;
+    let context = getContext(type, key);
 
     if (!context) {
-      console.log("create", type);
-      context = createContext(body, type);
+      context = createContext(body, type, key);
       addContext(context);
     }
 
@@ -177,7 +179,7 @@ export const effect = (thing, compare = defaultCompare) => {
       const nextIndex = indexStack[indexStack.length - 1] + 1;
 
       if (nextIndex < length) {
-        console.log(nextIndex, children);
+        console.log("Destroying leftover children in ", type, key);
         for (let index = nextIndex; index < length; index++) {
           destroy(children[index]);
         }
@@ -195,11 +197,12 @@ export const effect = (thing, compare = defaultCompare) => {
 };
 
 const destroy = (context) => {
-  console.log("destroying", context.type);
+  console.log("destroying", context.type, context.key);
   runCleanup(context, true);
   context.parent = null;
   context.value = null;
   context.argumentCache.clear();
+  context.key = null;
 
   for (const child of context.children) {
     destroy(child);
@@ -275,7 +278,7 @@ const createTagEffect = (tagName, elementEffect = htmlElement, overrideElement) 
           }
         }
       } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
-        if (argument.__event__) {
+        if (argument[eventKey]) {
           htmlEventHandler(element, argument);
         } else {
           htmlAttributes(element, argument);
@@ -348,7 +351,7 @@ const htmlAttributes = effect(
 );
 const htmlEventHandler = effect(function htmlEventHandler(
   element,
-  { __event__: event, handler: handler, ...options }
+  { [eventKey]: event, handler: handler, ...options }
 ) {
   console.log("attaching handler", event);
   element.addEventListener(event, handler, options);
@@ -359,7 +362,7 @@ const htmlEventHandler = effect(function htmlEventHandler(
 });
 
 export const event = effect(function event(event, handler, options) {
-  return { __event__: event, handler, ...options };
+  return { [eventKey]: event, handler, ...options };
 });
 
 export const createRoot = (element) =>
