@@ -1,4 +1,4 @@
-# bad-react (working title)
+# Rahti
 
 - Write reactive JS `p("like this")`.
 - No compile steps.
