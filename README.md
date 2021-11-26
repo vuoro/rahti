@@ -151,7 +151,7 @@ const counter = state(
 const app = effect(() => {
   const [count, setCount] = counter();
   if (count === 0) setCount(1);
-  console.log("this should get logged twice")
+  console.log("this should get logged twice");
   child({ hello: "world" });
 });
 
@@ -217,7 +217,7 @@ const childWithoutKeys = effect(
 app(createRoot(document.body));
 ```
 
-<!-- ## Global state
+## Global state
 
 A special kind of State where one value is shared by each Effect that accesses it.
 
@@ -241,12 +241,12 @@ app();
 
 const [count, setCount] = counter();
 setCount(1); // all 10 children will log "1"
-``` -->
+```
 
 ## API
 
 ```js
-import { state, effect, onCleanup, html, svg, event, createRoot } from "bad-react";
+import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "bad-react";
 
 const counter = state(
   // the default initial value
@@ -259,11 +259,17 @@ const counter = state(
   (oldValue, newValue) => oldValue === newValue
 );
 
+const globalCounter = globalState(0); // same API as above
+const [globalCount, setGlobalCount] = globalCounter();
+
 const [value, setValue] = counter();
 
 const app = effect(
   // your function
   () => {
+    const [count, setCount] = counter();
+    const [globalCount, setGlobalCount] = globalCounter();
+
     console.log("Hello world");
 
     // Run before the effect is re-run and when it gets destroyed
