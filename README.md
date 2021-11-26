@@ -60,7 +60,7 @@ const app = effect((root) => {
 });
 
 const customEffect = effect(() => {
-  return [p("Hello"), p("Multiple."), p("Effects.")]
+  return [p("Hello"), p("Multiple."), p("Effects.")];
 });
 
 app(createRoot(document.body));
@@ -165,17 +165,21 @@ const child = effect(
 app();
 ```
 
-<!-- ## Keyed State and Effects
+## Keyed Effects
 
-When using State or Effects conditionally or inside loops, be sure to use keys. These work the same way as Component keys in React: the key helps the library find the correct instance, even if it moves around or something else takes its place.
+The first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops keys help prevent useless re-runs and re-initializations.
 
-As in React, Effects of a different type (like p() and strong()) sharing the same key won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
+If you're familiar with keys in React components, this works the same way. The only difference is that instead of `<YourComponent key={"blah"}/>`, you do `yourEffect("blah")`.
+
+Also similar to React is that Effects of a different type (like p() and strong()) that share the same key won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
+
+If you want to turn keys off for an effect, set the third argument to false.
 
 ```js
 import { effect, state, createRoot } from "bad-react";
 
 const data = [];
-for (let index = 0; index < 100; index++) {
+for (let index = 0; index < 10; index++) {
   data.push({ id: Math.random() });
 }
 const dataStorage = state(
@@ -190,19 +194,27 @@ const dataStorage = state(
 const app = effect((root) => {
   const [data, sortData] = dataStorage();
 
-  for (const { id } of data) {
-    child.key(id)();
+  for (const {} of data) {
+    childWithKeys(id);
   }
 
   root(button("Sort", event("click", sortData)));
 });
 
-const child = effect(() => {
-  console.log("This should log 100 times initially, and 0 times after clicking the button");
+const childWithKeys = effect((id) => {
+  console.log("This should log 10 times initially, and 0 times after clicking the button");
 });
 
+const childWithoutKeys = effect(
+  (id) => {
+    console.log("This should log 10 times initially, and 10 times after clicking the button");
+  },
+  undefined,
+  false // turns off keys
+);
+
 app(createRoot(document.body));
-``` -->
+```
 
 <!-- ## Global state
 
@@ -262,7 +274,9 @@ const app = effect(
   // comparison function used to check if previous and new arguments match
   // if they match, your function will not re-run and the effect will return its previous value
   // can be set to `false` to disable checking
-  (oldValue, newValue) => oldValue === newValue
+  (oldValue, newValue) => oldValue === newValue,
+  // this determines if the effect should use its first argument as a key
+  true
 );
 
 // these are proxies, so you can destructure any DOM Effect you want out of them
