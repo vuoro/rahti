@@ -258,32 +258,36 @@ export const svg = new Proxy(
   }
 );
 
+const processTagEffectArgument = (argument, element) => {
+  const type = typeof argument;
+
+  if (argument instanceof Node || type === "string" || type === "number") {
+    communalSet.add(argument);
+    return true;
+  } else if (type === "object" && Symbol.iterator in argument) {
+    let hasChildren = false;
+    for (const what of argument) {
+      const result = processTagEffectArgument(what, element);
+      hasChildren = hasChildren || !!result;
+    }
+    return hasChildren;
+  } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
+    if (argument[eventKey]) {
+      htmlEventHandler(element, argument);
+    } else {
+      htmlAttributes(element, argument);
+    }
+  }
+};
+
 const createTagEffect = (tagName, elementEffect = htmlElement, overrideElement) => {
   const result = function () {
     const element = overrideElement || elementEffect(tagName);
     let hasChildren = false;
 
     for (let index = 0, { length } = arguments; index < length; index++) {
-      const argument = arguments[index];
-      const type = typeof argument;
-
-      if (argument instanceof Node || type === "string" || type === "number") {
-        communalSet.add(argument);
-        hasChildren = true;
-      } else if (type === "object" && Symbol.iterator in argument) {
-        for (const what of argument) {
-          if (what instanceof Node || type === "string" || type === "number") {
-            communalSet.add(what);
-            hasChildren = true;
-          }
-        }
-      } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
-        if (argument[eventKey]) {
-          htmlEventHandler(element, argument);
-        } else {
-          htmlAttributes(element, argument);
-        }
-      }
+      const result = processTagEffectArgument(arguments[index], element);
+      hasChildren = hasChildren || !!result;
     }
 
     if (hasChildren) {

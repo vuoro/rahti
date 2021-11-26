@@ -49,7 +49,7 @@
       }));
 
       const listItem = effect(function listItem(number) {
-        return li(`${number} last ran at `, (Date.now() - today) / 1000);
+        return [li(), li(`${number} last ran at `, (Date.now() - today) / 1000)];
       });
 
       app(createRoot(document.body));
