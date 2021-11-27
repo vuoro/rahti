@@ -270,8 +270,6 @@ const counter = state(
 const globalCounter = globalState(0); // same API as above
 const [globalCount, setGlobalCount] = globalCounter();
 
-const [value, setValue] = counter();
-
 const app = effect(
   // your function
   () => {
