@@ -1,5 +1,81 @@
-const isServer = import.meta?.env?.SSR || typeof window === "undefined";
+const isServer = !import.meta?.env?.SSR || typeof window === "undefined";
 export const identifier = "__vuoro_rahti__";
+export class ServerElement {
+  constructor(tagName) {
+    if (!tagName) {
+      this.isFragment = true;
+    } else {
+      this.tagName = tagName;
+    }
+  }
+
+  style = {};
+  attributes = new Map();
+  children = new Set();
+
+  append(child) {
+    if (child.isFragment) {
+      for (const grandChild of child.children) {
+        this.append(grandChild);
+      }
+      child.children.clear();
+    } else {
+      this.children.add(child);
+    }
+  }
+  replaceChildren(fromElement) {
+    this.children.clear();
+
+    if (fromElement.isFragment) {
+      for (const child of fromElement.children) {
+        this.append(child);
+      }
+      fromElement.children.clear();
+    } else {
+      this.append(fromElement);
+    }
+  }
+
+  getAttribute(key) {
+    this.attributes.get(key);
+  }
+  setAttribute(key, value) {
+    this.attributes.set(key, key === value ? true : value);
+  }
+  removeAttribute(key) {
+    this.attributes.delete(key);
+  }
+
+  addEventListener() {}
+  removeEventListener() {}
+
+  toString() {
+    let result = "";
+
+    if (!this.isFragment) {
+      result += `<${this.tagName}`;
+
+      for (const [key, value] of this.attributes) {
+        result += ` ${key}`;
+        if (typeof value !== "boolean") result += `="${value}"`;
+      }
+
+      if (this.style.cssText) result += ` style="${this.style.cssText}"`;
+
+      result += `>`;
+    }
+
+    for (const child of this.children) {
+      if (result instanceof ServerElement || typeof result === "string") {
+        result += child;
+      }
+    }
+
+    if (!this.isFragment) result += `</${this.tagName}>`;
+
+    return result;
+  }
+}
 
 const defaultCompare = (a, b) => a === b;
 const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
@@ -430,80 +506,3 @@ export const event = effect(function event(event, handler, options) {
 
 export const createRoot = (element) =>
   createTagEffect("(root) " + element.tagName, undefined, element);
-
-export class ServerElement {
-  constructor(tagName) {
-    if (!tagName) {
-      this.isFragment = true;
-    } else {
-      this.tagName = tagName;
-    }
-  }
-
-  style = {};
-  attributes = new Map();
-  children = new Set();
-
-  append(child) {
-    if (child.isFragment) {
-      for (const grandChild of child.children) {
-        this.append(grandChild);
-      }
-      child.children.clear();
-    } else {
-      this.children.add(child);
-    }
-  }
-  replaceChildren(fromElement) {
-    this.children.clear();
-
-    if (fromElement.isFragment) {
-      for (const child of fromElement.children) {
-        this.append(child);
-      }
-      fromElement.children.clear();
-    } else {
-      this.append(fromElement);
-    }
-  }
-
-  getAttribute(key) {
-    this.attributes.get(key);
-  }
-  setAttribute(key, value) {
-    this.attributes.set(key, key === value ? true : value);
-  }
-  removeAttribute(key) {
-    this.attributes.delete(key);
-  }
-
-  addEventListener() {}
-  removeEventListener() {}
-
-  toString() {
-    let result = "";
-
-    if (!this.isFragment) {
-      result += `<${this.tagName}`;
-
-      for (const [key, value] of this.attributes) {
-        result += ` key`;
-        if (!typeof value === "boolean") result += `="${value}"`;
-      }
-
-      if (this.style.cssText) result += ` style="${this.style.cssText}"`;
-
-      result += `>`;
-    }
-
-    for (const child of this.children) {
-      if (result instanceof ServerElement || typeof result === "string") {
-        result += child;
-      }
-    }
-
-    if (!this.isFragment) result += `</${this.tagName}>`;
-
-    return result;
-  }
-}

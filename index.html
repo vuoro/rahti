@@ -40,7 +40,7 @@
       const masthead = effect(function masthead(increment, decrement, count, setDeleted) {
         return header(
           h1("Count: ", count),
-          button("Increment +1", event("click", increment)),
+          button("Increment +1", event("click", increment), { type: "button" }),
           button("Decrement -1", event("click", decrement)),
           button(
             "Skip random",
@@ -67,7 +67,7 @@
       app(createRoot(document.body));
 
       const [, setTest] = globalStateTest();
-      setInterval(() => setTest(Date.now()), 2000);
+      // setInterval(() => setTest(Date.now()), 2000);
     </script>
   </body>
 </html>
