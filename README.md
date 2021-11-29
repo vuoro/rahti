@@ -3,13 +3,19 @@
 `npm install @vuoro/rahti`
 
 - Write reactive JS `p("like this")`.
-- No compile steps.
-- Low garbage generation at runtime.
-- Simple API: `import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";`
+- Simple API 
+  ```js
+  import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
+  
 - Supports any DOM elements:
-  - `const { h1, p, nav } = html;`
-  - `const { "my-web-component": myWebComponent } = html;`
-  - `const { rect, text } = svg;`
+  ```js
+  const { h1, p, nav } = html;
+  const { "my-web-component": myWebComponent } = html;
+  const { rect, text } = svg;
+  ```
+- Supports [server-side rendering with Astro](#server-side-rendering-with-astro).
+- No compile steps.
+- Low garbage generation.
 
 ## State and Effects
 
