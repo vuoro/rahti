@@ -1,4 +1,4 @@
-const isServer = !import.meta?.env?.SSR || typeof window === "undefined";
+export const isServer = import.meta?.env?.SSR || typeof window === "undefined";
 export const identifier = "__vuoro_rahti__";
 export class ServerElement {
   constructor(tagName) {

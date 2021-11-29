@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
   "main": "main.js",
