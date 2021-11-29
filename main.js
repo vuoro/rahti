@@ -9,6 +9,7 @@ export class ServerElement {
     }
   }
 
+  isServerElement = true; // for some reason instanceof randomly fails
   style = {};
   attributes = new Map();
   children = new Set();
@@ -66,7 +67,7 @@ export class ServerElement {
     }
 
     for (const child of this.children) {
-      if (result instanceof ServerElement || typeof result === "string") {
+      if (result.isServerElement || typeof result === "string" || typeof result === "number") {
         result += child;
       }
     }
@@ -391,7 +392,7 @@ const processTagEffectArgument = (argument, element) => {
   const type = typeof argument;
 
   if (
-    argument instanceof (isServer ? ServerElement : Node) ||
+    (isServer ? argument.isServerElement : argument instanceof Node) ||
     type === "string" ||
     type === "number"
   ) {
