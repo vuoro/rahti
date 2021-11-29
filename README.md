@@ -3,11 +3,11 @@
 `npm install @vuoro/rahti`
 
 - Write reactive JS `p("like this")`.
-- Simple API 
+- Simple [API](#api) 
   ```js
   import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
   
-- Supports any DOM elements:
+- Supports any [DOM elements](#rendering-html-and-svg-with-dom-effects):
   ```js
   const { h1, p, nav } = html;
   const { "my-web-component": myWebComponent } = html;
