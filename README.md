@@ -2,7 +2,10 @@
 
 `npm install @vuoro/rahti`
 
-- Write reactive JS `p("like this")`.
+- Write reactive JS 
+  ```js
+  p("like this.")
+  ```
 - Simple [API](#api) 
   ```js
   import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
