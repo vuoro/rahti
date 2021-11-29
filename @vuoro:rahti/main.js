@@ -1,5 +1,8 @@
+const isServer = import.meta?.env?.SSR || typeof window === "undefined";
+export const identifier = "__vuoro_rahti__";
+
 const defaultCompare = (a, b) => a === b;
-const schedule = window.requestIdleCallback || window.requestAnimationFrame;
+const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
 let later;
 const updateQueue = new Set();
 const processQueue = () => {
@@ -136,6 +139,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
     return context.body;
   };
 
+  body[identifier] = true;
   return body;
 };
 
@@ -176,6 +180,7 @@ export const globalState = (initialValue, getSetter, compare = defaultCompare) =
     return context.body;
   };
 
+  body[identifier] = true;
   return body;
 };
 
@@ -237,6 +242,7 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
     return context.value;
   };
 
+  body[identifier] = true;
   return body;
 };
 
@@ -274,7 +280,7 @@ export const onCleanup = (cleanup) => {
 };
 
 const htmlCache = new Map();
-const communalFragment = new DocumentFragment();
+const communalFragment = isServer ? new ServerElement() : new DocumentFragment();
 const communalSet = new Set();
 export const html = new Proxy(
   {},
@@ -308,7 +314,11 @@ export const svg = new Proxy(
 const processTagEffectArgument = (argument, element) => {
   const type = typeof argument;
 
-  if (argument instanceof Node || type === "string" || type === "number") {
+  if (
+    argument instanceof (isServer ? ServerElement : Node) ||
+    type === "string" ||
+    type === "number"
+  ) {
     communalSet.add(argument);
     return true;
   } else if (type === "object" && Symbol.iterator in argument) {
@@ -350,10 +360,12 @@ const createTagEffect = (tagName, elementEffect = htmlElement, overrideElement) 
 };
 
 const htmlElement = effect(function htmlElement(tagName) {
-  return document.createElement(tagName);
+  return isServer ? new ServerElement(tagName) : document.createElement(tagName);
 });
 const svgElement = effect(function svgElement(tagName) {
-  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+  return isServer
+    ? new ServerElement(tagName)
+    : document.createElementNS("http://www.w3.org/2000/svg", tagName);
 });
 const htmlChildren = effect(function htmlChildren() {
   const element = arguments[0];
@@ -362,7 +374,7 @@ const htmlChildren = effect(function htmlChildren() {
     const child = arguments[index];
     const type = typeof child;
 
-    const node = type === "string" || type === "number" ? new Text(child) : child;
+    const node = !isServer && (type === "string" || type === "number") ? new Text(child) : child;
     communalFragment.append(node);
   }
 
@@ -418,3 +430,80 @@ export const event = effect(function event(event, handler, options) {
 
 export const createRoot = (element) =>
   createTagEffect("(root) " + element.tagName, undefined, element);
+
+export class ServerElement {
+  constructor(tagName) {
+    if (!tagName) {
+      this.isFragment = true;
+    } else {
+      this.tagName = tagName;
+    }
+  }
+
+  style = {};
+  attributes = new Map();
+  children = new Set();
+
+  append(child) {
+    if (child.isFragment) {
+      for (const grandChild of child.children) {
+        this.append(grandChild);
+      }
+      child.children.clear();
+    } else {
+      this.children.add(child);
+    }
+  }
+  replaceChildren(fromElement) {
+    this.children.clear();
+
+    if (fromElement.isFragment) {
+      for (const child of fromElement.children) {
+        this.append(child);
+      }
+      fromElement.children.clear();
+    } else {
+      this.append(fromElement);
+    }
+  }
+
+  getAttribute(key) {
+    this.attributes.get(key);
+  }
+  setAttribute(key, value) {
+    this.attributes.set(key, key === value ? true : value);
+  }
+  removeAttribute(key) {
+    this.attributes.delete(key);
+  }
+
+  addEventListener() {}
+  removeEventListener() {}
+
+  toString() {
+    let result = "";
+
+    if (!this.isFragment) {
+      result += `<${this.tagName}`;
+
+      for (const [key, value] of this.attributes) {
+        result += ` key`;
+        if (!typeof value === "boolean") result += `="${value}"`;
+      }
+
+      if (this.style.cssText) result += ` style="${this.style.cssText}"`;
+
+      result += `>`;
+    }
+
+    for (const child of this.children) {
+      if (result instanceof ServerElement || typeof result === "string") {
+        result += child;
+      }
+    }
+
+    if (!this.isFragment) result += `</${this.tagName}>`;
+
+    return result;
+  }
+}

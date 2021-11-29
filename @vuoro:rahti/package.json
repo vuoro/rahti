@@ -1,7 +1,7 @@
 {
-  "name": "rahti",
-  "version": "0.0.1",
-  "description": "",
+  "name": "@vuoro/rahti",
+  "version": "0.1.0",
+  "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
   "main": "main.js",
   "exports": {
@@ -14,7 +14,6 @@
     "type": "git",
     "url": "git+https://github.com/vuoro/rahti.git"
   },
-  "author": "",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vuoro/rahti/issues"

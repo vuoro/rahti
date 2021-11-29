@@ -1,5 +1,7 @@
 # Rahti
 
+`npm install @vuoro/rahti`
+
 - Write reactive JS `p("like this")`.
 - No compile steps.
 - Low garbage generation at runtime.
@@ -313,6 +315,13 @@ root(
   )
 );
 ```
+
+## Server-side rendering with Astro
+
+Rahti has a custom renderer for [Astro](https://astro.build).
+
+1. `npm install @vuoro/astro-renderer-rahti`
+2. Add the renderer to your Astro project configuration. At the time of writing you need to add a file named `astro.config.mjs` to the root of your project, with the contents: `export default { renderers: ['@vuoro/astro-renderer-rahti'] };`. For details about configuring Astro, see <https://docs.astro.build>.
 
 ## Inspirations
 
