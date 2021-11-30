@@ -390,7 +390,7 @@ const processTagEffectArgument = (argument, element) => {
   const type = typeof argument;
 
   if (
-    (isServer ? argument.isServerElement : argument instanceof Node) ||
+    (isServer ? argument?.isServerElement : argument instanceof Node) ||
     type === "string" ||
     type === "number"
   ) {
