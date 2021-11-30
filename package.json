@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
   "main": "main.js",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "eslint": "^8.3.0"
   },
-  "eslint": {
+  "eslintConfig": {
     "env": {
       "browser": true,
       "es2021": true

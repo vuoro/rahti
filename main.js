@@ -7,12 +7,12 @@ export class ServerElement {
     } else {
       this.tagName = tagName;
     }
-  }
 
-  isServerElement = true; // for some reason instanceof randomly fails
-  style = {};
-  attributes = new Map();
-  children = new Set();
+    this.isServerElement = true; // for some reason instanceof randomly fails
+    this.style = {};
+    this.attributes = new Map();
+    this.children = new Set();
+  }
 
   append(child) {
     if (child.isFragment) {
@@ -471,12 +471,12 @@ const htmlAttributes = effect(
   (a, b, index) => {
     if (index === 1 && a && b) {
       // Shallow-compare attributes
-      for (var key in a) {
+      for (const key in a) {
         if (!(key in b) || a[key] !== b[key]) {
           return false;
         }
       }
-      for (var key in b) {
+      for (const key in b) {
         if (!(key in a) || a[key] !== b[key]) {
           return false;
         }
