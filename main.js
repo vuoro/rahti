@@ -111,7 +111,6 @@ const createContext = (body, type, key) => {
     cleanups: new Set(),
     value: null,
     shouldUpdate: true,
-    hasReturned: false,
     key,
     type,
     body,
@@ -133,7 +132,7 @@ const rerun = (context, shouldUpdate = false) => {
 
   console.log("starting a rerun of", context.type);
 
-  while (contextToRerun.hasReturned && contextToRerun.parent !== rootContext) {
+  while (contextToRerun.body.hasReturned && contextToRerun.parent !== rootContext) {
     contextToRerun = contextToRerun.parent;
     console.log("escalating rerun up to", contextToRerun.type);
     contextToRerun.shouldUpdate = shouldUpdate;
@@ -296,7 +295,7 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
         console.error(error);
       }
 
-      if (!context.hasReturned) context.hasReturned = context.value !== undefined;
+      if (!body.hasReturned && context.value !== undefined) body.hasReturned = true;
       context.shouldUpdate = false;
 
       // Destroy children that were not visited on this execution
