@@ -277,13 +277,14 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
     for (let index = 0; index < Math.max(arguments.length, argumentCache.size); index++) {
       const argument = argumentCache.get(index);
       const newArgument = arguments[index];
-      if (!compare || !compare(argument, newArgument, index)) {
+      if (context.shouldUpdate || !compare || !compare(argument, newArgument, index)) {
         argumentCache.set(index, newArgument);
-        context.shouldUpdate = true;
+        if (!context.shouldUpdate) context.shouldUpdate = true;
       }
     }
 
     if (context.shouldUpdate) {
+      context.shouldUpdate = false;
       stack.push(context);
       indexStack.push(-1);
 
@@ -295,7 +296,6 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
       }
 
       if (!body.hasReturned && context.value !== undefined) body.hasReturned = true;
-      context.shouldUpdate = false;
 
       // Destroy children that were not visited on this execution
       const { children } = context;

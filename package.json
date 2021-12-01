@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
   "main": "main.js",
@@ -14,6 +14,11 @@
     "type": "git",
     "url": "git+https://github.com/vuoro/rahti.git"
   },
+  "keywords": [
+    "reactive",
+    "javascript",
+    "rahti"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vuoro/rahti/issues"
@@ -21,6 +26,9 @@
   "homepage": "https://github.com/vuoro/rahti#readme",
   "devDependencies": {
     "eslint": "^8.3.0"
+  },
+  "prettier": {
+    "printWidth": 100
   },
   "eslintConfig": {
     "env": {
