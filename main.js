@@ -111,6 +111,8 @@ const createContext = (body, type, key) => {
     cleanups: new Set(),
     value: null,
     shouldUpdate: true,
+    hasReturned: false,
+    parent: null,
     key,
     type,
     body,
@@ -189,7 +191,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
     let context = getContext(stateType);
 
     if (!context) {
-      const body = [initialValue];
+      const body = [initialValue, null];
 
       const get = () => body[0];
       const set = (newValue) => {
@@ -328,11 +330,12 @@ const destroy = (context) => {
   context.value = null;
   context.argumentCache.clear();
   context.key = null;
+  
+  if (context.type === globalStateAccessorType) {
+    context.body.globalParents.delete(context);
+  }
 
   for (const child of context.children) {
-    if (child.type === globalStateAccessorType) {
-      child.body.globalParents.delete(context);
-    }
     destroy(child);
   }
   context.children.splice(0);
