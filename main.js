@@ -111,7 +111,6 @@ const createContext = (body, type, key) => {
     cleanups: new Set(),
     value: null,
     shouldUpdate: true,
-    hasReturned: false,
     parent: null,
     key,
     type,
@@ -320,6 +319,7 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
   };
 
   body[identifier] = true;
+  body.hasReturned = false;
   return body;
 };
 
