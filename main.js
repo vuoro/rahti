@@ -221,7 +221,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
 };
 
 export const globalState = (initialValue, getSetter, compare = defaultCompare) => {
-  const storage = [initialValue];
+  const storage = [initialValue, null];
   const globalParents = new Set();
   storage.globalParents = globalParents;
 
