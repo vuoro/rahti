@@ -1,4 +1,4 @@
-import { effect, onCleanup } from "./main.js";
+import { effect, onCleanup } from "./effect.js";
 import { isServer, ServerElement } from "./server-side-rendering.js";
 
 const eventKey = "__vuoro_event__";

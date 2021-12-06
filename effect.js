@@ -1,30 +1,4 @@
-import { registerForSsr, isServer } from "./server-side-rendering.js";
-
-const defaultAreDifferent = (a, b) => a === b;
-const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
-let later;
-const updateQueue = new Set();
-const processQueue = () => {
-  for (const context of updateQueue) {
-    updateState(context, context.body.nextValue);
-  }
-  later = null;
-  updateQueue.clear();
-};
-const updateState = (context, newValue) => {
-  // console.log("================ setting", newValue, context);
-  context.body[0] = newValue;
-
-  const { globalParents } = context.body;
-
-  if (globalParents) {
-    for (const parent of globalParents) {
-      rerun(parent);
-    }
-  } else {
-    rerun(context.parent);
-  }
-};
+import { registerForSsr } from "./server-side-rendering.js";
 
 const createContext = (body, type, key) => {
   // console.log("create", type, key);
@@ -41,32 +15,12 @@ const createContext = (body, type, key) => {
 };
 
 const rootContext = createContext(() => {}, "rootContext");
-const stateType = "state";
-const globalStateType = "globalState";
-const globalStateAccessorType = "globalStateAccessor";
+export const stack = [rootContext];
+export const indexStack = [-1];
+
+export const defaultAreDifferent = (a, b) => a === b;
+export const argumentCache = new WeakMap();
 let effectTypeCounter = 0;
-const indexStack = [-1];
-const stack = [rootContext];
-const argumentCache = new WeakMap();
-
-const rerun = (context) => {
-  let contextToRerun = context;
-  contextToRerun.shouldUpdate = true;
-
-  // console.log("starting a rerun of", context.type);
-
-  while (contextToRerun.body.hasReturned && contextToRerun.parent !== rootContext) {
-    contextToRerun = contextToRerun.parent;
-    // console.log("escalating rerun up to", contextToRerun.type);
-    contextToRerun.shouldUpdate = true;
-  }
-
-  stack.push(contextToRerun.parent);
-  indexStack.push(-1);
-  contextToRerun.body.apply(null, argumentCache.get(contextToRerun));
-  stack.pop();
-  indexStack.pop();
-};
 
 const getContext = (type, key) => {
   let context;
@@ -105,82 +59,6 @@ const addContext = (context) => {
   const index = indexStack[indexStack.length - 1];
   parent.children.splice(index, 0, context);
   context.parent = parent;
-};
-
-export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreDifferent) => {
-  const body = (initialValue = defaultInitialValue) => {
-    let context = getContext(stateType);
-
-    if (!context) {
-      const body = [initialValue, null];
-
-      const get = () => body[0];
-      const set = (newValue) => {
-        if (!areDifferent || !areDifferent(body[0], newValue)) {
-          if (stack.length > 1) {
-            // TODO: this might break on initial execution
-            // console.log("========================= setting later", newValue);
-            updateQueue.add(context);
-            body.nextValue = newValue;
-            later = later || schedule(processQueue);
-          } else {
-            updateState(context, newValue);
-          }
-        }
-      };
-
-      body[1] = getSetter ? getSetter(get, set) : set;
-
-      context = createContext(body, stateType);
-      addContext(context);
-    }
-
-    return context.body;
-  };
-
-  registerForSsr(body);
-  return body;
-};
-
-export const globalState = (initialValue, getSetter, areDifferent = defaultAreDifferent) => {
-  const storage = [initialValue, null];
-  const globalParents = new Set();
-  storage.globalParents = globalParents;
-
-  const context = createContext(storage, globalStateType, storage);
-  addContext(context);
-
-  const get = () => storage[0];
-  const set = (newValue) => {
-    if (!areDifferent || !areDifferent(storage[0], newValue)) {
-      if (stack.length > 1) {
-        // TODO: this might break on initial execution
-        // console.log("========================= setting later", newValue);
-        updateQueue.add(context);
-        storage.nextValue = newValue;
-        later = later || schedule(processQueue);
-      } else {
-        updateState(context, newValue);
-      }
-    }
-  };
-
-  storage[1] = getSetter ? getSetter(get, set) : set;
-
-  const body = () => {
-    let context = getContext(globalStateAccessorType, storage);
-
-    if (!context) {
-      context = createContext(storage, globalStateAccessorType, storage);
-      addContext(context);
-      globalParents.add(context.parent);
-    }
-
-    return context.body;
-  };
-
-  registerForSsr(body);
-  return body;
 };
 
 export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey = true) => {
@@ -261,10 +139,6 @@ const destroy = (context) => {
   context.parent = null;
   context.value = null;
   context.key = null;
-
-  if (context.type === globalStateAccessorType) {
-    context.body.globalParents.clear();
-  }
 
   for (const child of context.children) {
     destroy(child);

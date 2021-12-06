@@ -60,8 +60,12 @@
       const globalStateTest = globalState(false);
 
       const listItem = effect(function listItem(number) {
+        const [count, { increment }] = counter(5);
         if (number < 3) globalStateTest();
-        return [li(), li(`${number} last ran at `, (Date.now() - today) / 1000)];
+        return [
+          li(`${number} last ran at `, (Date.now() - today) / 1000),
+          button("Rerun", event("click", increment), { type: "button" }),
+        ];
       });
 
       app(createRoot(document.body));
