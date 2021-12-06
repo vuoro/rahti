@@ -9,9 +9,10 @@ const processQueue = () => {
     updateState(context, context.body.nextValue);
   }
   later = null;
+  updateQueue.clear();
 };
 const updateState = (context, newValue) => {
-  // console.log("================ setting", newValue);
+  // console.log("================ setting", newValue, context);
   context.body[0] = newValue;
 
   const { globalParents } = context.body;
@@ -262,7 +263,7 @@ const destroy = (context) => {
   context.key = null;
 
   if (context.type === globalStateAccessorType) {
-    context.body.globalParents.delete(context);
+    context.body.globalParents.clear();
   }
 
   for (const child of context.children) {
