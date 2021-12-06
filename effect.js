@@ -18,7 +18,7 @@ export const rootContext = createContext(() => {}, "rootContext");
 export const stack = [rootContext];
 export const indexStack = [-1];
 
-export const defaultAreDifferent = (a, b) => a === b;
+export const defaultAreSame = (a, b) => a === b;
 export const argumentCache = new WeakMap();
 export const hasReturneds = new WeakSet();
 let effectTypeCounter = 0;
@@ -62,7 +62,7 @@ const addContext = (context) => {
   context.parent = parent;
 };
 
-export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey = true) => {
+export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => {
   const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
 
   const body = function () {
@@ -74,7 +74,7 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
       addContext(context);
     }
 
-    if (!context.shouldUpdate || !areDifferent) {
+    if (!context.shouldUpdate || !areSame) {
       const previousArguments = argumentCache.get(context);
       const newLength = arguments.length;
       const previousLength = previousArguments.length;
@@ -85,7 +85,7 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
         for (let index = 0; index < arguments.length; index++) {
           const previousArgument = previousArguments[index];
           const newArgument = arguments[index];
-          if (!areDifferent(newArgument, previousArgument, index)) {
+          if (!areSame(newArgument, previousArgument, index)) {
             context.shouldUpdate = true;
             break;
           }

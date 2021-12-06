@@ -1,6 +1,6 @@
 import {
   argumentCache,
-  defaultAreDifferent,
+  defaultAreSame,
   effect,
   hasReturneds,
   indexStack,
@@ -14,7 +14,7 @@ const values = new WeakMap();
 const nextValues = new WeakMap();
 const setters = new WeakMap();
 
-export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreDifferent) => {
+export const state = (defaultInitialValue, getSetter, areSame = defaultAreSame) => {
   const accessor = effect(
     (initialValue = defaultInitialValue) => {
       const context = stack[stack.length - 1];
@@ -23,7 +23,7 @@ export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreD
       if (!setters.has(context)) {
         const get = () => values.get(context);
         const set = (newValue) => {
-          if (!areDifferent || !areDifferent(get(), newValue)) {
+          if (!areSame || !areSame(get(), newValue)) {
             if (stack.length > 1) {
               // TODO: this might break on initial execution
               // console.log("========================= setting later", newValue);
@@ -48,14 +48,14 @@ export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreD
   return accessor;
 };
 
-export const globalState = (defaultInitialValue, getSetter, areDifferent = defaultAreDifferent) => {
+export const globalState = (defaultInitialValue, getSetter, areSame = defaultAreSame) => {
   const subscribers = new Set();
   const globalIdentity = { subscribers };
   values.set(globalIdentity, defaultInitialValue);
 
   const get = () => values.get(globalIdentity);
   const set = (newValue) => {
-    if (!areDifferent || !areDifferent(get(), newValue)) {
+    if (!areSame || !areSame(get(), newValue)) {
       if (stack.length > 1) {
         // TODO: this might break on initial execution
         // console.log("========================= setting later", newValue);
