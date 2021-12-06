@@ -51,7 +51,7 @@ const processTagEffectArgument = (argument, element) => {
       hasChildren = hasChildren || !!result;
     }
     return hasChildren;
-  } else if (type === "object" && argument !== null && !Array.isArray(argument)) {
+  } else if (type === "object" && !(Symbol.iterator in argument)) {
     if (argument[eventKey]) {
       htmlEventHandler(element, argument);
     } else {
@@ -116,8 +116,10 @@ const htmlAttributes = effect(
       }
     }
   },
-  (a, b, index) => {
-    if (index === 1 && a && b) {
+  (a, b) => {
+    if (typeof a !== typeof b) return false;
+
+    if (typeof a === "object" && !(Symbol.iterator in a)) {
       // Shallow-compare attributes
       for (const key in a) {
         if (!(key in b) || a[key] !== b[key]) {

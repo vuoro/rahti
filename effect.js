@@ -85,7 +85,7 @@ export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => 
         for (let index = 0; index < arguments.length; index++) {
           const previousArgument = previousArguments[index];
           const newArgument = arguments[index];
-          if (!areSame(newArgument, previousArgument, index)) {
+          if (!areSame(newArgument, previousArgument)) {
             context.shouldUpdate = true;
             break;
           }
