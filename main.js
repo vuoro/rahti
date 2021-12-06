@@ -28,7 +28,6 @@ const updateState = (context, newValue) => {
 const createContext = (body, type, key) => {
   // console.log("create", type, key);
   return {
-    argumentCache: new Map(),
     children: [],
     cleanups: new Set(),
     value: null,
@@ -47,6 +46,7 @@ const globalStateAccessorType = "globalStateAccessor";
 let effectTypeCounter = 0;
 const indexStack = [-1];
 const stack = [rootContext];
+const argumentCache = new WeakMap();
 
 const rerun = (context) => {
   let contextToRerun = context;
@@ -62,7 +62,7 @@ const rerun = (context) => {
 
   stack.push(contextToRerun.parent);
   indexStack.push(-1);
-  contextToRerun.body.call(null, ...contextToRerun.argumentCache.values());
+  contextToRerun.body.apply(null, argumentCache.get(contextToRerun));
   stack.pop();
   indexStack.pop();
 };
@@ -194,16 +194,26 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
       addContext(context);
     }
 
-    const { argumentCache } = context;
+    if (!context.shouldUpdate || !areDifferent) {
+      const previousArguments = argumentCache.get(context);
+      const newLength = arguments.length;
+      const previousLength = previousArguments.length;
 
-    for (let index = 0; index < Math.max(arguments.length, argumentCache.size); index++) {
-      const argument = argumentCache.get(index);
-      const newArgument = arguments[index];
-      if (context.shouldUpdate || !areDifferent || !areDifferent(argument, newArgument, index)) {
-        argumentCache.set(index, newArgument);
-        if (!context.shouldUpdate) context.shouldUpdate = true;
+      if (newLength !== previousLength) {
+        context.shouldUpdate = true;
+      } else {
+        for (let index = 0; index < arguments.length; index++) {
+          const previousArgument = previousArguments[index];
+          const newArgument = arguments[index];
+          if (!areDifferent(newArgument, previousArgument, index)) {
+            context.shouldUpdate = true;
+            break;
+          }
+        }
       }
     }
+
+    argumentCache.set(context, arguments);
 
     if (context.shouldUpdate) {
       context.shouldUpdate = false;
@@ -251,7 +261,7 @@ const destroy = (context) => {
   context.value = null;
   context.argumentCache.clear();
   context.key = null;
-  
+
   if (context.type === globalStateAccessorType) {
     context.body.globalParents.delete(context);
   }

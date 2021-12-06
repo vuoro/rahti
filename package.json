@@ -31,7 +31,7 @@
     "printWidth": 100
   },
   "eslintConfig": {
-    "env": 9
+    "env": {
       "browser": true,
       "es2021": true
     },
