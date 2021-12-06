@@ -2,8 +2,10 @@ import {
   argumentCache,
   defaultAreDifferent,
   effect,
+  hasReturneds,
   indexStack,
   onCleanup,
+  rootContext,
   stack,
 } from "./effect.js";
 import { isServer } from "./server-side-rendering.js";
@@ -93,7 +95,12 @@ const rerun = (context) => {
 
   // console.log("starting a rerun of", context.type);
 
-  while (contextToRerun.body.hasReturned && contextToRerun.parent) {
+  while (
+    hasReturneds.has(contextToRerun.body) &&
+    // FIXME: this sucks
+    contextToRerun.parent &&
+    contextToRerun.parent !== rootContext
+  ) {
     contextToRerun = contextToRerun.parent;
     // console.log("escalating rerun up to", contextToRerun.type);
     contextToRerun.shouldUpdate = true;

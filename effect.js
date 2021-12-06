@@ -14,12 +14,13 @@ const createContext = (body, type, key) => {
   };
 };
 
-const rootContext = createContext(() => {}, "rootContext");
+export const rootContext = createContext(() => {}, "rootContext");
 export const stack = [rootContext];
 export const indexStack = [-1];
 
 export const defaultAreDifferent = (a, b) => a === b;
 export const argumentCache = new WeakMap();
+export const hasReturneds = new WeakSet();
 let effectTypeCounter = 0;
 
 const getContext = (type, key) => {
@@ -106,7 +107,7 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
         console.error(error);
       }
 
-      if (!body.hasReturned && context.value !== undefined) body.hasReturned = true;
+      if (context.value !== undefined && !hasReturneds.has(body)) hasReturneds.add(body);
 
       // Destroy children that were not visited on this execution
       const { children } = context;
@@ -129,7 +130,6 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
   };
 
   registerForSsr(body);
-  body.hasReturned = false;
   return body;
 };
 
