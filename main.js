@@ -1,4 +1,4 @@
-import { identifier, isServer } from "./server-side-rendering.js";
+import { registerForSsr, isServer } from "./server-side-rendering.js";
 
 const defaultAreDifferent = (a, b) => a === b;
 const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
@@ -137,7 +137,7 @@ export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreD
     return context.body;
   };
 
-  body[identifier] = true;
+  registerForSsr(body);
   return body;
 };
 
@@ -178,7 +178,7 @@ export const globalState = (initialValue, getSetter, areDifferent = defaultAreDi
     return context.body;
   };
 
-  body[identifier] = true;
+  registerForSsr(body);
   return body;
 };
 
@@ -249,7 +249,7 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
     return context.value;
   };
 
-  body[identifier] = true;
+  registerForSsr(body);
   body.hasReturned = false;
   return body;
 };

@@ -1,5 +1,9 @@
 export const isServer = import.meta?.env?.SSR || typeof window === "undefined";
-export const identifier = "__vuoro_rahti__";
+
+const ssrRegistry = new WeakSet();
+export const isRahti = (what) => ssrRegistry.has(what);
+export const registerForSsr = (what) => ssrRegistry.add(what);
+
 export class ServerElement {
   constructor(tagName) {
     if (!tagName) {
