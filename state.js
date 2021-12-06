@@ -95,12 +95,7 @@ const rerun = (context) => {
 
   // console.log("starting a rerun of", context.type);
 
-  while (
-    hasReturneds.has(contextToRerun.body) &&
-    // FIXME: this sucks
-    contextToRerun.parent &&
-    contextToRerun.parent !== rootContext
-  ) {
+  while (hasReturneds.has(contextToRerun.body) && contextToRerun.parent?.parent) {
     contextToRerun = contextToRerun.parent;
     // console.log("escalating rerun up to", contextToRerun.type);
     contextToRerun.shouldUpdate = true;
