@@ -1,6 +1,6 @@
 import { identifier, isServer } from "./server-side-rendering.js";
 
-const defaultCompare = (a, b) => a === b;
+const defaultAreDifferent = (a, b) => a === b;
 const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
 let later;
 const updateQueue = new Set();
@@ -105,7 +105,7 @@ const addContext = (context) => {
   context.parent = parent;
 };
 
-export const state = (defaultInitialValue, getSetter, compare = defaultCompare) => {
+export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreDifferent) => {
   const body = (initialValue = defaultInitialValue) => {
     let context = getContext(stateType);
 
@@ -114,7 +114,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
 
       const get = () => body[0];
       const set = (newValue) => {
-        if (!compare || !compare(body[0], newValue)) {
+        if (!areDifferent || !areDifferent(body[0], newValue)) {
           if (stack.length > 1) {
             // TODO: this might break on initial execution
             // console.log("========================= setting later", newValue);
@@ -140,7 +140,7 @@ export const state = (defaultInitialValue, getSetter, compare = defaultCompare) 
   return body;
 };
 
-export const globalState = (initialValue, getSetter, compare = defaultCompare) => {
+export const globalState = (initialValue, getSetter, areDifferent = defaultAreDifferent) => {
   const storage = [initialValue];
   const globalParents = new Set();
   storage.globalParents = globalParents;
@@ -150,7 +150,7 @@ export const globalState = (initialValue, getSetter, compare = defaultCompare) =
 
   const get = () => storage[0];
   const set = (newValue) => {
-    if (!compare || !compare(storage[0], newValue)) {
+    if (!areDifferent || !areDifferent(storage[0], newValue)) {
       if (stack.length > 1) {
         // TODO: this might break on initial execution
         // console.log("========================= setting later", newValue);
@@ -181,7 +181,7 @@ export const globalState = (initialValue, getSetter, compare = defaultCompare) =
   return body;
 };
 
-export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => {
+export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey = true) => {
   const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
 
   const body = function () {
@@ -198,7 +198,7 @@ export const effect = (thing, compare = defaultCompare, shouldUseKey = true) => 
     for (let index = 0; index < Math.max(arguments.length, argumentCache.size); index++) {
       const argument = argumentCache.get(index);
       const newArgument = arguments[index];
-      if (context.shouldUpdate || !compare || !compare(argument, newArgument, index)) {
+      if (context.shouldUpdate || !areDifferent || !areDifferent(argument, newArgument, index)) {
         argumentCache.set(index, newArgument);
         if (!context.shouldUpdate) context.shouldUpdate = true;
       }
