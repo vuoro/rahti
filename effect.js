@@ -1,4 +1,4 @@
-import { registerForSsr } from "./server-side-rendering.js";
+import { ssrIdentifier, isServer } from "./server-side-rendering.js";
 
 const createContext = (body, type, key) => {
   // console.log("create", type, key);
@@ -129,7 +129,7 @@ export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => 
     return context.value;
   };
 
-  registerForSsr(body);
+  if (isServer) body[ssrIdentifier] = true;
   return body;
 };
 
