@@ -18,10 +18,10 @@ const updateState = (context, newValue) => {
 
   if (globalParents) {
     for (const parent of globalParents) {
-      rerun(parent, true);
+      rerun(parent);
     }
   } else {
-    rerun(context.parent, true);
+    rerun(context.parent);
   }
 };
 
@@ -48,16 +48,16 @@ let effectTypeCounter = 0;
 const indexStack = [-1];
 const stack = [rootContext];
 
-const rerun = (context, shouldUpdate = false) => {
+const rerun = (context) => {
   let contextToRerun = context;
-  contextToRerun.shouldUpdate = shouldUpdate;
+  contextToRerun.shouldUpdate = true;
 
   // console.log("starting a rerun of", context.type);
 
   while (contextToRerun.body.hasReturned && contextToRerun.parent !== rootContext) {
     contextToRerun = contextToRerun.parent;
     // console.log("escalating rerun up to", contextToRerun.type);
-    contextToRerun.shouldUpdate = shouldUpdate;
+    contextToRerun.shouldUpdate = true;
   }
 
   stack.push(contextToRerun.parent);
