@@ -3,9 +3,9 @@
   "version": "0.1.8",
   "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
-  "main": "main.js",
+  "main": "index.js",
   "exports": {
-    ".": "./main.js"
+    ".": "./index.js"
   },
   "scripts": {
     "start": "npx @web/dev-server --open --watch"
