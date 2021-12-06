@@ -33,6 +33,7 @@ const createContext = (body, type, key) => {
     cleanups: new Set(),
     value: null,
     shouldUpdate: true,
+    parent: null,
     key,
     type,
     body,
@@ -110,7 +111,7 @@ export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreD
     let context = getContext(stateType);
 
     if (!context) {
-      const body = [initialValue];
+      const body = [initialValue, null];
 
       const get = () => body[0];
       const set = (newValue) => {
@@ -141,7 +142,7 @@ export const state = (defaultInitialValue, getSetter, areDifferent = defaultAreD
 };
 
 export const globalState = (initialValue, getSetter, areDifferent = defaultAreDifferent) => {
-  const storage = [initialValue];
+  const storage = [initialValue, null];
   const globalParents = new Set();
   storage.globalParents = globalParents;
 
@@ -239,6 +240,7 @@ export const effect = (thing, areDifferent = defaultAreDifferent, shouldUseKey =
   };
 
   body[identifier] = true;
+  body.hasReturned = false;
   return body;
 };
 
@@ -249,11 +251,12 @@ const destroy = (context) => {
   context.value = null;
   context.argumentCache.clear();
   context.key = null;
+  
+  if (context.type === globalStateAccessorType) {
+    context.body.globalParents.delete(context);
+  }
 
   for (const child of context.children) {
-    if (child.type === globalStateAccessorType) {
-      child.body.globalParents.delete(context);
-    }
     destroy(child);
   }
   context.children.splice(0);
