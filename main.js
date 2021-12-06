@@ -259,7 +259,6 @@ const destroy = (context) => {
   runCleanup(context, true);
   context.parent = null;
   context.value = null;
-  context.argumentCache.clear();
   context.key = null;
 
   if (context.type === globalStateAccessorType) {
