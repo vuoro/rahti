@@ -63,7 +63,8 @@ const addContext = (context) => {
 };
 
 export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => {
-  const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
+  // const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
+  const type = effectTypeCounter++;
 
   const body = function () {
     const key = shouldUseKey ? arguments[0] : undefined;
