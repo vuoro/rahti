@@ -75,7 +75,7 @@ export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => 
       addContext(context);
     }
 
-    if (!context.shouldUpdate || !areSame) {
+    if (!context.shouldUpdate && areSame) {
       const previousArguments = argumentCache.get(context);
       const newLength = arguments.length;
       const previousLength = previousArguments.length;
