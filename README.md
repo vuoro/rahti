@@ -127,7 +127,7 @@ app();
 
 ## Setting state during rendering
 
-Much like in React, you can update State during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed until the next `requestIdleCallback` (or `requestAnimationFrame` if not supported).
+Much like in React, you can update State during "rendering": while an Effect is running. The new value won't take effect or cause re-runs immediately. Instead it will be delayed and set using `requestIdleCallback` (or `requestAnimationFrame` if not supported).
 
 If you use this feature, be careful of infinite loops!
 
@@ -265,6 +265,27 @@ const [count, setCount] = counter();
 setCount(1); // all 10 children will log "1"
 ```
 
+## Idle Effects
+
+If you mark an effect as `idle`, it will not execute immediately. Instead it will execute using `requestIdleCallback` (or `requestAnimationFrame`, if not available). This also means it will always return `undefined`.
+
+This is handy for any expensive work that isn't needed immediately. For example: I use it to generate map tiles in game development, and have it write the result directly to a WebGL texture.
+
+```js
+import { state, effect } from "rahti";
+
+const counter = state(0);
+
+const app = effect(
+  (calledAt) => {
+    console.log(`This ran ${calledAt - Date.now()} ms later`);
+  },
+  { idle: true }
+);
+
+app(Date.now());
+```
+
 ## API
 
 ```js
@@ -306,8 +327,11 @@ const app = effect(
     // can be set to `false` to disable checking
     areSame: (oldValue, newValue) => oldValue === newValue,
     // determines the key of your effect instance
+    // (the real efault is actually a more efficient version of this)
     getKey: (...argumentsYouPassYourEffect) => argumentsYouPassYourEffect[0],
-    // (the default is actually a more efficient version of the above)
+    // if set, this effect always returns `undefined` and is not executed immediately,
+    // but on using requestIdleCallback (or requestAnimationFrame if not supported)
+    idle: false,
   }
 );
 

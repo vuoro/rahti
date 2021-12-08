@@ -5,10 +5,10 @@ import {
   hasReturneds,
   indexStack,
   onCleanup,
-  rootContext,
+  schedule,
   stack,
+  supportsRequestIdleCallback,
 } from "./effect.js";
-import { isServer } from "./server-side-rendering.js";
 
 const values = new WeakMap();
 const nextValues = new WeakMap();
@@ -31,7 +31,7 @@ export const state = (defaultInitialValue, options) => {
               // console.log("========================= setting later", newValue);
               updateQueue.add(context);
               nextValues.set(context, newValue);
-              later = later || schedule(processQueue);
+              later = later || schedule(processQueues);
             } else {
               updateState(context, newValue);
             }
@@ -65,7 +65,7 @@ export const globalState = (defaultInitialValue, options) => {
         // console.log("========================= setting later", newValue);
         globalUpdateQueue.add(globalIdentity);
         nextValues.set(globalIdentity, newValue);
-        later = later || schedule(processQueue);
+        later = later || schedule(processQueues);
       } else {
         for (const context of subscribers) {
           rerun(context);
@@ -122,30 +122,43 @@ const rerun = (context) => {
   }
 };
 
-const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
 let later;
-const updateQueue = new Set();
+export const updateQueue = new Set();
 const globalUpdateQueue = new Set();
 
-const processQueue = () => {
-  for (const context of updateQueue) {
+const processQueues = (deadline) => {
+  const updateIterator = updateQueue.values();
+  const globalUpdateIterator = globalUpdateQueue.values();
+
+  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+    const entry = updateIterator.next();
+    if (entry.done) break;
+
+    const context = entry.value;
     const newValue = nextValues.get(context);
     nextValues.delete(context);
     updateState(context, newValue);
+
+    updateQueue.delete(context);
   }
 
-  for (const globalIdentity of globalUpdateQueue) {
+  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+    const entry = globalUpdateIterator.next();
+    if (entry.done) break;
+
+    const globalIdentity = entry.value;
     values.set(globalIdentity, nextValues.get(globalIdentity));
     nextValues.delete(globalIdentity);
 
     for (const context of globalIdentity.subscribers) {
       rerun(context);
     }
+
+    globalUpdateQueue.delete(globalIdentity);
   }
 
-  later = null;
-  updateQueue.clear();
-  globalUpdateQueue.clear();
+  later = later =
+    updateQueue.size > 0 || globalUpdateQueue.size > 0 ? schedule(processQueues) : null;
 };
 
 const updateState = (context, newValue) => {

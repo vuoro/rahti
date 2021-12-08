@@ -65,12 +65,22 @@
         function listItem(number) {
           const [count, { increment }] = counter(5);
           if (number < 3) globalStateTest();
+
+          const time = (Date.now() - today) / 1000;
+          idler(number, time);
+
           return [
-            li(`${number} last ran at `, (Date.now() - today) / 1000),
+            li(`${number} last ran at `, time),
             button("Rerun", event("click", increment), { type: "button" }),
           ];
         }
         // { getKey: () => {} }
+      );
+
+      const idler = effect(
+        (number, time) =>
+          console.log(`Idler ${number} ran `, (Date.now() - today) / 1000 - time, " s later"),
+        { idle: true }
       );
 
       app(createRoot(document.body));

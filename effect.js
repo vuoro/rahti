@@ -1,6 +1,7 @@
 import { ssrIdentifier, isServer } from "./server-side-rendering.js";
+import { updateQueue } from "./state.js";
 
-const createContext = (body, type, key) => {
+const createContext = (body, code, type, key) => {
   // console.log("create", type, key);
   return {
     children: [],
@@ -11,10 +12,11 @@ const createContext = (body, type, key) => {
     key,
     type,
     body,
+    code,
   };
 };
 
-export const rootContext = createContext(() => {}, "rootContext");
+const rootContext = createContext(() => {}, "rootContext");
 export const stack = [rootContext];
 export const indexStack = [-1];
 
@@ -64,11 +66,12 @@ const addContext = (context) => {
 
 const defaultGetKey = (first) => first;
 
-export const effect = (thing, options) => {
+export const effect = (code, options) => {
   const areSame = options?.areSame || defaultAreSame;
   const getKey = options?.getKey || defaultGetKey;
+  const idle = options?.idle;
 
-  // const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
+  // const type = `${code.name || "anonymous"} (${effectTypeCounter++})`;
   const type = effectTypeCounter++;
 
   const body = function () {
@@ -76,7 +79,7 @@ export const effect = (thing, options) => {
     let context = getContext(type, key);
 
     if (!context) {
-      context = createContext(body, type, key);
+      context = createContext(body, code, type, key);
       addContext(context);
     }
 
@@ -103,33 +106,12 @@ export const effect = (thing, options) => {
 
     if (context.shouldUpdate) {
       context.shouldUpdate = false;
-      stack.push(context);
-      indexStack.push(-1);
 
-      runCleanup(context);
-      try {
-        context.value = thing.apply(null, arguments);
-      } catch (error) {
-        console.error(error);
+      if (idle) {
+        scheduleIdleRun(context);
+      } else {
+        runContext(context, arguments);
       }
-
-      if (context.value !== undefined && !hasReturneds.has(body)) hasReturneds.add(body);
-
-      // Destroy children that were not visited on this execution
-      const { children } = context;
-      const { length } = children;
-      const nextIndex = indexStack[indexStack.length - 1] + 1;
-
-      if (nextIndex < length) {
-        // console.log("Destroying leftover children in ", type, key);
-        for (let index = nextIndex; index < length; index++) {
-          destroy(children[index]);
-        }
-        children.splice(nextIndex);
-      }
-
-      stack.pop();
-      indexStack.pop();
     }
 
     return context.value;
@@ -139,12 +121,49 @@ export const effect = (thing, options) => {
   return body;
 };
 
+const runContext = (context, args, setReturnValue = true) => {
+  const { body, code } = context;
+
+  stack.push(context);
+  indexStack.push(-1);
+
+  try {
+    runCleanup(context);
+    const value = code.apply(null, args);
+    if (setReturnValue) context.value = value;
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (setReturnValue && context.value !== undefined && !hasReturneds.has(body))
+    hasReturneds.add(body);
+
+  // Destroy children that were not visited on this execution
+  const { children } = context;
+  const { length } = children;
+  const nextIndex = indexStack[indexStack.length - 1] + 1;
+
+  if (nextIndex < length) {
+    // console.log("Destroying leftover children in ", type, key);
+    for (let index = nextIndex; index < length; index++) {
+      destroy(children[index]);
+    }
+    children.splice(nextIndex);
+  }
+
+  stack.pop();
+  indexStack.pop();
+};
+
 const destroy = (context) => {
   // console.log("destroying", context.type, context.key);
   runCleanup(context, true);
   context.parent = null;
   context.value = null;
   context.key = null;
+
+  if (idleQueue.has(context)) idleQueue.delete(context);
+  if (updateQueue.has(context)) updateQueue.delete(context);
 
   for (const child of context.children) {
     destroy(child);
@@ -166,4 +185,33 @@ const runCleanup = ({ cleanups }, isFinal = false) => {
 
 export const onCleanup = (cleanup) => {
   stack[stack.length - 1].cleanups.add(cleanup);
+};
+
+export const supportsRequestIdleCallback = window.requestIdleCallback;
+export const schedule = isServer
+  ? () => {}
+  : window.requestIdleCallback || window.requestAnimationFrame;
+
+const idleQueue = new Set();
+let later = null;
+
+const scheduleIdleRun = (context) => {
+  idleQueue.add(context);
+  later = later || schedule(processIdleQueue);
+};
+
+const processIdleQueue = (deadline) => {
+  const idleIterator = idleQueue.values();
+
+  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+    const entry = idleIterator.next();
+    if (entry.done) break;
+
+    const context = entry.value;
+    runContext(context, argumentCache.get(context), false);
+
+    idleQueue.delete(context);
+  }
+
+  later = idleQueue.size > 0 ? schedule(processIdleQueue) : null;
 };
