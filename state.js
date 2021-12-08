@@ -25,7 +25,6 @@ export const state = (defaultInitialValue, getSetter, areSame = defaultAreSame) 
         const set = (newValue) => {
           if (!areSame || !areSame(get(), newValue)) {
             if (stack.length > 1) {
-              // TODO: this might break on initial execution
               // console.log("========================= setting later", newValue);
               updateQueue.add(context);
               nextValues.set(context, newValue);
@@ -57,7 +56,6 @@ export const globalState = (defaultInitialValue, getSetter, areSame = defaultAre
   const set = (newValue) => {
     if (!areSame || !areSame(get(), newValue)) {
       if (stack.length > 1) {
-        // TODO: this might break on initial execution
         // console.log("========================= setting later", newValue);
         globalUpdateQueue.add(globalIdentity);
         nextValues.set(globalIdentity, newValue);
@@ -101,11 +99,21 @@ const rerun = (context) => {
     contextToRerun.shouldUpdate = true;
   }
 
-  stack.push(contextToRerun.parent);
-  indexStack.push(-1);
+  const stackTopIsAlreadyParent = stack[stack.length - 1] === contextToRerun.parent;
+
+  if (!stackTopIsAlreadyParent) {
+    stack.push(contextToRerun.parent);
+    indexStack.push(-1);
+  } else {
+    indexStack[indexStack.length - 1] = -1;
+  }
+
   contextToRerun.body.apply(null, argumentCache.get(contextToRerun));
-  stack.pop();
-  indexStack.pop();
+
+  if (!stackTopIsAlreadyParent) {
+    stack.pop();
+    indexStack.pop();
+  }
 };
 
 const schedule = isServer ? () => {} : window.requestIdleCallback || window.requestAnimationFrame;
