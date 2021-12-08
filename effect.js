@@ -62,12 +62,17 @@ const addContext = (context) => {
   context.parent = parent;
 };
 
-export const effect = (thing, areSame = defaultAreSame, shouldUseKey = true) => {
+const defaultGetKey = (first) => first;
+
+export const effect = (thing, options) => {
+  const areSame = options?.areSame || defaultAreSame;
+  const getKey = options?.getKey || defaultGetKey;
+
   // const type = `${thing.name || "anonymous"} (${effectTypeCounter++})`;
   const type = effectTypeCounter++;
 
   const body = function () {
-    const key = shouldUseKey ? arguments[0] : undefined;
+    const key = getKey ? getKey.apply(this, arguments) : undefined;
     let context = getContext(type, key);
 
     if (!context) {

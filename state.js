@@ -14,7 +14,10 @@ const values = new WeakMap();
 const nextValues = new WeakMap();
 const setters = new WeakMap();
 
-export const state = (defaultInitialValue, getSetter, areSame = defaultAreSame) => {
+export const state = (defaultInitialValue, options) => {
+  const areSame = options?.areSame || defaultAreSame;
+  const getActions = options?.getActions;
+
   const accessor = effect(
     (initialValue = defaultInitialValue) => {
       const context = stack[stack.length - 1];
@@ -35,7 +38,7 @@ export const state = (defaultInitialValue, getSetter, areSame = defaultAreSame) 
           }
         };
 
-        setters.set(context, getSetter ? getSetter(get, set) : set);
+        setters.set(context, getActions ? getActions(get, set) : set);
       }
 
       return [values.get(context), setters.get(context)];
@@ -47,7 +50,10 @@ export const state = (defaultInitialValue, getSetter, areSame = defaultAreSame) 
   return accessor;
 };
 
-export const globalState = (defaultInitialValue, getSetter, areSame = defaultAreSame) => {
+export const globalState = (defaultInitialValue, options) => {
+  const areSame = options?.areSame || defaultAreSame;
+  const getActions = options?.getActions;
+
   const subscribers = new Set();
   const globalIdentity = { subscribers };
   values.set(globalIdentity, defaultInitialValue);
@@ -68,7 +74,7 @@ export const globalState = (defaultInitialValue, getSetter, areSame = defaultAre
     }
   };
 
-  const setter = getSetter ? getSetter(get, set) : set;
+  const setter = getActions ? getActions(get, set) : set;
 
   const accessor = effect(
     () => {

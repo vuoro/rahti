@@ -2,14 +2,14 @@
 
 `npm install @vuoro/rahti`
 
-- Write reactive JS 
+- Write reactive JS
   ```js
-  p("like this.")
+  p("like this.");
   ```
-- Simple [API](#api) 
+- Simple [API](#api)
   ```js
   import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
-  
+  ```
 - Supports any [DOM elements](#rendering-html-and-svg-with-dom-effects):
   ```js
   const { h1, p, nav } = html;
@@ -109,10 +109,12 @@ Also, the default initial value of a State can be set when defining the it: `con
 ```js
 import { state, effect } from "rahti";
 
-const counter = state(0, (get, set) => ({
-  increment: () => set(get() + 1),
-  decrement: () => set(get() - 1),
-}));
+const counter = state(0, {
+  getActions: (get, set) => ({
+    increment: () => set(get() + 1),
+    decrement: () => set(get() - 1),
+  }),
+});
 
 const app = effect(() => {
   const [count, { increment }] = counter(100); // this will start off at `100` instead of `0`
@@ -162,8 +164,7 @@ import { state, effect } from "rahti";
 
 const counter = state(
   0,
-  undefined, // use default setter
-  false // turn off comparisons
+  { areSame: false } // turn off new value equality check
 );
 
 const app = effect(() => {
@@ -177,8 +178,8 @@ const child = effect(
   ({ hello }) => {
     console.log("this should only get logged once");
   },
-  // custom comparison function
-  (oldValue, newValue) => oldValue.hello === newValue.hello
+  // custom argument comparison function
+  { areSame: (oldValue, newValue) => oldValue.hello === newValue.hello }
 );
 
 app();
@@ -186,13 +187,13 @@ app();
 
 ## Keyed Effects
 
-The first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops, keys will help prevent useless re-runs and re-initializations.
+By default, the first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops, keys will help prevent useless re-runs and re-initializations.
 
 If you're familiar with keys in React components, this works the same way. The only difference is that instead of `<YourComponent key="blah"/>`, you do `yourEffect("blah")`.
 
 Also similar to React is that Effects of a different type (like p() and strong()) that share the same key won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
 
-If you want to turn keys off for an effect, set the third argument to false.
+See below for how to customize keys with `getKey`.
 
 ```js
 import { effect, state, createRoot } from "rahti";
@@ -222,14 +223,16 @@ const app = effect((root) => {
 
 const childWithKeys = effect((id) => {
   console.log("This should log 10 times initially, and 0 times after clicking the button");
-});
+},
+// `getKey` receives the same arguments you are passing to your Effect
+{ getKey: (firstArgument) => firstArgument } // use the first argument as key (default)
 
 const childWithoutKeys = effect(
   (id) => {
     console.log("This should log 10 times initially, and 10 times after clicking the button");
   },
   undefined,
-  false // turns off keys
+  { getKey: () => {} } // keys are turned off, because all keys will be the same: `undefined`
 );
 
 app(createRoot(document.body));
@@ -270,12 +273,14 @@ import { state, globalState, effect, onCleanup, html, svg, event, createRoot } f
 const counter = state(
   // the default initial value
   0,
-  // whatever this function returns replaces the "setState": [value, THIS_HERE]
-  (get, set) => set,
-  // comparison function used when a new value is set,
-  // to determine if the new value should take effect and Effects should re-run
-  // can be set to `false` to disable checking
-  (oldValue, newValue) => oldValue === newValue
+  {
+    // whatever this function returns replaces the "setState": [value, THIS_HERE]
+    getActions: (get, set) => set,
+    // comparison function used when a new value is set,
+    // to determine if the new value should take effect and Effects should re-run
+    // can be set to `false` to disable checking
+    areSame: (oldValue, newValue) => oldValue === newValue,
+  }
 );
 
 const globalCounter = globalState(0); // same API as above
@@ -295,12 +300,15 @@ const app = effect(
       console.log(isFinal ? "Bye world" : "Still here!");
     });
   },
-  // comparison function used to check if previous and new arguments match
-  // if they match, your function will not re-run and the effect will return its previous value
-  // can be set to `false` to disable checking
-  (oldValue, newValue) => oldValue === newValue,
-  // this determines if the effect should use its first argument as a key
-  true
+  {
+    // comparison function used to check if previous and new arguments match
+    // if they match, your function will not re-run and the effect will return its previous value
+    // can be set to `false` to disable checking
+    areSame: (oldValue, newValue) => oldValue === newValue,
+    // determines the key of your effect instance
+    getKey: (...argumentsYouPassYourEffect) => argumentsYouPassYourEffect[0],
+    // (the default is actually a more efficient version of the above)
+  }
 );
 
 // these are proxies, so you can destructure any DOM Effect you want out of them
@@ -333,6 +341,10 @@ Rahti has a custom renderer for [Astro](https://astro.build): https://github.com
 2. Add the renderer to your Astro project configuration. At the time of writing you need to add a file named `astro.config.mjs` to the root of your project, with the contents: `export default { renderers: ['@vuoro/astro-renderer-rahti'] };`. For details about configuring Astro, see <https://docs.astro.build>.
 3. Now you should be able to mount any Effect in Astro as a Component. `<YourEffect someProp={"someValue"}>blah</YourEffect>` should call your Effect like this: `YourEffect(root, {someProp: "someValue"}, ["blah"])`.
 4. Your effect should use the provided `root` for any DOM Effects, and also pass the provided `children` array to it: `const YourEffect = effect((root, props, children) => { root(p("Hello world"), children) })`.
+
+## WebGL 2 Effects
+
+Since I'm using this library to develop games, I'm also building a set of Effects for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
 
 ## Inspirations
 

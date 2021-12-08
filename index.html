@@ -52,21 +52,26 @@
       const container = state();
       const today = Date.now();
 
-      const counter = state(0, (get, set) => ({
-        increment: () => set(get() + 1),
-        decrement: () => set(get() - 1),
-      }));
+      const counter = state(0, {
+        getActions: (get, set) => ({
+          increment: () => set(get() + 1),
+          decrement: () => set(get() - 1),
+        }),
+      });
 
       const globalStateTest = globalState(false);
 
-      const listItem = effect(function listItem(number) {
-        const [count, { increment }] = counter(5);
-        if (number < 3) globalStateTest();
-        return [
-          li(`${number} last ran at `, (Date.now() - today) / 1000),
-          button("Rerun", event("click", increment), { type: "button" }),
-        ];
-      });
+      const listItem = effect(
+        function listItem(number) {
+          const [count, { increment }] = counter(5);
+          if (number < 3) globalStateTest();
+          return [
+            li(`${number} last ran at `, (Date.now() - today) / 1000),
+            button("Rerun", event("click", increment), { type: "button" }),
+          ];
+        }
+        // { getKey: () => {} }
+      );
 
       app(createRoot(document.body));
 

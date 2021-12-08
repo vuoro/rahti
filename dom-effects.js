@@ -116,25 +116,27 @@ const htmlAttributes = effect(
       }
     }
   },
-  (a, b) => {
-    if (typeof a !== typeof b) return false;
+  {
+    areSame: (a, b) => {
+      if (typeof a !== typeof b) return false;
 
-    if (typeof a === "object" && !(Symbol.iterator in a)) {
-      // Shallow-compare attributes
-      for (const key in a) {
-        if (!(key in b) || a[key] !== b[key]) {
-          return false;
+      if (typeof a === "object" && !(Symbol.iterator in a)) {
+        // Shallow-compare attributes
+        for (const key in a) {
+          if (!(key in b) || a[key] !== b[key]) {
+            return false;
+          }
         }
-      }
-      for (const key in b) {
-        if (!(key in a) || a[key] !== b[key]) {
-          return false;
+        for (const key in b) {
+          if (!(key in a) || a[key] !== b[key]) {
+            return false;
+          }
         }
+        return true;
       }
-      return true;
-    }
 
-    return a === b;
+      return a === b;
+    },
   }
 );
 const htmlEventHandler = effect(function htmlEventHandler(
