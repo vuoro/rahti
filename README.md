@@ -214,8 +214,9 @@ const dataStorage = state(
 const app = effect((root) => {
   const [data, sortData] = dataStorage();
 
-  for (const {} of data) {
+  for (const {id} of data) {
     childWithKeys(id);
+    childWithoutKeys(id);
   }
 
   root(button("Sort", event("click", sortData)));
@@ -278,7 +279,7 @@ const counter = state(0);
 
 const app = effect(
   (calledAt) => {
-    console.log(`This ran ${calledAt - Date.now()} ms later`);
+    console.log(`This ran ${Date.now() - calledAt} ms later`);
   },
   { idle: true }
 );
@@ -329,8 +330,8 @@ const app = effect(
     // determines the key of your effect instance
     // (the real efault is actually a more efficient version of this)
     getKey: (...argumentsYouPassYourEffect) => argumentsYouPassYourEffect[0],
-    // if set, this effect always returns `undefined` and is not executed immediately,
-    // but on using requestIdleCallback (or requestAnimationFrame if not supported)
+    // if set, this effect always returns `undefined` and is executed later,
+    // using requestIdleCallback (or requestAnimationFrame if not supported)
     idle: false,
   }
 );
