@@ -5,6 +5,7 @@ import {
   hasReturneds,
   indexStack,
   onCleanup,
+  rerun,
   schedule,
   stack,
   supportsRequestIdleCallback,
@@ -91,35 +92,6 @@ export const globalState = (defaultInitialValue, options) => {
   );
 
   return accessor;
-};
-
-const rerun = (context) => {
-  let contextToRerun = context;
-  contextToRerun.shouldUpdate = true;
-
-  // console.log("starting a rerun of", context.type);
-
-  while (hasReturneds.has(contextToRerun.body) && contextToRerun.parent?.parent) {
-    contextToRerun = contextToRerun.parent;
-    // console.log("escalating rerun up to", contextToRerun.type);
-    contextToRerun.shouldUpdate = true;
-  }
-
-  const stackTopIsAlreadyParent = stack[stack.length - 1] === contextToRerun.parent;
-
-  if (!stackTopIsAlreadyParent) {
-    stack.push(contextToRerun.parent);
-    indexStack.push(-1);
-  } else {
-    indexStack[indexStack.length - 1] = -1;
-  }
-
-  contextToRerun.body.apply(null, argumentCache.get(contextToRerun));
-
-  if (!stackTopIsAlreadyParent) {
-    stack.pop();
-    indexStack.pop();
-  }
 };
 
 let later;

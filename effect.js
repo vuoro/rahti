@@ -1,7 +1,7 @@
 import { ssrIdentifier, isServer } from "./server-side-rendering.js";
 import { updateQueue } from "./state.js";
 
-const createContext = (body, code, type, key) => {
+const createContext = (body, code, type, key, idle) => {
   // console.log("create", type, key);
   return {
     children: [],
@@ -13,6 +13,7 @@ const createContext = (body, code, type, key) => {
     type,
     body,
     code,
+    idle,
   };
 };
 
@@ -79,7 +80,7 @@ export const effect = (code, options) => {
     let context = getContext(type, key);
 
     if (!context) {
-      context = createContext(body, code, type, key);
+      context = createContext(body, code, type, key, idle);
       addContext(context);
     }
 
@@ -110,7 +111,7 @@ export const effect = (code, options) => {
       if (idle) {
         scheduleIdleRun(context);
       } else {
-        runContext(context, arguments);
+        runContext(context, arguments, true);
       }
     }
 
@@ -121,7 +122,7 @@ export const effect = (code, options) => {
   return body;
 };
 
-const runContext = (context, args, setReturnValue = true) => {
+const runContext = (context, args = argumentCache.get(context), setReturnValue = true) => {
   const { body, code } = context;
 
   stack.push(context);
@@ -208,10 +209,29 @@ const processIdleQueue = (deadline) => {
     if (entry.done) break;
 
     const context = entry.value;
-    runContext(context, argumentCache.get(context), false);
+    runContext(context, undefined, false);
 
     idleQueue.delete(context);
   }
 
   later = idleQueue.size > 0 ? schedule(processIdleQueue) : null;
+};
+
+export const rerun = (context) => {
+  let contextToRerun = context;
+  contextToRerun.shouldUpdate = true;
+
+  // console.log("starting a rerun of", context.type);
+
+  while (hasReturneds.has(contextToRerun.body) && contextToRerun.parent?.parent) {
+    contextToRerun = contextToRerun.parent;
+    // console.log("escalating rerun up to", contextToRerun.type);
+    contextToRerun.shouldUpdate = true;
+  }
+
+  if (contextToRerun.idle) {
+    scheduleIdleRun(contextToRerun);
+  } else {
+    runContext(contextToRerun);
+  }
 };
