@@ -44,14 +44,14 @@ const processTagEffectArgument = (argument, element) => {
   ) {
     communalSet.add(argument);
     return true;
-  } else if (type === "object" && Symbol.iterator in argument) {
+  } else if (type === "object" && argument && Symbol.iterator in argument) {
     let hasChildren = false;
     for (const what of argument) {
       const result = processTagEffectArgument(what, element);
       hasChildren = hasChildren || !!result;
     }
     return hasChildren;
-  } else if (type === "object" && !(Symbol.iterator in argument)) {
+  } else if (type === "object" && argument && !(Symbol.iterator in argument)) {
     if (argument[eventKey]) {
       htmlEventHandler(element, argument);
     } else {
