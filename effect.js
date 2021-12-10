@@ -1,3 +1,4 @@
+import { schedule } from "./scheduler.js";
 import { ssrIdentifier, isServer } from "./server-side-rendering.js";
 import { updateQueue } from "./state.js";
 
@@ -188,11 +189,6 @@ export const onCleanup = (cleanup) => {
   stack[stack.length - 1].cleanups.add(cleanup);
 };
 
-export const supportsRequestIdleCallback = window.requestIdleCallback;
-export const schedule = isServer
-  ? () => {}
-  : window.requestIdleCallback || window.requestAnimationFrame;
-
 const idleQueue = new Set();
 let later = null;
 
@@ -204,7 +200,7 @@ const scheduleIdleRun = (context) => {
 const processIdleQueue = (deadline) => {
   const idleIterator = idleQueue.values();
 
-  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+  while (deadline.timeRemaining() > 0 || deadline.didTimeout) {
     const entry = idleIterator.next();
     if (entry.done) break;
 

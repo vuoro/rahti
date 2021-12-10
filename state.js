@@ -1,15 +1,5 @@
-import {
-  argumentCache,
-  defaultAreSame,
-  effect,
-  hasReturneds,
-  indexStack,
-  onCleanup,
-  rerun,
-  schedule,
-  stack,
-  supportsRequestIdleCallback,
-} from "./effect.js";
+import { defaultAreSame, effect, onCleanup, rerun, stack } from "./effect.js";
+import { schedule } from "./scheduler.js";
 
 const values = new WeakMap();
 const nextValues = new WeakMap();
@@ -102,7 +92,7 @@ const processQueues = (deadline) => {
   const updateIterator = updateQueue.values();
   const globalUpdateIterator = globalUpdateQueue.values();
 
-  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+  while (deadline.timeRemaining() > 0 || deadline.didTimeout) {
     const entry = updateIterator.next();
     if (entry.done) break;
 
@@ -114,7 +104,7 @@ const processQueues = (deadline) => {
     updateQueue.delete(context);
   }
 
-  while (!supportsRequestIdleCallback || deadline.timeRemaining() > 0 || deadline.didTimeout) {
+  while (deadline.timeRemaining() > 0 || deadline.didTimeout) {
     const entry = globalUpdateIterator.next();
     if (entry.done) break;
 
