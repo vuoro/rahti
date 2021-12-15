@@ -205,9 +205,8 @@ const processIdleQueue = (deadline) => {
     if (entry.done) break;
 
     const context = entry.value;
-    runContext(context, undefined, false);
-
     idleQueue.delete(context);
+    runContext(context, undefined, false);
   }
 
   later = idleQueue.size > 0 ? schedule(processIdleQueue) : null;

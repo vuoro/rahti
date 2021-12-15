@@ -97,11 +97,11 @@ const processQueues = (deadline) => {
     if (entry.done) break;
 
     const context = entry.value;
+    updateQueue.delete(context);
+
     const newValue = nextValues.get(context);
     nextValues.delete(context);
     updateState(context, newValue);
-
-    updateQueue.delete(context);
   }
 
   while (deadline.timeRemaining() > 0 || deadline.didTimeout) {
@@ -109,14 +109,15 @@ const processQueues = (deadline) => {
     if (entry.done) break;
 
     const globalIdentity = entry.value;
-    values.set(globalIdentity, nextValues.get(globalIdentity));
+    globalUpdateQueue.delete(globalIdentity);
+
+    const value = nextValues.get(globalIdentity);
     nextValues.delete(globalIdentity);
+    values.set(globalIdentity, value);
 
     for (const context of globalIdentity.subscribers) {
       rerun(context);
     }
-
-    globalUpdateQueue.delete(globalIdentity);
   }
 
   later = later =

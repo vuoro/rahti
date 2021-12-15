@@ -30,8 +30,8 @@ const fallbackScheduler = (now) => {
   startedAt = now;
 
   for (const item of fallbackSchedule) {
-    item(deadline);
     fallbackSchedule.delete(item);
+    item(deadline);
     if (timeRemaining() <= 0) break;
   }
 
