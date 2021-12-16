@@ -63,16 +63,19 @@ export class ServerElement {
 
       if (this.style.cssText) result += ` style="${this.style.cssText}"`;
 
-      result += `>`;
-    }
+      let childHtml = "";
+      for (const child of this.children) {
+        if (result.isServerElement || typeof result === "string" || typeof result === "number") {
+          childHtml += child;
+        }
+      }
 
-    for (const child of this.children) {
-      if (result.isServerElement || typeof result === "string" || typeof result === "number") {
-        result += child;
+      if (childHtml) {
+        result += `>${childHtml}</${this.tagName}>`;
+      } else {
+        result += "/>";
       }
     }
-
-    if (!this.isFragment) result += `</${this.tagName}>`;
 
     return result;
   }
