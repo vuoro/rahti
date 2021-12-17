@@ -1,7 +1,7 @@
 import { effect, onCleanup } from "./effect.js";
 import { isServer, ServerElement } from "./server-side-rendering.js";
 
-const eventKey = "__vuoro_event__";
+const eventKey = "_v_rahti_e_";
 const htmlCache = new Map();
 const communalFragment = isServer ? new ServerElement() : new DocumentFragment();
 const communalSet = new Set();

@@ -187,16 +187,14 @@ app();
 
 ## Keyed Effects
 
-By default, the first argument passed to an Effect is used as its key. This key is used to find the Effect when its parent Effect gets re-run. If you use Effects inside conditionals or loops, keys will help prevent useless re-runs and re-initializations.
+You can pass any Effect a `key("blah")` as its first argument. It will be removed from your Effect's arguments before execution, and instead be used to help find the Effect whenever its parent Effect gets re-run. If you use Effects inside conditionals or loops, keys will help prevent useless re-runs and re-initializations.
 
-If you're familiar with keys in React components, this works the same way. The only difference is that instead of `<YourComponent key="blah"/>`, you do `yourEffect("blah")`.
+If you're familiar with keys in React components, these work the same way. The only difference is that instead of `<YourComponent key="blah"/>`, you do `yourEffect(key("blah"))`.
 
-Also similar to React is that Effects of a different type (like p() and strong()) that share the same key won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
-
-See below for how to customize keys with `getKey`.
+Also similar to React is that Effects of a different type that share the same key (like p(key(1)) and strong(key(1))) won't get confused together. Keys are also scoped to the current parent Effect, so you can't use them to "re-parent" an Effect.
 
 ```js
-import { effect, state, createRoot } from "rahti";
+import { effect, state, key, createRoot } from "rahti";
 
 const data = [];
 for (let index = 0; index < 10; index++) {
@@ -214,8 +212,8 @@ const dataStorage = state(
 const app = effect((root) => {
   const [data, sortData] = dataStorage();
 
-  for (const {id} of data) {
-    childWithKeys(id);
+  for (const { id } of data) {
+    childWithKeys(key(id), id);
     childWithoutKeys(id);
   }
 
@@ -224,17 +222,11 @@ const app = effect((root) => {
 
 const childWithKeys = effect((id) => {
   console.log("This should log 10 times initially, and 0 times after clicking the button");
-},
-// `getKey` receives the same arguments you are passing to your Effect
-{ getKey: (firstArgument) => firstArgument } // use the first argument as key (default)
+});
 
-const childWithoutKeys = effect(
-  (id) => {
-    console.log("This should log 10 times initially, and 10 times after clicking the button");
-  },
-  undefined,
-  { getKey: () => {} } // keys are turned off, because all keys will be the same: `undefined`
-);
+const childWithoutKeys = effect((id) => {
+  console.log("This should log 10 times initially, and 10 times after clicking the button");
+});
 
 app(createRoot(document.body));
 ```
@@ -290,7 +282,7 @@ app(Date.now());
 ## API
 
 ```js
-import { state, globalState, effect, onCleanup, html, svg, event, createRoot } from "rahti";
+import { state, globalState, effect, key, onCleanup, html, svg, event, createRoot } from "rahti";
 
 const counter = state(
   // the default initial value
@@ -327,20 +319,24 @@ const app = effect(
     // if they match, your function will not re-run and the effect will return its previous value
     // can be set to `false` to disable checking
     areSame: (oldValue, newValue) => oldValue === newValue,
-    // determines the key of your effect instance
-    // (the real efault is actually a more efficient version of this)
-    getKey: (...argumentsYouPassYourEffect) => argumentsYouPassYourEffect[0],
     // if set, this effect always returns `undefined` and is executed later,
     // using requestIdleCallback (or requestAnimationFrame if not supported)
     idle: false,
   }
 );
 
+app();
+
+// Any Wffect accepts a `key()` as its argument to help identify it.
+// The key is removed before executing the Effect.
+const KeyedTest = effect((noKeyHere) => console.log("First argument:", noKeyHere));
+KeyedTest(key("blah"));
+
 // these are proxies, so you can destructure any DOM Effect you want out of them
 const { h1, p, button, "my-web-component": myWebComponent } = html;
 const { svg: svgRoot, rect } = svg;
 
-// this creates a DOM Effect out of an element of your choosing
+// this creates a root DOM Effect out of an element of your choosing
 const root = createRoot(document.getElementById("root"));
 
 // DOM Effects accept strings, numbers, attributes as objects, event Effects, and other DOM Effects

@@ -11,6 +11,7 @@
         onCleanup,
         event,
         createRoot,
+        key,
       } from "./index.js";
       const { h1, button, p, ul, li, strong, div, header } = html;
 
@@ -20,7 +21,7 @@
 
         const numbers = [];
         for (let index = 0; index < count; index++) {
-          if (deleted !== index) numbers.push(listItem(index + 1));
+          if (deleted !== index) numbers.push(listItem(key(index + 1), index + 1));
         }
 
         root(
@@ -83,10 +84,12 @@
         { idle: true }
       );
 
-      app(createRoot(document.body));
+      const root = createRoot(document.body);
+
+      app(root);
 
       const [, setTest] = globalStateTest();
-      setInterval(() => setTest(Date.now()), 2000);
+      // setInterval(() => setTest(Date.now()), 2000);
     </script>
   </body>
 </html>

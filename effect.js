@@ -3,7 +3,7 @@ import { ssrIdentifier, isServer } from "./server-side-rendering.js";
 import { updateQueue } from "./state.js";
 
 const createContext = (body, code, type, key, idle) => {
-  // console.log("create", type, key);
+  console.log("create", type, key);
   return {
     children: [],
     cleanups: new Set(),
@@ -39,14 +39,14 @@ const getContext = (type, key) => {
 
   if (currentChild && currentChild.type === type && currentChild.key === key) {
     // If the current child looks like this one, use it
-    // console.log("found here", `${type}:${key} at ${indexStack}`);
+    console.log("found here", `${type}:${key} at ${indexStack}`);
     context = currentChild;
   } else {
     // Try to find the next matching child
     for (let index = currentIndex + 1, { length } = children; index < length; index++) {
       const child = children[index];
       if (child.type === type && child.key === key) {
-        // console.log("found later at", index, `${type}:${key} at ${indexStack}`);
+        console.log("found later at", index, `${type}:${key} at ${indexStack}`);
         context = child;
         // Move it into its new place
         children.splice(index, 1);
@@ -66,19 +66,20 @@ const addContext = (context) => {
   context.parent = parent;
 };
 
-const defaultGetKey = (first) => first;
-
 export const effect = (code, options) => {
   const areSame = options?.areSame || defaultAreSame;
-  const getKey = options?.getKey || defaultGetKey;
   const idle = options?.idle;
 
   // const type = `${code.name || "anonymous"} (${effectTypeCounter++})`;
   const type = effectTypeCounter++;
 
   const body = function () {
-    const key = getKey ? getKey.apply(this, arguments) : undefined;
+    const key = arguments[0]?.[keyKey];
     let context = getContext(type, key);
+
+    const hasKey = key !== undefined;
+    const args = hasKey ? [...arguments] : arguments;
+    if (hasKey) args.shift();
 
     if (!context) {
       context = createContext(body, code, type, key, idle);
@@ -87,15 +88,15 @@ export const effect = (code, options) => {
 
     if (!context.shouldUpdate && areSame) {
       const previousArguments = argumentCache.get(context);
-      const newLength = arguments.length;
+      const newLength = args.length;
       const previousLength = previousArguments.length;
 
       if (newLength !== previousLength) {
         context.shouldUpdate = true;
       } else {
-        for (let index = 0; index < arguments.length; index++) {
+        for (let index = 0; index < args.length; index++) {
           const previousArgument = previousArguments[index];
-          const newArgument = arguments[index];
+          const newArgument = args[index];
           if (!areSame(newArgument, previousArgument)) {
             context.shouldUpdate = true;
             break;
@@ -104,7 +105,7 @@ export const effect = (code, options) => {
       }
     }
 
-    argumentCache.set(context, arguments);
+    argumentCache.set(context, args);
 
     if (context.shouldUpdate) {
       context.shouldUpdate = false;
@@ -112,7 +113,7 @@ export const effect = (code, options) => {
       if (idle) {
         scheduleIdleRun(context);
       } else {
-        runContext(context, arguments, true);
+        runContext(context, args, true);
       }
     }
 
@@ -230,3 +231,8 @@ export const rerun = (context) => {
     runContext(contextToRerun);
   }
 };
+
+const keyKey = "_v_rahti_k_";
+export const key = effect(function key(key) {
+  return { [keyKey]: key };
+});
