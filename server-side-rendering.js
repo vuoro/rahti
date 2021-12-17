@@ -53,7 +53,16 @@ export class ServerElement {
   toString() {
     let result = "";
 
-    if (!this.isFragment) {
+    let childHtml = "";
+    for (const child of this.children) {
+      if (result.isServerElement || typeof result === "string" || typeof result === "number") {
+        childHtml += child;
+      }
+    }
+
+    if (this.isFragment) {
+      result += childHtml;
+    } else {
       result += `<${this.tagName}`;
 
       for (const [key, value] of this.attributes) {
@@ -62,13 +71,6 @@ export class ServerElement {
       }
 
       if (this.style.cssText) result += ` style="${this.style.cssText}"`;
-
-      let childHtml = "";
-      for (const child of this.children) {
-        if (result.isServerElement || typeof result === "string" || typeof result === "number") {
-          childHtml += child;
-        }
-      }
 
       if (childHtml) {
         result += `>${childHtml}</${this.tagName}>`;
