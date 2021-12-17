@@ -3,7 +3,7 @@ import { ssrIdentifier, isServer } from "./server-side-rendering.js";
 import { updateQueue } from "./state.js";
 
 const createContext = (body, code, type, key, idle) => {
-  console.log("create", type, key);
+  // console.log("create", type, key);
   return {
     children: [],
     cleanups: new Set(),
@@ -39,14 +39,14 @@ const getContext = (type, key) => {
 
   if (currentChild && currentChild.type === type && currentChild.key === key) {
     // If the current child looks like this one, use it
-    console.log("found here", `${type}:${key} at ${indexStack}`);
+    // console.log("found here", `${type}:${key} at ${indexStack}`);
     context = currentChild;
   } else {
     // Try to find the next matching child
     for (let index = currentIndex + 1, { length } = children; index < length; index++) {
       const child = children[index];
       if (child.type === type && child.key === key) {
-        console.log("found later at", index, `${type}:${key} at ${indexStack}`);
+        // console.log("found later at", index, `${type}:${key} at ${indexStack}`);
         context = child;
         // Move it into its new place
         children.splice(index, 1);
