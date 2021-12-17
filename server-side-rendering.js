@@ -63,6 +63,8 @@ export class ServerElement {
     if (this.isFragment) {
       result += childHtml;
     } else {
+      const canSelfClose = selfClosers.has(this.tagName);
+
       result += `<${this.tagName}`;
 
       for (const [key, value] of this.attributes) {
@@ -72,7 +74,7 @@ export class ServerElement {
 
       if (this.style.cssText) result += ` style="${this.style.cssText}"`;
 
-      if (childHtml) {
+      if (!canSelfClose) {
         result += `>${childHtml}</${this.tagName}>`;
       } else {
         result += "/>";
@@ -82,3 +84,20 @@ export class ServerElement {
     return result;
   }
 }
+
+const selfClosers = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
