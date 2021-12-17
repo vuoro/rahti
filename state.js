@@ -9,34 +9,30 @@ export const state = (defaultInitialValue, options) => {
   const areSame = options?.areSame || defaultAreSame;
   const getActions = options?.getActions;
 
-  const accessor = effect(
-    (initialValue = defaultInitialValue) => {
-      const context = stack[stack.length - 1];
+  const accessor = effect((initialValue = defaultInitialValue) => {
+    const context = stack[stack.length - 1];
 
-      if (!values.has(context)) values.set(context, initialValue);
-      if (!setters.has(context)) {
-        const get = () => values.get(context);
-        const set = (newValue) => {
-          if (!areSame || !areSame(get(), newValue)) {
-            if (stack.length > 1) {
-              // console.log("========================= setting later", newValue);
-              updateQueue.add(context);
-              nextValues.set(context, newValue);
-              later = later || schedule(processQueues);
-            } else {
-              updateState(context, newValue);
-            }
+    if (!values.has(context)) values.set(context, initialValue);
+    if (!setters.has(context)) {
+      const get = () => values.get(context);
+      const set = (newValue) => {
+        if (!areSame || !areSame(get(), newValue)) {
+          if (stack.length > 1) {
+            // console.log("========================= setting later", newValue);
+            updateQueue.add(context);
+            nextValues.set(context, newValue);
+            later = later || schedule(processQueues);
+          } else {
+            updateState(context, newValue);
           }
-        };
+        }
+      };
 
-        setters.set(context, getActions ? getActions(get, set) : set);
-      }
+      setters.set(context, getActions ? getActions(get, set) : set);
+    }
 
-      return [values.get(context), setters.get(context)];
-    },
-    undefined,
-    false
-  );
+    return [values.get(context), setters.get(context)];
+  });
 
   return accessor;
 };
@@ -58,6 +54,7 @@ export const globalState = (defaultInitialValue, options) => {
         nextValues.set(globalIdentity, newValue);
         later = later || schedule(processQueues);
       } else {
+        values.set(globalIdentity, newValue);
         for (const context of subscribers) {
           rerun(context);
         }
@@ -67,19 +64,15 @@ export const globalState = (defaultInitialValue, options) => {
 
   const setter = getActions ? getActions(get, set) : set;
 
-  const accessor = effect(
-    () => {
-      const context = stack[stack.length - 1];
-      subscribers.add(context);
-      onCleanup((isFinal) => {
-        if (isFinal) subscribers.delete(context);
-      });
+  const accessor = effect(() => {
+    const context = stack[stack.length - 1];
+    subscribers.add(context);
+    onCleanup((isFinal) => {
+      if (isFinal) subscribers.delete(context);
+    });
 
-      return [values.get(globalIdentity), setter];
-    },
-    undefined,
-    false
-  );
+    return [values.get(globalIdentity), setter];
+  });
 
   return accessor;
 };

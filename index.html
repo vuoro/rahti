@@ -62,21 +62,18 @@
 
       const globalStateTest = globalState(false);
 
-      const listItem = effect(
-        function listItem(number) {
-          const [count, { increment }] = counter(5);
-          if (number < 3) globalStateTest();
+      const listItem = effect(function listItem(number) {
+        const [count, { increment }] = counter(5);
+        if (number < 3) globalStateTest();
 
-          const time = (Date.now() - today) / 1000;
-          idler(number, time);
+        const time = (Date.now() - today) / 1000;
+        idler(number, time);
 
-          return [
-            li(`${number} last ran at `, time),
-            button("Rerun", event("click", increment), { type: "button" }),
-          ];
-        }
-        // { getKey: () => {} }
-      );
+        return [
+          li(`${number} last ran at `, time),
+          button("Rerun", event("click", increment), { type: "button" }),
+        ];
+      });
 
       const idler = effect(
         (number, time) =>
@@ -89,7 +86,7 @@
       app(root);
 
       const [, setTest] = globalStateTest();
-      // setInterval(() => setTest(Date.now()), 2000);
+      setInterval(() => setTest(Date.now()), 2000);
     </script>
   </body>
 </html>
