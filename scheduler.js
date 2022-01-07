@@ -15,7 +15,7 @@ export const unschedule = isServer
 let fallbackFrame = null;
 const fallbackSchedule = new Set();
 
-let timeAllowance = 8;
+let timeAllowance = 12;
 export const setTimeAllowance = (amount) => (timeAllowance = amount);
 
 const deadline = {
