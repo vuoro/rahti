@@ -6,6 +6,7 @@ const keys = new WeakMap();
 const codes = new WeakMap();
 const pendings = new WeakSet();
 const argumentCache = new WeakMap();
+const valueCache = new WeakMap();
 
 export const root = (code, key) => {
   const component = createComponent(code, rootComponent, key);
@@ -40,31 +41,56 @@ const createComponent = (code, parent, key) => {
 
   // Create `this(code)()`
   const applyComponent = function () {
-    console.log("+++ start of", code.name);
-
-    const cleaner = cleanupResolvers.get(component);
-    if (cleaner) {
-      console.log("running cleanup for", codes.get(component).name);
-      cleaner(false);
+    let needsUpdate = needsUpdates.has(component);
+    if (!needsUpdate) {
+      const previousArguments = argumentCache.get(component);
+      if (previousArguments.length !== arguments.length) {
+        needsUpdate = true;
+      } else {
+        for (let index = 0; index < arguments.length; index++) {
+          const previousArgument = previousArguments[index];
+          const newArgument = arguments[index];
+          if (newArgument !== previousArgument) {
+            needsUpdate = true;
+            break;
+          }
+        }
+      }
     }
 
     argumentCache.set(component, arguments);
-    let result;
-    try {
-      result = code.apply(component, arguments);
-    } catch (error) {
-      reportError(error);
+
+    if (needsUpdate) {
+      console.log("+++ start of", code.name);
+      const cleaner = cleanupResolvers.get(component);
+      if (cleaner) {
+        console.log("running cleanup for", codes.get(component).name);
+        cleaner(false);
+      }
+
+      let result;
+      try {
+        result = code.apply(component, arguments);
+      } catch (error) {
+        reportError(error);
+      }
+
+      if (result !== undefined && !mightReturns.has(code)) {
+        mightReturns.add(code);
+      }
+
+      const promise = Promise.resolve(result);
+      pendings.add(promise);
+      promise.catch(reportError).finally(handleEndOfComponent);
+
+      valueCache.set(component, result);
+      needsUpdates.delete(component);
+
+      return result;
+    } else {
+      console.log("!!! skipping update for", code.name);
+      return valueCache.get(component);
     }
-
-    if (result !== undefined) {
-      mightReturns.add(code);
-    }
-
-    const promise = Promise.resolve(result);
-    pendings.add(promise);
-    promise.catch(reportError).finally(handleEndOfComponent);
-
-    return result;
   };
   appliers.set(component, applyComponent);
 
@@ -108,6 +134,8 @@ const createComponent = (code, parent, key) => {
   codes.set(component, code);
 
   console.log("created", code.name, "in", codes.get(parent).name, "at", currentIndexes.get(parent));
+
+  needsUpdates.add(component);
 
   return component;
 };
@@ -197,7 +225,7 @@ export const update = (component) => {
   }
 
   if (current !== component) console.log("escalated update up to", codes.get(current).name);
-
+  needsUpdates.add(current);
   updateQueue.add(current);
   queueMicrotask(runUpdateQueue);
 };
