@@ -13,6 +13,7 @@
         // createRoot,
         // key,
         root,
+        idle,
       } from "./index.js";
 
       const app = function () {
@@ -21,7 +22,8 @@
         }
       };
 
-      const logger = function () {
+      const logger = async function () {
+        await idle();
         if (Math.random() < 0.1) throw new Error();
       };
 
