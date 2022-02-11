@@ -5,14 +5,15 @@ const appliers = new WeakMap();
 const keys = new WeakMap();
 const codes = new WeakMap();
 const pendings = new WeakSet();
+const argumentCache = new WeakMap();
 
 export const root = (code, key) => {
-  const component = createComponent(code, rootObject, key);
+  const component = createComponent(code, rootComponent, key);
   return appliers.get(component);
 };
 
-const rootObject = {};
-codes.set(rootObject, root);
+const rootComponent = {};
+codes.set(rootComponent, root);
 
 const reportError = window.reportError || console.error;
 
@@ -47,6 +48,7 @@ const createComponent = (code, parent, key) => {
       cleaner(false);
     }
 
+    argumentCache.set(component, arguments);
     let result;
     try {
       result = code.apply(component, arguments);
@@ -54,10 +56,14 @@ const createComponent = (code, parent, key) => {
       reportError(error);
     }
 
+    if (result !== undefined) {
+      mightReturns.add(code);
+    }
+
     const promise = Promise.resolve(result);
     pendings.add(promise);
+    promise.catch(reportError).finally(handleEndOfComponent);
 
-    Promise.resolve(result).finally(handleEndOfComponent);
     return result;
   };
   appliers.set(component, applyComponent);
@@ -173,3 +179,58 @@ export const cleanup = (component) => {
   return promise;
 };
 export const cleanUp = cleanup;
+
+const needsUpdates = new WeakSet();
+const mightReturns = new WeakSet();
+const updateQueue = new Set();
+
+export const update = (component) => {
+  console.log("=== updating", codes.get(component).name);
+  needsUpdates.add(component);
+  let current = component;
+
+  while (mightReturns.has(codes.get(current))) {
+    needsUpdates.add(current);
+    const parent = parents.get(current);
+    if (parent === rootComponent) break;
+    current = parent;
+  }
+
+  if (current !== component) console.log("escalated update up to", codes.get(current).name);
+
+  updateQueue.add(current);
+  queueMicrotask(runUpdateQueue);
+};
+
+const runUpdateQueue = () => {
+  for (const component of updateQueue) {
+    updateQueue.delete(component);
+    const applier = appliers.get(component);
+    applier.apply(undefined, argumentCache.get(component));
+  }
+};
+
+const states = new WeakMap();
+
+export const state = function (initialValue, actions) {
+  let state = states.get(this);
+
+  if (!state) {
+    state = [initialValue];
+    const setter = (newValue) => {
+      state[0] = newValue;
+      update(this);
+    };
+
+    if (actions) {
+      const getter = () => state[0];
+      state.push(actions(getter, setter));
+    } else {
+      state.push(setter);
+    }
+
+    states.set(this, state);
+  }
+
+  return state;
+};

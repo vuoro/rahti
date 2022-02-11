@@ -14,9 +14,14 @@
         // key,
         root,
         idle,
+        state,
       } from "./index.js";
 
-      const app = function () {
+      const app = function (hello) {
+        console.log(hello, "world");
+        const [counter, setState] = this(state)(0);
+        setTimeout(() => setState(counter + 1), 5000);
+
         for (let index = 0; index < Math.random() * 10; index++) {
           if (Math.random() > 0.1) this(logger, index)();
         }
@@ -27,11 +32,7 @@
         if (Math.random() < 0.1) throw new Error();
       };
 
-      const test = root(app);
-      setInterval(() => {
-        console.log("====================");
-        test();
-      }, 2000);
+      root(app)("hello");
 
       // const { h1, button, p, ul, li, strong, div, header } = html;
 
