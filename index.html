@@ -15,12 +15,16 @@
         root,
         idle,
         state,
+        createGlobalState,
       } from "./index.js";
+
+      const [globalTest, setGlobalTest] = createGlobalState(0);
+      setInterval(() => setGlobalTest(Math.random()), 4500);
 
       const app = function (hello) {
         console.log(hello, "world");
         const [counter, setState] = this(state)(0);
-        setTimeout(() => setState(counter + 1), 5000);
+        setTimeout(() => setState(counter + 1), 3500);
 
         for (let index = 0; index < Math.random() * 10; index++) {
           if (Math.random() > 0.1) this(logger, index)();
@@ -28,8 +32,10 @@
       };
 
       const logger = async function () {
+        const [value, setValue] = this(globalTest)();
         await idle();
         if (Math.random() < 0.1) throw new Error();
+        console.log(value);
       };
 
       root(app)("hello");
