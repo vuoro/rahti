@@ -1,7 +1,7 @@
 let currentResolve;
 const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
 
-let requestIdleCallback = window.requestIdleCallback;
+export let requestIdleCallback = window.requestIdleCallback;
 
 if (!requestIdleCallback) {
   let timeAllowance = 12;

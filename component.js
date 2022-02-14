@@ -1,3 +1,5 @@
+import { getDomCode } from "./dom.js";
+
 const reportError = window.reportError || console.error;
 
 const parents = new WeakMap();
@@ -8,24 +10,35 @@ const keys = new WeakMap();
 const codes = new WeakMap();
 const argumentCache = new WeakMap();
 const valueCache = new WeakMap();
+const pendings = new WeakSet();
 
 // Create a root component
 // it can never update, but can be manually re-applied
-export const root = function (code, key) {
-  const component = createComponent(code, rootComponent, key);
+export const root = function (code) {
+  const component = createComponent(code, rootComponent);
   return appliers.get(component);
 };
 
-const rootComponent = {};
+const rootComponent = () => {};
 codes.set(rootComponent, root);
+
+// Custom renderers, DOM by default
+let renderer = getDomCode;
+export const setRenderer = (newRenderer) => (renderer = newRenderer);
 
 const createComponent = (code, parent, key) => {
   // Create the component, or the `this`
   const component = function (code, key) {
+    // If code is a string, use the renderer
+    let finalCode = code;
+    if (typeof code === "string") {
+      finalCode = renderer(code);
+    }
+
     // Find or create a child component
     console.log(
       "looking for",
-      code.name,
+      finalCode.name,
       "in",
       codes.get(component).name,
       "with key",
@@ -33,8 +46,8 @@ const createComponent = (code, parent, key) => {
       "at",
       currentIndexes.get(component)
     );
-    const found = getComponent(code, component, key);
-    const child = found || createComponent(code, component, key);
+    const found = getComponent(finalCode, component, key);
+    const child = found || createComponent(finalCode, component, key);
     currentIndexes.set(component, currentIndexes.get(component) + 1);
 
     return appliers.get(child);
@@ -87,7 +100,7 @@ const createComponent = (code, parent, key) => {
       }
 
       // If it returned something, note that it's code might do so
-      if (result !== undefined && !mightReturns.has(code)) {
+      if (!mightReturns.has(code) && result !== undefined) {
         mightReturns.add(code);
       }
 
@@ -95,8 +108,15 @@ const createComponent = (code, parent, key) => {
       valueCache.set(component, result);
       needsUpdates.delete(component);
 
-      // Since the code might be async, do housekeeping only after its promise resolves
-      handleEndOfComponent(result, currentIndexes.get(component) + 1);
+      // Housekeeping
+      const seemsLikeAPromise = typeof result?.then === "function";
+
+      if (seemsLikeAPromise) {
+        pendings.add(component);
+        result.finally(handleEndOfComponent);
+      } else {
+        handleEndOfComponent(result);
+      }
 
       return result;
     } else {
@@ -107,27 +127,27 @@ const createComponent = (code, parent, key) => {
   };
   appliers.set(component, applyComponent);
 
-  const handleEndOfComponent = async (result, nextIndex) => {
-    // await result, in case it's an async function
-    try {
-      await result;
-    } catch (error) {
-      reportError(error);
-    }
-
+  const handleEndOfComponent = () => {
     // Destroy children that were not visited on this execution
     const children = childrens.get(component);
     if (children) {
+      const nextIndex = currentIndexes.get(component) + 1;
       const { length } = children;
 
       if (nextIndex < length) {
-        console.log("Destroying leftover children in ", codes.get(component).name);
+        console.log(
+          "destroying leftover children in ",
+          codes.get(component).name,
+          length - nextIndex
+        );
         for (let index = nextIndex; index < length; index++) {
           destroy(children[index]);
         }
         children.splice(nextIndex);
       }
     }
+
+    pendings.delete(component);
 
     console.log("--- end of", code.name);
   };
@@ -172,7 +192,7 @@ const getComponent = (code, parent, key) => {
       // Try to find the a matching child further on
       for (let index = currentIndex + 1, { length } = children; index < length; index++) {
         const child = children[index];
-        if (codes.get(currentChild) === code && keys.get(currentChild) === key) {
+        if (codes.get(child) === code && keys.get(child) === key) {
           // This one looks correct, so move it into its new place
           children.splice(index, 1);
           children.splice(currentIndex, 0, child);
@@ -233,6 +253,7 @@ export const cleanUp = cleanup;
 const needsUpdates = new WeakSet();
 const mightReturns = new WeakSet();
 const updateQueue = new Set();
+let queueWillRun = false;
 
 export const update = (component) => {
   console.log("=== updating", codes.get(component).name);
@@ -249,13 +270,28 @@ export const update = (component) => {
   if (current !== component) console.log("escalated update up to", codes.get(current).name);
   needsUpdates.add(current);
   updateQueue.add(current);
-  queueMicrotask(runUpdateQueue);
+
+  if (!queueWillRun) {
+    queueWillRun = true;
+    queueMicrotask(runUpdateQueue);
+  }
 };
 
 const runUpdateQueue = () => {
   for (const component of updateQueue) {
+    if (pendings.has(component)) {
+      console.log("!!!", codes.get(component).name, "is pending, waiting");
+      continue;
+    }
+
     updateQueue.delete(component);
     const applier = appliers.get(component);
     applier.apply(undefined, argumentCache.get(component));
+  }
+
+  if (updateQueue.size > 0) {
+    requestIdleCallback(runUpdateQueue);
+  } else {
+    queueWillRun = false;
   }
 };
