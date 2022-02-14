@@ -4,7 +4,6 @@ const currentIndexes = new WeakMap();
 const appliers = new WeakMap();
 const keys = new WeakMap();
 const codes = new WeakMap();
-const pendings = new WeakSet();
 const argumentCache = new WeakMap();
 const valueCache = new WeakMap();
 
@@ -79,9 +78,7 @@ const createComponent = (code, parent, key) => {
         mightReturns.add(code);
       }
 
-      const promise = Promise.resolve(result);
-      pendings.add(promise);
-      promise.catch(reportError).finally(handleEndOfComponent);
+      Promise.resolve(result).catch(reportError).finally(handleEndOfComponent);
 
       valueCache.set(component, result);
       needsUpdates.delete(component);
@@ -110,7 +107,6 @@ const createComponent = (code, parent, key) => {
       }
     }
 
-    pendings.delete(component);
     currentIndexes.set(component, 0);
     console.log("--- end of", code.name);
   };
