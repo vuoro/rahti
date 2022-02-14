@@ -1,3 +1,5 @@
+const reportError = window.reportError || console.error;
+
 const parents = new WeakMap();
 const childrens = new WeakMap();
 const currentIndexes = new WeakMap();
@@ -7,7 +9,9 @@ const codes = new WeakMap();
 const argumentCache = new WeakMap();
 const valueCache = new WeakMap();
 
-export const root = (code, key) => {
+// Create a root component
+// it can never update, but can be manually re-applied
+export const root = function (code, key) {
   const component = createComponent(code, rootComponent, key);
   return appliers.get(component);
 };
@@ -15,12 +19,10 @@ export const root = (code, key) => {
 const rootComponent = {};
 codes.set(rootComponent, root);
 
-const reportError = window.reportError || console.error;
-
 const createComponent = (code, parent, key) => {
-  // Create `this()`
+  // Create the component, or the `this`
   const component = function (code, key) {
-    // Find or create the child component
+    // Find or create a child component
     console.log(
       "looking for",
       code.name,
@@ -38,9 +40,11 @@ const createComponent = (code, parent, key) => {
     return appliers.get(child);
   };
 
-  // Create `this(code)()`
+  // Create the applier function, or `this(code)()`
   const applyComponent = function () {
+    // See if the component should re-run
     let needsUpdate = needsUpdates.has(component);
+
     if (!needsUpdate) {
       const previousArguments = argumentCache.get(component);
       if (previousArguments.length !== arguments.length) {
@@ -57,16 +61,23 @@ const createComponent = (code, parent, key) => {
       }
     }
 
+    // Save this run's arguments for next time
     argumentCache.set(component, arguments);
 
     if (needsUpdate) {
+      // Run the component
       console.log("+++ start of", code.name);
+
+      // Run the cleanup, if there is one
       const cleaner = cleanupResolvers.get(component);
       if (cleaner) {
+        cleanups.delete(component);
+        cleanupResolvers.delete(component);
         console.log("running cleanup for", codes.get(component).name);
         cleaner(false);
       }
 
+      // Run the component's code
       let result;
       try {
         result = code.apply(component, arguments);
@@ -74,17 +85,21 @@ const createComponent = (code, parent, key) => {
         reportError(error);
       }
 
+      // If it returned something, note that it's code might do so
       if (result !== undefined && !mightReturns.has(code)) {
         mightReturns.add(code);
       }
 
-      Promise.resolve(result).catch(reportError).finally(handleEndOfComponent);
-
+      // Save the new value
       valueCache.set(component, result);
       needsUpdates.delete(component);
 
+      // Since the code might be async, do housekeeping only after its promise resolves
+      Promise.resolve(result).catch(reportError).finally(handleEndOfComponent);
+
       return result;
     } else {
+      // Skip running and return the previous value
       console.log("!!! skipping update for", code.name);
       return valueCache.get(component);
     }
@@ -107,6 +122,7 @@ const createComponent = (code, parent, key) => {
       }
     }
 
+    // Reset the component's index
     currentIndexes.set(component, 0);
     console.log("--- end of", code.name);
   };
@@ -129,8 +145,8 @@ const createComponent = (code, parent, key) => {
   keys.set(component, key);
   codes.set(component, code);
 
+  // Mark as needing an update
   console.log("created", code.name, "in", codes.get(parent).name, "at", currentIndexes.get(parent));
-
   needsUpdates.add(component);
 
   return component;
@@ -170,14 +186,19 @@ const getComponent = (code, parent, key) => {
 
 const destroy = (component) => {
   console.log("destroying", codes.get(component).name);
+
+  // Run the cleanup, if there is any
   const cleaner = cleanupResolvers.get(component);
   if (cleaner) {
+    cleanups.delete(component);
+    cleanupResolvers.delete(component);
     console.log("running final cleanup for", codes.get(component).name);
     cleaner(true);
   }
 
   const children = childrens.get(component);
 
+  // Destroy children
   if (children) {
     for (const child of children) {
       destroy(child);
@@ -195,6 +216,7 @@ export const cleanup = (component) => {
   let promise = cleanups.get(component);
 
   if (!promise) {
+    // Create a promise to trigger when the component is cleaning up
     promise = new Promise(promiseResolveCatcher);
     cleanups.set(component, promise);
     cleanupResolvers.set(component, currentResolve);
@@ -232,62 +254,4 @@ const runUpdateQueue = () => {
     const applier = appliers.get(component);
     applier.apply(undefined, argumentCache.get(component));
   }
-};
-
-const states = new WeakMap();
-
-export const state = function (initialValue, actions) {
-  let state = states.get(this);
-
-  if (!state) {
-    state = [initialValue];
-    const setter = (newValue) => {
-      state[0] = newValue;
-      update(this);
-    };
-
-    if (actions) {
-      const getter = () => state[0];
-      state.push(actions(getter, setter));
-    } else {
-      state.push(setter);
-    }
-
-    states.set(this, state);
-  }
-
-  return state;
-};
-
-export const createGlobalState = (initialValue, actions) => {
-  let value = initialValue;
-  const states = new Map();
-  const cleaners = new WeakMap();
-
-  const getter = () => value;
-  const setter = (newValue) => {
-    value = newValue;
-    for (const [component, state] of states) {
-      state[0] = value;
-      update(component);
-    }
-  };
-  const finalSetter = actions ? actions(getter, setter) : setter;
-
-  const globalState = function () {
-    let state = states.get(this);
-
-    if (!state) {
-      state = [value, finalSetter];
-      states.set(this, state);
-      cleaners.set(this, (isFinal) => {
-        if (isFinal) states.delete(this);
-      });
-    }
-
-    cleanup(this).finally(cleaners.get(this));
-    return state;
-  };
-
-  return [globalState, finalSetter];
 };
