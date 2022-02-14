@@ -78,6 +78,7 @@ const createComponent = (code, parent, key) => {
       }
 
       // Run the component's code
+      currentIndexes.set(component, 0);
       let result;
       try {
         result = code.apply(component, arguments);
@@ -95,7 +96,7 @@ const createComponent = (code, parent, key) => {
       needsUpdates.delete(component);
 
       // Since the code might be async, do housekeeping only after its promise resolves
-      Promise.resolve(result).catch(reportError).finally(handleEndOfComponent);
+      handleEndOfComponent(result, currentIndexes.get(component) + 1);
 
       return result;
     } else {
@@ -106,12 +107,18 @@ const createComponent = (code, parent, key) => {
   };
   appliers.set(component, applyComponent);
 
-  const handleEndOfComponent = () => {
+  const handleEndOfComponent = async (result, nextIndex) => {
+    // await result, in case it's an async function
+    try {
+      await result;
+    } catch (error) {
+      reportError(error);
+    }
+
     // Destroy children that were not visited on this execution
     const children = childrens.get(component);
     if (children) {
       const { length } = children;
-      const nextIndex = currentIndexes.get(component) + 1;
 
       if (nextIndex < length) {
         console.log("Destroying leftover children in ", codes.get(component).name);
@@ -122,8 +129,6 @@ const createComponent = (code, parent, key) => {
       }
     }
 
-    // Reset the component's index
-    currentIndexes.set(component, 0);
     console.log("--- end of", code.name);
   };
 
@@ -133,7 +138,6 @@ const createComponent = (code, parent, key) => {
     console.log("starting children for", codes.get(parent).name);
     children = [];
     childrens.set(parent, children);
-    currentIndexes.set(parent, 0);
   }
 
   // Get parent's current index and save as a child using it
