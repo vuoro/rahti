@@ -4,7 +4,7 @@ const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
 let requestIdleCallback = window.requestIdleCallback;
 
 if (!requestIdleCallback) {
-  let timeAllowance = 10;
+  let timeAllowance = 12;
   let startedAt = performance.now();
   const fallbackDeadline = {
     timeRemaining: () => timeAllowance - (performance.now() - startedAt),
