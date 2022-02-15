@@ -1,4 +1,5 @@
 import { getDomCode } from "./dom.js";
+import { requestIdleCallback } from "./idle.js";
 
 const reportError = window.reportError || console.error;
 

@@ -23,12 +23,15 @@
       setInterval(() => setGlobalTest(Math.random()), 200);
 
       const app = async function (hello) {
-        console.log(hello, "world");
+        // console.log(hello, "world");
         const [counter, setState] = this(state)(0);
         setTimeout(() => setState(counter + 1), 200);
 
+        let deadline = await idle();
+
         const values = [];
-        for (let index = 0; index < Math.random() * 10 + counter; index++) {
+        for (let index = 0; index < Math.random() * 1000; index++) {
+          if (deadline.timeRemaining() <= 0) deadline = await idle();
           if (Math.random() > 0.1) values.push(await this(logger, index)());
         }
 
@@ -40,9 +43,8 @@
 
       const logger = async function () {
         const [value, setValue] = this(globalTest)();
-        await idle();
         // if (Math.random() < 0.1) throw new Error();
-        console.log(value);
+        // console.log(value);
         return this("li")(value);
       };
 
