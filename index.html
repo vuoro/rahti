@@ -3,90 +3,50 @@
   <body>
     <script type="module">
       import {
+        // state,
+        // globalState,
+        // effect,
+        // html,
+        // svg,
+        // onCleanup,
+        // event,
+        // createRoot,
+        // key,
+        root,
+        idle,
         state,
-        globalState,
-        effect,
-        html,
-        svg,
-        onCleanup,
-        event,
-        createRoot,
-        key,
+        createGlobalState,
+        mount,
       } from "./index.js";
-      const { h1, button, p, ul, li, strong, div, header } = html;
 
-      const app = effect((root) => {
-        const [count, { increment, decrement }] = counter(5);
-        const [deleted, setDeleted] = container();
+      const [globalTest, setGlobalTest] = createGlobalState(0);
+      setInterval(() => setGlobalTest(Math.random()), 3000);
 
-        const numbers = [];
-        for (let index = 0; index < count; index++) {
-          if (deleted !== index) numbers.push(listItem(key(index + 1), index + 1));
+      const app = async function (hello) {
+        console.log(hello, "world");
+        const [counter, setState] = this(state)(0);
+        setTimeout(() => setState(counter + 1), 2000);
+
+        const values = [];
+        for (let index = 0; index < Math.random() * 0 + counter; index++) {
+          if (Math.random() > 0.1) values.push(await this(logger, index)());
         }
 
-        root(
-          masthead(increment, decrement, count, setDeleted),
-          count === 0 && p("Try the buttons!"),
-          count > 0 && ul(...numbers),
-          count < 0 &&
-            div(
-              svg.svg(
-                svg.rect({ width: 300, height: 300, fill: "red" }),
-                svg.text("Surprise svg!", { x: 50, y: 50, fill: "white" })
-              )
-            )
+        this(mount)(
+          document.body,
+          this("ul")({ style: "color: red", class: "lol", events: { click: console.log } }, values)
         );
-      });
+      };
 
-      const masthead = effect(function masthead(increment, decrement, count, setDeleted) {
-        return header(
-          h1("Count: ", count),
-          button("Increment +1", event("click", increment), { type: "button" }),
-          button("Decrement -1", event("click", decrement)),
-          button(
-            "Skip random",
-            event("click", () => setDeleted(Math.floor(Math.random() * count)))
-          )
-        );
-      });
+      const logger = async function () {
+        const [value, setValue] = this(globalTest)();
+        await idle();
+        // if (Math.random() < 0.1) throw new Error();
+        console.log(value);
+        return this("li")(value);
+      };
 
-      const container = state();
-      const today = Date.now();
-
-      const counter = state(0, {
-        getActions: (get, set) => ({
-          increment: () => set(get() + 1),
-          decrement: () => set(get() - 1),
-        }),
-      });
-
-      const globalStateTest = globalState(false);
-
-      const listItem = effect(function listItem(number) {
-        const [count, { increment }] = counter(5);
-        if (number < 3) globalStateTest();
-
-        const time = (Date.now() - today) / 1000;
-        idler(number, time);
-
-        return [
-          li(`${number} last ran at `, time),
-          button("Rerun", event("click", increment), { type: "button" }),
-        ];
-      });
-
-      const idler = effect(
-        (number, time) =>
-          console.log(`Idler ${number} ran `, (Date.now() - today) / 1000 - time, " s later"),
-        { idle: true }
-      );
-
-      const root = createRoot(document.body);
-
-      app(root);
-
-      const [, setTest] = globalStateTest();
-      setInterval(() => setTest(Date.now()), 2000);
+      root(app)("hello");
     </script>
   </body>
 </html>
