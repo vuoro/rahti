@@ -77,19 +77,26 @@ const processArguments = (args, element, component, startIndex = 0) => {
       }
     } else {
       // treat as Text
-      component(slot, argument)(argument, element, slotIndex++, true);
+      const textNode = component(text)();
+      textNode.nodeValue = argument;
+      component(slot, textNode)(textNode, element, slotIndex++);
     }
   }
 
   return slotIndex;
 };
 
-const slot = function (child, parent, index, asText = false) {
-  const value = asText ? new Text(child) : child;
+const text = function () {
+  const node = new Text();
+  cleanup(this).then(() => node.remove());
+  return node;
+};
+
+const slot = function (child, parent, index) {
   if (index >= parent.children.length) {
-    parent.appendChild(value);
+    parent.appendChild(child);
   } else {
-    parent.insertBefore(value, parent.children[index]);
+    parent.insertBefore(child, parent.children[index]);
   }
 };
 
