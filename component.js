@@ -36,16 +36,16 @@ const createComponent = (code, parent, key) => {
     }
 
     // Find or create a child component
-    console.log(
-      "looking for",
-      finalCode.name,
-      "in",
-      codes.get(component).name,
-      "with key",
-      key,
-      "at",
-      currentIndexes.get(component)
-    );
+    // console.log(
+    //   "looking for",
+    //   finalCode.name,
+    //   "in",
+    //   codes.get(component).name,
+    //   "with key",
+    //   key,
+    //   "at",
+    //   currentIndexes.get(component)
+    // );
     const found = getComponent(finalCode, component, key);
     const child = found || createComponent(finalCode, component, key);
     currentIndexes.set(component, currentIndexes.get(component) + 1);
@@ -93,14 +93,14 @@ const createComponent = (code, parent, key) => {
 
     if (needsUpdate) {
       // Run the component
-      console.log("+++ start of", code.name);
+      // console.log("+++ start of", code.name);
 
       // Run the cleanup, if there is one
       const cleaner = cleanupResolvers.get(component);
       if (cleaner) {
         cleanups.delete(component);
         cleanupResolvers.delete(component);
-        console.log("running cleanup for", codes.get(component).name);
+        // console.log("running cleanup for", codes.get(component).name);
         cleaner(false);
       }
 
@@ -135,7 +135,7 @@ const createComponent = (code, parent, key) => {
       return result;
     } else {
       // Skip running and return the previous value
-      console.log("!!! skipping update for", code.name);
+      // console.log("!!! skipping update for", code.name);
       return valueCache.get(component);
     }
   };
@@ -149,11 +149,11 @@ const createComponent = (code, parent, key) => {
       const { length } = children;
 
       if (nextIndex < length) {
-        console.log(
-          "destroying leftover children in ",
-          codes.get(component).name,
-          length - nextIndex
-        );
+        // console.log(
+        //   "destroying leftover children in ",
+        //   codes.get(component).name,
+        //   length - nextIndex
+        // );
         for (let index = nextIndex; index < length; index++) {
           destroy(children[index]);
         }
@@ -163,13 +163,13 @@ const createComponent = (code, parent, key) => {
 
     pendings.delete(component);
 
-    console.log("--- end of", code.name);
+    // console.log("--- end of", code.name);
   };
 
   // Get or create parent's children
   let children = childrens.get(parent);
   if (!children) {
-    console.log("starting children for", codes.get(parent).name);
+    // console.log("starting children for", codes.get(parent).name);
     children = [];
     childrens.set(parent, children);
   }
@@ -184,7 +184,7 @@ const createComponent = (code, parent, key) => {
   codes.set(component, code);
 
   // Mark as needing an update
-  console.log("created", code.name, "in", codes.get(parent).name, "at", currentIndexes.get(parent));
+  // console.log("created", code.name, "in", codes.get(parent).name, "at", currentIndexes.get(parent));
   needsUpdates.add(component);
 
   return component;
@@ -200,7 +200,7 @@ const getComponent = (code, parent, key) => {
 
     if (currentChild && codes.get(currentChild) === code && keys.get(currentChild) === key) {
       // The child looks like what we're looking for
-      console.log("found here", codes.get(currentChild).name);
+      // console.log("found here", codes.get(currentChild).name);
       return currentChild;
     } else {
       // Try to find the a matching child further on
@@ -210,27 +210,27 @@ const getComponent = (code, parent, key) => {
           // This one looks correct, so move it into its new place
           children.splice(index, 1);
           children.splice(currentIndex, 0, child);
-          console.log("found later", codes.get(child).name);
+          // console.log("found later", codes.get(child).name);
           return child;
         }
       }
     }
 
-    console.log("did not find matching children");
+    // console.log("did not find matching children");
   } else {
-    console.log("there were no children");
+    // console.log("there were no children");
   }
 };
 
 const destroy = (component) => {
-  console.log("destroying", codes.get(component).name);
+  // console.log("destroying", codes.get(component).name);
 
   // Run the cleanup, if there is any
   const cleaner = cleanupResolvers.get(component);
   if (cleaner) {
     cleanups.delete(component);
     cleanupResolvers.delete(component);
-    console.log("running final cleanup for", codes.get(component).name);
+    // console.log("running final cleanup for", codes.get(component).name);
     cleaner(true);
   }
 
@@ -270,7 +270,7 @@ const updateQueue = new Set();
 let queueWillRun = false;
 
 export const update = (component) => {
-  console.log("=== updating", codes.get(component).name);
+  // console.log("=== updating", codes.get(component).name);
   needsUpdates.add(component);
   let current = component;
 
@@ -281,7 +281,7 @@ export const update = (component) => {
     current = parent;
   }
 
-  if (current !== component) console.log("escalated update up to", codes.get(current).name);
+  // if (current !== component) console.log("escalated update up to", codes.get(current).name);
   needsUpdates.add(current);
   updateQueue.add(current);
 
@@ -294,7 +294,7 @@ export const update = (component) => {
 const runUpdateQueue = () => {
   for (const component of updateQueue) {
     if (pendings.has(component)) {
-      console.log("!!!", codes.get(component).name, "is pending, waiting");
+      // console.log("!!!", codes.get(component).name, "is pending, waiting");
       continue;
     }
 
