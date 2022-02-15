@@ -12,9 +12,10 @@
   }
   root(parent)();
   ```
-- Small API
+- Simple API
   ```js
-  import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
+  import { root, mount, state, cleanup } from "rahti"; // for most use cases
+  import { createGlobalState, idle, update } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements, including web components
   ```js
@@ -50,6 +51,11 @@ function app(greeting) {
   // set event handlers with an `events` attribute
   this("button")({ type: "button", events: { click: console.log } });
   this("button")({ type: "button", events: { pointermove: [console.log, { passive: true }] } });
+  
+  // components can be given keys
+  // they help identify the same component between re-runs, 
+  // avoiding unnecessary work & bugs when components are used inside loops or if-clauses
+  this("p", "some key here")("keyed paragraph!")
 
   // none of the above DOM components will actually appear on the page,
   // unless passed to a `mount` component,
