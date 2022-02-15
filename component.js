@@ -12,7 +12,7 @@ const argumentCache = new WeakMap();
 const valueCache = new WeakMap();
 const pendings = new WeakMap();
 
-// Create a root component
+// Creates a root component
 // it can never update, but can be manually re-applied
 export const root = function (code) {
   const component = createComponent(code, rootComponent);
@@ -22,17 +22,13 @@ export const root = function (code) {
 const rootComponent = () => {};
 codes.set(rootComponent, root);
 
-// Custom renderers, DOM by default
-let renderer = getDomCode;
-export const setRenderer = (newRenderer) => (renderer = newRenderer);
-
 const createComponent = (code, parent, key) => {
-  // Create the component, or the `this`
+  // Create the component itself, or the `this`
   const component = function (code, key) {
     // If code is a string, use the renderer
     let finalCode = code;
     if (typeof code === "string") {
-      finalCode = renderer(code);
+      finalCode = getDomCode(code);
     }
 
     // Find or create a child component
