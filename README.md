@@ -50,6 +50,11 @@ function app(greeting) {
   // set event handlers with an `events` attribute
   this("button")({ type: "button", events: { click: console.log } });
   this("button")({ type: "button", events: { pointermove: [console.log, { passive: true }] } });
+  
+  // components can be given keys
+  // they help identify the same component between re-runs, 
+  // avoiding unnecessary work & bugs when components are used inside loops or if-clauses
+  this("p", "some key here")("keyed paragraph!")
 
   // none of the above DOM components will actually appear on the page,
   // unless passed to a `mount` component,
