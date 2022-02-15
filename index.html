@@ -20,15 +20,15 @@
       } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 3000);
+      setInterval(() => setGlobalTest(Math.random()), 200);
 
       const app = async function (hello) {
         console.log(hello, "world");
         const [counter, setState] = this(state)(0);
-        setTimeout(() => setState(counter + 1), 2000);
+        setTimeout(() => setState(counter + 1), 200);
 
         const values = [];
-        for (let index = 0; index < Math.random() * 0 + counter; index++) {
+        for (let index = 0; index < Math.random() * 10 + counter; index++) {
           if (Math.random() > 0.1) values.push(await this(logger, index)());
         }
 

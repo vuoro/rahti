@@ -1,6 +1,3 @@
-let currentResolve;
-const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
-
 export let requestIdleCallback = window.requestIdleCallback;
 
 if (!requestIdleCallback) {
@@ -31,8 +28,15 @@ if (!requestIdleCallback) {
   };
 }
 
+let currentResolve = null;
+const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
+let currentIdle = null;
+
 export const idle = () => {
-  const promise = new Promise(promiseResolveCatcher);
-  requestIdleCallback(currentResolve);
-  return promise;
+  if (!currentIdle) {
+    currentIdle = new Promise(promiseResolveCatcher);
+    requestIdleCallback(currentResolve);
+  }
+
+  return currentIdle;
 };
