@@ -12,7 +12,7 @@
   }
   root(parent)();
   ```
-- Small API
+- Simple API
   ```js
   import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
   ```
