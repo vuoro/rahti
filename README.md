@@ -14,7 +14,7 @@
   ```
 - Small API
   ```js
-  import { root, mount, state, createGlobalState, idle, update } from "rahti";
+  import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
   ```
 - Supports any DOM elements, including web components
   ```js
@@ -29,7 +29,7 @@
 ## API & example
 
 ```js
-import { root, mount, state, createGlobalState, idle, update } from "rahti";
+import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
 
 // components are normal functions with no special rules to them,
 // EXCEPT that they must be functions, not arrow functions
@@ -114,6 +114,25 @@ function a() {
 
 function b() {
   const [timestamp, setGlobalTimestamp] = this(globalTimer)();
+}
+
+// you can also create custom state mechanisms with `update`
+// (check out state.js and globalState.js for how they use it)
+function () {
+  console.log("ran at", performance.now());
+  setTimeout(() => update(this), 1000);
+}
+
+// finally, components can have cleanups
+// (both `cleanup` and `cleanUp` will work!)
+function () {
+  const element = document.createElement("div");
+  cleanup(this).then((isFinal) => {
+    // if isFinal is true, the component is being destroyed
+    // else it's just updating
+    if (isFinal) element.remove();
+  });
+  return element;
 }
 ```
 
