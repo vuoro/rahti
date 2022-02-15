@@ -14,7 +14,8 @@
   ```
 - Simple API
   ```js
-  import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
+  import { root, mount, state, cleanup } from "rahti"; // for most use cases
+  import { createGlobalState, idle, update } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements, including web components
   ```js
