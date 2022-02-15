@@ -10,7 +10,7 @@ const keys = new WeakMap();
 const codes = new WeakMap();
 const argumentCache = new WeakMap();
 const valueCache = new WeakMap();
-const pendings = new WeakSet();
+const pendings = new WeakMap();
 
 // Create a root component
 // it can never update, but can be manually re-applied
@@ -55,6 +55,20 @@ const createComponent = (code, parent, key) => {
 
   // Create the applier function, or `this(code)()`
   const applyComponent = function () {
+    // If component is already running, delay this run until it finishes
+    // (this should be a very rare occurrence, so it's not very optimized)
+    if (pendings.has(component)) {
+      const pendingPromise = pendings.get(component);
+      const promise = new Promise(promiseResolveCatcher);
+      const resolve = currentResolve;
+
+      pendingPromise.finally(() => {
+        resolve(applyComponent.apply(undefined, arguments));
+      });
+
+      return promise;
+    }
+
     // See if the component should re-run
     let needsUpdate = needsUpdates.has(component);
 
@@ -112,7 +126,7 @@ const createComponent = (code, parent, key) => {
       const seemsLikeAPromise = typeof result?.then === "function";
 
       if (seemsLikeAPromise) {
-        pendings.add(component);
+        pendings.set(component, result);
         result.finally(handleEndOfComponent);
       } else {
         handleEndOfComponent(result);
