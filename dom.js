@@ -19,8 +19,8 @@ export const getDomCode = function (tagName) {
 };
 
 const createDomCode = (tagName) => {
-  const code = function () {
-    const el = this(element)(tagName);
+  const code = async function () {
+    const el = await this(element)(tagName);
     processArguments(arguments, el, this);
     return el;
   };
@@ -43,11 +43,11 @@ const element = function (tagName) {
 
 const { iterator } = Symbol;
 
-const processArguments = (args, element, component, startIndex = 0) => {
+const processArguments = async (args, element, component, startIndex = 0) => {
   let slotIndex = startIndex;
 
   for (let index = 0; index < args.length; index++) {
-    const argument = args[index];
+    const argument = await args[index];
     const type = typeof argument;
 
     if (argument instanceof Node) {
@@ -77,7 +77,7 @@ const processArguments = (args, element, component, startIndex = 0) => {
       }
     } else {
       // treat as Text
-      const textNode = component(text)();
+      const textNode = await component(text)();
       textNode.nodeValue = argument;
       component(slot, textNode)(textNode, element, slotIndex++);
     }

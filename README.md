@@ -32,15 +32,20 @@
 ```js
 import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
 
-// components are normal functions with no special rules to them,
-// EXCEPT that they must be functions, not arrow functions
+// components are just normal async functions, with 1 rule:
+// Rahti makes use of `this`, so they must NOT be arrow functions
+// good: function() {}
+// bad: () => {}
 
 function app(greeting) {
   // passing `this` a function creates a new child component
   this(child)(greeting);
 
   // passing a string creates DOM component
-  const p = this("p")(greeting); // p is the actual <p> element
+  // `p` here is an actual `<p>` element
+  // you can access it by awaiting it
+  const p = this("p")(greeting);
+  console.log(await p);
 
   // passing DOM components into DOM components nests them inside
   const svg = this("svg")(this("rect")());
@@ -51,9 +56,9 @@ function app(greeting) {
   // set event handlers with an `events` attribute
   this("button")({ type: "button", events: { click: console.log } });
   this("button")({ type: "button", events: { pointermove: [console.log, { passive: true }] } });
-  
+
   // components can be given keys
-  // they help identify the same component between re-runs, 
+  // they help identify the same component between re-runs,
   // avoiding unnecessary work & bugs when components are used inside loops or if-clauses
   this("p", "some key here")("keyed paragraph!")
 
@@ -63,7 +68,7 @@ function app(greeting) {
   this(mount)(document.body, p, svg);
 }
 
-// components can be async functions and can use await freely
+// components can use await freely
 async function child(greeting) {
   this(logger)("waking up…", performance.now());
 
@@ -73,6 +78,8 @@ async function child(greeting) {
   this(logger)(greeting, performance.now());
 }
 
+// if they don't use await, they don't have to be async,
+// but this(logger)() will still return a Promise
 function logger(...text) {
   console.log(...text);
 }
@@ -83,16 +90,16 @@ root(app)("hello");
 // components can have state
 // when a component's state changes, it re-runs
 // if it returns some value, its parent component will also re-run
-function statefulApp() {
-  const timestamp = this(timer)();
+async function statefulApp() {
+  const timestamp = await this(timer)();
 
   this(mount)(document.body, this("p")(timestamp));
 }
 
-function timer() {
+async function timer() {
   // the first argument will be the state's initial value
   // returns [current value, function for changing the state]
-  const [timestamp, setTimestamp] = this(state)(performance.now());
+  const [timestamp, setTimestamp] = await this(state)(performance.now());
   requestAnimationFrame(setTimestamp);
   return timestamp;
 }
@@ -105,8 +112,8 @@ const createActions = (get, set) => {
   };
 };
 
-function timer() {
-  const [timestamp, setTimestamp] = this(state)(performance.now(), createActions);
+async function timer() {
+  const [timestamp, setTimestamp] = await this(state)(performance.now(), createActions);
 }
 
 // `createGlobalState` is a helper for sharing the same state between multiple components
@@ -115,11 +122,11 @@ const [globalTimer, setGlobalTimestamp] = createGlobalState(performance.now());
 setInterval(() => setGlobalTimestamp(performance.now()), 200);
 
 function a() {
-  const [timestamp, setGlobalTimestamp] = this(globalTimer)();
+  const [timestamp, setGlobalTimestamp] = await this(globalTimer)();
 }
 
 function b() {
-  const [timestamp, setGlobalTimestamp] = this(globalTimer)();
+  const [timestamp, setGlobalTimestamp] = await this(globalTimer)();
 }
 
 // you can also create custom state mechanisms with `update`

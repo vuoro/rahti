@@ -1,5 +1,4 @@
 import { getDomCode } from "./dom.js";
-import { requestIdleCallback } from "./idle.js";
 
 const reportError = window.reportError || console.error;
 
@@ -51,19 +50,13 @@ const createComponent = (code, parent, key) => {
   };
 
   // Create the applier function, or `this(code)()`
-  const applyComponent = function () {
+  const applyComponent = async function () {
     // If component is already running, delay this run until it finishes
-    // (this should be a very rare occurrence, so it's not very optimized)
-    if (pendings.has(component)) {
-      const pendingPromise = pendings.get(component);
-      const promise = new Promise(promiseResolveCatcher);
-      const resolve = currentResolve;
-
-      pendingPromise.finally(() => {
-        resolve(applyComponent.apply(undefined, arguments));
-      });
-
-      return promise;
+    const pendingPromise = pendings.get(component);
+    if (pendingPromise) {
+      // console.log("??? waiting for ", codes.get(component).name, " to finish before applying");
+      await pendingPromise;
+      // console.log("??? continuing with", codes.get(component).name);
     }
 
     // See if the component should re-run
@@ -98,14 +91,17 @@ const createComponent = (code, parent, key) => {
         cleanups.delete(component);
         cleanupResolvers.delete(component);
         // console.log("running cleanup for", codes.get(component).name);
-        cleaner(false);
+        await cleaner(false);
       }
 
       // Run the component's code
       currentIndexes.set(component, 0);
       let result;
+
       try {
         result = code.apply(component, arguments);
+        pendings.set(component, result);
+        await result;
       } catch (error) {
         reportError(error);
       }
@@ -119,15 +115,26 @@ const createComponent = (code, parent, key) => {
       valueCache.set(component, result);
       needsUpdates.delete(component);
 
-      // Housekeeping
-      const seemsLikeAPromise = typeof result?.then === "function";
+      // Destroy children that were not visited on this execution
+      const children = childrens.get(component);
+      if (children) {
+        const nextIndex = currentIndexes.get(component) + 1;
+        const { length } = children;
 
-      if (seemsLikeAPromise) {
-        pendings.set(component, result);
-        result.finally(handleEndOfComponent);
-      } else {
-        handleEndOfComponent(result);
+        if (nextIndex < length) {
+          // console.log(
+          //   "destroying leftover children in ",
+          //   codes.get(component).name,
+          //   length - nextIndex
+          // );
+          for (let index = nextIndex; index < length; index++) {
+            destroy(children[index]);
+          }
+          children.splice(nextIndex);
+        }
       }
+
+      pendings.delete(component);
 
       return result;
     } else {
@@ -137,32 +144,6 @@ const createComponent = (code, parent, key) => {
     }
   };
   appliers.set(component, applyComponent);
-
-  const handleEndOfComponent = () => {
-    // Destroy children that were not visited on this execution
-    const children = childrens.get(component);
-    if (children) {
-      const nextIndex = currentIndexes.get(component) + 1;
-      const { length } = children;
-
-      if (nextIndex < length) {
-        // console.log(
-        //   "destroying leftover children in ",
-        //   codes.get(component).name,
-        //   length - nextIndex
-        // );
-        for (let index = nextIndex; index < length; index++) {
-          destroy(children[index]);
-        }
-        children.splice(nextIndex);
-      }
-    }
-
-    pendings.delete(component);
-
-    // console.log("--- end of", code.name);
-  };
-
   // Get or create parent's children
   let children = childrens.get(parent);
   if (!children) {
@@ -290,19 +271,10 @@ export const update = (component) => {
 
 const runUpdateQueue = () => {
   for (const component of updateQueue) {
-    if (pendings.has(component)) {
-      // console.log("!!!", codes.get(component).name, "is pending, waiting");
-      continue;
-    }
-
     updateQueue.delete(component);
     const applier = appliers.get(component);
     applier.apply(undefined, argumentCache.get(component));
   }
 
-  if (updateQueue.size > 0) {
-    requestIdleCallback(runUpdateQueue);
-  } else {
-    queueWillRun = false;
-  }
+  queueWillRun = false;
 };
