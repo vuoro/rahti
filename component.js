@@ -118,7 +118,7 @@ const createComponent = (code, parent, key) => {
       // Destroy children that were not visited on this execution
       const children = childrens.get(component);
       if (children) {
-        const nextIndex = currentIndexes.get(component) + 1;
+        const nextIndex = currentIndexes.get(component);
         const { length } = children;
 
         if (nextIndex < length) {
