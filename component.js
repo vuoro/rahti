@@ -54,7 +54,7 @@ const createComponent = (code, parent, key) => {
     // If component is already running, delay this run until it finishes
     const pendingPromise = pendings.get(component);
     if (pendingPromise) {
-      // console.log("??? waiting for ", codes.get(component).name, " to finish before applying");
+      // console.log("??? waiting for", codes.get(component).name, "to finish before applying");
       await pendingPromise;
       // console.log("??? continuing with", codes.get(component).name);
     }
@@ -101,40 +101,42 @@ const createComponent = (code, parent, key) => {
       try {
         result = code.apply(component, arguments);
         pendings.set(component, result);
-        await result;
+
+        const finalResult = await result;
+
+        // If it returned something, note that it's code might do so
+        if (!mightReturns.has(code) && finalResult !== undefined) {
+          mightReturns.add(code);
+          // console.log(code.name, "might return because of", finalResult);
+        }
+
+        // Save the new value
+        valueCache.set(component, finalResult);
+        needsUpdates.delete(component);
       } catch (error) {
         reportError(error);
-      }
+      } finally {
+        // Destroy children that were not visited on this execution
+        const children = childrens.get(component);
+        if (children) {
+          const nextIndex = currentIndexes.get(component);
+          const { length } = children;
 
-      // If it returned something, note that it's code might do so
-      if (!mightReturns.has(code) && result !== undefined) {
-        mightReturns.add(code);
-      }
-
-      // Save the new value
-      valueCache.set(component, result);
-      needsUpdates.delete(component);
-
-      // Destroy children that were not visited on this execution
-      const children = childrens.get(component);
-      if (children) {
-        const nextIndex = currentIndexes.get(component);
-        const { length } = children;
-
-        if (nextIndex < length) {
-          // console.log(
-          //   "destroying leftover children in ",
-          //   codes.get(component).name,
-          //   length - nextIndex
-          // );
-          for (let index = nextIndex; index < length; index++) {
-            destroy(children[index]);
+          if (nextIndex < length) {
+            // console.log(
+            //   "destroying leftover children in ",
+            //   codes.get(component).name,
+            //   length - nextIndex
+            // );
+            for (let index = nextIndex; index < length; index++) {
+              destroy(children[index]);
+            }
+            children.splice(nextIndex);
           }
-          children.splice(nextIndex);
         }
-      }
 
-      pendings.delete(component);
+        pendings.delete(component);
+      }
 
       return result;
     } else {
@@ -271,6 +273,7 @@ export const update = (component) => {
 
 const runUpdateQueue = () => {
   for (const component of updateQueue) {
+    // console.log("=== applying update to", codes.get(component).name);
     updateQueue.delete(component);
     const applier = appliers.get(component);
     applier.apply(undefined, argumentCache.get(component));

@@ -30,7 +30,7 @@
         let deadline = await idle();
 
         const values = [];
-        for (let index = 0; index < Math.random() - 0.5; index++) {
+        for (let index = 0; index < Math.random() * 30; index++) {
           if (deadline.timeRemaining() <= 0) deadline = await idle();
           if (Math.random() > 0.1) values.push(await this(logger, index)());
         }
