@@ -1,9 +1,9 @@
-import { cleanup, update } from "./component.js";
+import { cleanup, component, update } from "./component.js";
 
 export const createGlobalState = (initialValue, actions) => {
   let value = initialValue;
   const states = new Map();
-  const cleaners = new WeakMap();
+  const cleaners = new Map();
 
   const getter = () => value;
   const setter = (newValue) => {
@@ -15,20 +15,23 @@ export const createGlobalState = (initialValue, actions) => {
   };
   const finalSetter = actions ? actions(getter, setter) : setter;
 
-  const globalState = function () {
+  const globalState = component(function globalState() {
     let state = states.get(this);
 
     if (!state) {
       state = [value, finalSetter];
       states.set(this, state);
       cleaners.set(this, (isFinal) => {
-        if (isFinal) states.delete(this);
+        if (isFinal) {
+          states.delete(this);
+          cleaners.delete(this);
+        }
       });
     }
 
     cleanup(this).finally(cleaners.get(this));
     return state;
-  };
+  });
 
   return [globalState, finalSetter];
 };

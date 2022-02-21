@@ -2,53 +2,43 @@
 <html>
   <body>
     <script type="module">
-      import {
-        // state,
-        // globalState,
-        // effect,
-        // html,
-        // svg,
-        // onCleanup,
-        // event,
-        // createRoot,
-        // key,
-        root,
-        idle,
-        state,
-        createGlobalState,
-        mount,
-      } from "./index.js";
+      import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 200);
+      setInterval(() => setGlobalTest(Math.random()), 3500);
 
-      const app = async function (hello) {
+      const app = component(async function app(hello) {
         // console.log(hello, "world");
-        const [counter, setState] = await this(state)(0);
-        setTimeout(() => setState(counter + 1), 200);
+        const [counter, setState] = state(this, 0);
+        setTimeout(() => setState(counter + 1), 3000);
 
         let deadline = await idle();
 
         const values = [];
-        for (let index = 0; index < Math.random() * 30; index++) {
+        for (let index = 0; index < Math.random() * 10; index++) {
           if (deadline.timeRemaining() <= 0) deadline = await idle();
-          if (Math.random() > 0.1) values.push(await this(logger, index)());
+          if (Math.random() > 0.1) values.push(await logger(index, this));
         }
 
-        this(mount)(
+        mount(
+          this,
           document.body,
-          this("ul")({ style: "color: red", class: "lol", events: { click: console.log } }, values)
+          html.ul(
+            this,
+            { style: "color: red", class: "lol", events: { click: console.log } },
+            values
+          )
         );
-      };
+      });
 
-      const logger = async function () {
-        const [value, setValue] = await this(globalTest)();
+      const logger = component(async function logger() {
+        const [value, setValue] = await globalTest(this);
         // if (Math.random() < 0.1) throw new Error();
         // console.log(value);
-        return this("li")(value);
-      };
+        return html.li(this, value);
+      });
 
-      root(app)("hello");
+      app(self, "hello");
     </script>
   </body>
 </html>
