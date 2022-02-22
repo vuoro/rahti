@@ -363,7 +363,7 @@ const runUpdateQueue = () => {
     const code = codes.get(component);
     // console.log("=== applying update to", code.name, component);
 
-    (asyncs.has(code) ? startAsync : start)(component, null, code);
+    (asyncs.has(code) ? startAsync : start)(component, undefined, code);
   }
 
   queueWillRun = false;

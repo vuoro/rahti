@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "Write reactive JavaScript `p(\"like this\")`.",
   "type": "module",
   "main": "index.js",
@@ -8,7 +8,7 @@
     ".": "./index.js"
   },
   "scripts": {
-    "start": "npx @web/dev-server --open --watch"
+    "start": "npx @web/dev-server --watch"
   },
   "repository": {
     "type": "git",
