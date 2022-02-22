@@ -29,7 +29,7 @@ export const createGlobalState = (initialValue, actions) => {
       });
     }
 
-    cleanup(this).finally(cleaners.get(this));
+    cleanup(this, cleaners.get(this));
     return state;
   });
 

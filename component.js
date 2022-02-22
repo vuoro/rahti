@@ -14,7 +14,6 @@ const valueCache = new Map();
 const pendings = new Map();
 
 const cleanups = new Map();
-const cleanupResolvers = new Map();
 const needsUpdates = new Set();
 const mightReturns = new Set();
 const updateQueue = new Set();
@@ -97,7 +96,7 @@ const checkForUpdate = (component, newArguments, code, async = false) => {
     // Run the component
     // console.log("+++ start of", code.name);
     // Run the cleanup, if there is one
-    return (async ? runCleanupAsync : runCleanup)(component, newArguments, code);
+    return runCleanup(component, newArguments, code, async);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", code.name);
@@ -105,30 +104,22 @@ const checkForUpdate = (component, newArguments, code, async = false) => {
   }
 };
 
-const runCleanup = (component, newArguments, code) => {
-  const cleaner = cleanupResolvers.get(component);
-  if (cleaner) {
-    cleanups.delete(component);
-    cleanupResolvers.delete(component);
+const runCleanup = (component, newArguments, code, async = false) => {
+  const cleaners = cleanups.get(component);
+  if (cleaners) {
     // console.log("running cleanup for", codes.get(component).name);
-    cleaner(false);
+    for (const cleaner of cleaners) {
+      try {
+        cleaner(false);
+      } catch (error) {
+        reportError(error);
+      }
+    }
+
+    cleaners.clear();
   }
 
-  return run(component, newArguments, code);
-};
-
-const runCleanupAsync = async (component, newArguments, code) => {
-  const cleaner = cleanupResolvers.get(component);
-  if (cleaner) {
-    const cleanup = cleanups.get(component);
-    cleanups.delete(component);
-    cleanupResolvers.delete(component);
-    // console.log("running cleanup for", codes.get(component).name);
-    cleaner(false);
-    await cleanup;
-  }
-
-  return runAsync(component, newArguments, code);
+  return (async ? runAsync : run)(component, newArguments, code);
 };
 
 const run = (component, newArguments, code) => {
@@ -274,12 +265,19 @@ const destroy = (component) => {
   // console.log("destroying", codes.get(component).name);
 
   // Run the cleanup, if there is any
-  const cleaner = cleanupResolvers.get(component);
-  if (cleaner) {
-    cleanups.delete(component);
-    cleanupResolvers.delete(component);
-    // console.log("running final cleanup for", codes.get(component).name);
-    cleaner(true);
+  const cleaners = cleanups.get(component);
+
+  if (cleaners) {
+    // console.log("running cleanup for", codes.get(component).name);
+    for (const cleaner of cleaners) {
+      try {
+        cleaner(true);
+      } catch (error) {
+        reportError(error);
+      }
+    }
+
+    cleaners.clear();
   }
 
   const children = childrens.get(component);
@@ -291,36 +289,31 @@ const destroy = (component) => {
     }
   }
 
-  codes.delete(component);
   components.delete(component);
   parents.delete(component);
   childrens.delete(component);
   currentIndexes.delete(component);
   keys.delete(component);
+
   argumentCache.delete(component);
   valueCache.delete(component);
   pendings.delete(component);
+
   cleanups.delete(component);
-  cleanupResolvers.delete(component);
   needsUpdates.delete(component);
   mightReturns.delete(component);
   updateQueue.delete(component);
 };
 
-let currentResolve;
-const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
+export const cleanup = (component, callback) => {
+  let cleaners = cleanups.get(component);
 
-export const cleanup = (component) => {
-  let promise = cleanups.get(component);
-
-  if (!promise) {
-    // Create a promise to trigger when the component is cleaning up
-    promise = new Promise(promiseResolveCatcher);
-    cleanups.set(component, promise);
-    cleanupResolvers.set(component, currentResolve);
+  if (!cleaners) {
+    cleaners = new Set();
+    cleanups.set(component, cleaners);
   }
 
-  return promise;
+  cleaners.add(callback);
 };
 export const cleanUp = cleanup;
 

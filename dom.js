@@ -39,7 +39,7 @@ const element = component(function element(tagName, isSvg) {
     ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
     : document.createElement(tagName);
 
-  cleanup(this).then(() => element.remove());
+  cleanup(this, () => element.remove());
   return element;
 });
 
@@ -90,7 +90,7 @@ const processArguments = (args, element, component, startIndex = 0) => {
 
 const text = component(function text() {
   const node = new Text();
-  cleanup(this).then(() => node.remove());
+  cleanup(this, () => node.remove());
   return node;
 });
 
@@ -104,14 +104,14 @@ const slot = component(function slot(child, parent, index) {
 
 const style = component(function style(value, element) {
   element.style.cssText = value;
-  cleanup(this).then((isFinal) => {
+  cleanup(this, (isFinal) => {
     if (isFinal) element.style.cssText = "";
   });
 });
 
 const attribute = component(function attribute(key, value, element) {
   element.setAttribute(key, typeof value === "boolean" ? key : value);
-  cleanup(this).then((isFinal) => {
+  cleanup(this, (isFinal) => {
     if (isFinal) element.removeAttribute(key);
   });
 });
@@ -119,9 +119,9 @@ const attribute = component(function attribute(key, value, element) {
 const event = component(function event(key, value, element) {
   if (Array.isArray(value)) {
     element.addEventListener(key, value[0], value[1]);
-    cleanup(this).then(() => element.removeEventListener(key, value[0]));
+    cleanup(this, () => element.removeEventListener(key, value[0]));
   } else {
     element.addEventListener(key, value);
-    cleanup(this).then(() => element.removeEventListener(key, value));
+    cleanup(this, () => element.removeEventListener(key, value));
   }
 });
