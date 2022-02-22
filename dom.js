@@ -34,12 +34,24 @@ const proxyHandler = {
 export const html = new Proxy({}, proxyHandler);
 export const svg = new Proxy({ isSvg: true }, proxyHandler);
 
+const cleaners = new Map();
+
 const element = component(function element(tagName, isSvg) {
   const element = isSvg
     ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
     : document.createElement(tagName);
 
-  cleanup(this, () => element.remove());
+  let cleaner = cleaners.get(this);
+  if (!cleaner) {
+    cleaner = (isFinal) => {
+      if (isFinal) {
+        element.remove();
+        cleaners.delete(this);
+      }
+    };
+  }
+  cleanup(this, cleaner);
+
   return element;
 });
 
@@ -90,7 +102,17 @@ const processArguments = (args, element, component, startIndex = 0) => {
 
 const text = component(function text() {
   const node = new Text();
-  cleanup(this, () => node.remove());
+
+  let cleaner = cleaners.get(this);
+  if (!cleaner) {
+    cleaner = (isFinal) => {
+      if (isFinal) {
+        node.remove();
+        cleaners.delete(this);
+      }
+    };
+  }
+  cleanup(this, cleaner);
   return node;
 });
 
@@ -104,16 +126,32 @@ const slot = component(function slot(child, parent, index) {
 
 const style = component(function style(value, element) {
   element.style.cssText = value;
-  cleanup(this, (isFinal) => {
-    if (isFinal) element.style.cssText = "";
-  });
+
+  let cleaner = cleaners.get(this);
+  if (!cleaner) {
+    cleaner = (isFinal) => {
+      if (isFinal) {
+        element.style.cssText = "";
+        cleaners.delete(this);
+      }
+    };
+  }
+  cleanup(this, cleaner);
 });
 
 const attribute = component(function attribute(key, value, element) {
   element.setAttribute(key, typeof value === "boolean" ? key : value);
-  cleanup(this, (isFinal) => {
-    if (isFinal) element.removeAttribute(key);
-  });
+
+  let cleaner = cleaners.get(this);
+  if (!cleaner) {
+    cleaner = (isFinal) => {
+      if (isFinal) {
+        element.removeAttribute(key);
+        cleaners.delete(this);
+      }
+    };
+  }
+  cleanup(this, cleaner);
 });
 
 const event = component(function event(key, value, element) {
