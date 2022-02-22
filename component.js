@@ -45,112 +45,8 @@ export const component = (code) => {
     const component = found || createComponent(code, parent, key);
     currentIndexes.set(parent, currentIndexes.get(parent) + 1);
 
-    return start(component, newArguments);
+    return (seemsAsync ? startAsync : start)(component, newArguments, code);
   };
-
-  const run = (component, newArguments) => {
-    // See if the component should re-run
-    let needsUpdate = needsUpdates.has(component);
-
-    if (!needsUpdate) {
-      const previousArguments = argumentCache.get(component);
-      if (previousArguments.length !== newArguments.length) {
-        needsUpdate = true;
-      } else {
-        for (let index = 0; index < newArguments.length; index++) {
-          const previousArgument = previousArguments[index];
-          const newArgument = newArguments[index];
-          if (newArgument !== previousArgument) {
-            needsUpdate = true;
-            break;
-          }
-        }
-      }
-    }
-
-    // Save this run's arguments for next time
-    argumentCache.set(component, newArguments);
-
-    if (needsUpdate) {
-      // Run the component
-      console.log("+++ start of", code.name);
-
-      // Run the cleanup, if there is one
-      const cleaner = cleanupResolvers.get(component);
-      if (cleaner) {
-        cleanups.delete(component);
-        cleanupResolvers.delete(component);
-        console.log("running cleanup for", codes.get(component).name);
-        cleaner(false);
-      }
-
-      // Run the component's code
-      currentIndexes.set(component, 0);
-      let result;
-
-      try {
-        result = code.apply(component, newArguments);
-
-        // pendings.set(component, result);
-        // finalResult = await result;
-        const finalResult = result;
-
-        // If it returned something, note that it's code might do so
-        if (!mightReturns.has(code) && finalResult !== undefined) {
-          mightReturns.add(code);
-          console.log(code.name, "might return because of", finalResult);
-        }
-
-        // Save the new value
-        valueCache.set(component, finalResult);
-        needsUpdates.delete(component);
-      } catch (error) {
-        reportError(error);
-      } finally {
-        // Destroy children that were not visited on this execution
-        const children = childrens.get(component);
-        if (children) {
-          const nextIndex = currentIndexes.get(component);
-          const { length } = children;
-
-          if (nextIndex < length) {
-            console.log(
-              "destroying leftover children in ",
-              codes.get(component).name,
-              length - nextIndex
-            );
-            for (let index = nextIndex; index < length; index++) {
-              destroy(children[index]);
-            }
-            children.splice(nextIndex);
-          }
-        }
-
-        pendings.delete(component);
-      }
-
-      // console.log("returning", result, "from", code.name, component);
-      return result;
-    } else {
-      // Skip running and return the previous value
-      console.log("!!! skipping update for", code.name);
-      return valueCache.get(component);
-    }
-  };
-
-  const start = seemsAsync
-    ? async function (component, newArguments) {
-        // If component is already running, delay this run until it finishes
-        const pendingPromise = pendings.get(component);
-        if (pendingPromise) {
-          console.log("??? waiting for", codes.get(component).name, "to finish before applying");
-          await pendingPromise;
-          console.log("??? continuing with", codes.get(component).name);
-        }
-
-        return run(component, newArguments);
-      }
-    : run;
 
   Object.defineProperty(apply, "name", { value: `apply_${code.name}`, configurable: true });
   appliers.set(code, apply);
@@ -159,6 +55,159 @@ export const component = (code) => {
   apply.isRahtiComponent = true;
 
   return apply;
+};
+
+const start = function (component, newArguments, code) {
+  return checkForUpdate(component, newArguments, code);
+};
+
+const startAsync = async function (component, newArguments, code) {
+  // If component is already running, delay this run until it finishes
+  const pendingPromise = pendings.get(component);
+  if (pendingPromise) {
+    console.log("??? waiting for", codes.get(component).name, "to finish before applying");
+    await pendingPromise;
+    console.log("??? continuing with", codes.get(component).name);
+  }
+
+  return checkForUpdate(component, newArguments, code, true);
+};
+
+const checkForUpdate = (component, newArguments, code, async = false) => {
+  // See if the component should re-run
+  let needsUpdate = needsUpdates.has(component);
+
+  if (!needsUpdate) {
+    const previousArguments = argumentCache.get(component);
+    if (previousArguments.length !== newArguments.length) {
+      needsUpdate = true;
+    } else {
+      for (let index = 0; index < newArguments.length; index++) {
+        const previousArgument = previousArguments[index];
+        const newArgument = newArguments[index];
+        if (newArgument !== previousArgument) {
+          needsUpdate = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Save this run's arguments for next time
+  argumentCache.set(component, newArguments);
+
+  if (needsUpdate) {
+    // Run the component
+    console.log("+++ start of", code.name);
+    // Run the cleanup, if there is one
+    return (async ? runCleanupAsync : runCleanup)(component, newArguments, code);
+  } else {
+    // Skip running and return the previous value
+    console.log("!!! skipping update for", code.name);
+    return valueCache.get(component);
+  }
+};
+
+const runCleanup = (component, newArguments, code) => {
+  const cleaner = cleanupResolvers.get(component);
+  if (cleaner) {
+    cleanups.delete(component);
+    cleanupResolvers.delete(component);
+    console.log("running cleanup for", codes.get(component).name);
+    cleaner(false);
+  }
+
+  return run(component, newArguments, code);
+};
+
+const runCleanupAsync = async (component, newArguments, code) => {
+  const cleaner = cleanupResolvers.get(component);
+  if (cleaner) {
+    const cleanup = cleanups.get(component);
+    cleanups.delete(component);
+    cleanupResolvers.delete(component);
+    console.log("running cleanup for", codes.get(component).name);
+    cleaner(false);
+    await cleanup;
+  }
+
+  return runAsync(component, newArguments, code);
+};
+
+const run = (component, newArguments, code) => {
+  // Run the component's code
+  currentIndexes.set(component, 0);
+  let result;
+
+  try {
+    result = code.apply(component, newArguments);
+
+    // If it returned something, note that it's code might do so
+    checkReturn(code, result);
+
+    // Save the new value
+    valueCache.set(component, result);
+    needsUpdates.delete(component);
+  } catch (error) {
+    reportError(error);
+  } finally {
+    finish(component, code);
+  }
+
+  // console.log("returning", result, "from", code.name, component);
+  return result;
+};
+
+const runAsync = async (component, newArguments, code) => {
+  // Run the component's code
+  currentIndexes.set(component, 0);
+  let result;
+
+  try {
+    result = code.apply(component, newArguments);
+
+    pendings.set(component, result);
+    const finalResult = await result;
+
+    // If it returned something, note that it's code might do so
+    checkReturn(code, finalResult);
+
+    // Save the new value
+    valueCache.set(component, finalResult);
+    needsUpdates.delete(component);
+  } catch (error) {
+    reportError(error);
+  } finally {
+    finish(component, code);
+    pendings.delete(component);
+  }
+
+  // console.log("returning", result, "from", code.name, component);
+  return result;
+};
+
+const checkReturn = (code, result) => {
+  if (!mightReturns.has(code) && result !== undefined) {
+    mightReturns.add(code);
+    console.log(code.name, "might return because of", result);
+  }
+};
+
+const finish = (component, code) => {
+  // Destroy children that were not visited on this execution
+  const children = childrens.get(component);
+  if (children) {
+    const nextIndex = currentIndexes.get(component);
+    const { length } = children;
+
+    if (nextIndex < length) {
+      console.log("destroying leftover children in ", code.name);
+      for (let index = nextIndex; index < length; index++) {
+        destroy(children[index]);
+      }
+      children.splice(nextIndex);
+    }
+  }
 };
 
 let idCounter = 0;
