@@ -5,12 +5,12 @@
       import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 3500);
+      setInterval(() => setGlobalTest(Math.random()), 350);
 
       const app = component(async function app(hello) {
         // console.log(hello, "world");
         const [counter, setState] = state(this, 0);
-        setTimeout(() => setState(counter + 1), 3000);
+        setTimeout(() => setState(counter + 1), 300);
 
         let deadline = await idle();
 
