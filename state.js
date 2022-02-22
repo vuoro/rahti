@@ -1,8 +1,9 @@
-import { update } from "./component.js";
+import { cleanup, component, update } from "./component.js";
 
-const states = new WeakMap();
+const states = new Map();
+const cleaners = new Map();
 
-export const state = function (initialValue, actions) {
+export const state = component(function state(initialValue, actions) {
   let state = states.get(this);
 
   if (!state) {
@@ -20,7 +21,16 @@ export const state = function (initialValue, actions) {
     }
 
     states.set(this, state);
+
+    cleaners.set(this, (isFinal) => {
+      if (isFinal) {
+        states.delete(this);
+        cleaners.delete(this);
+      }
+    });
   }
 
+  cleanup(this, cleaners.get(this));
+
   return state;
-};
+});
