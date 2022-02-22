@@ -66,6 +66,9 @@ const startAsync = async function (component, newArguments, code) {
     // console.log("??? continuing with", codes.get(component).name);
   }
 
+  // Check that component is still alive
+  if (!components.has(component)) return;
+
   return checkForUpdate(component, newArguments, code, true);
 };
 
@@ -80,7 +83,9 @@ const checkForUpdate = (
 
   if (!needsUpdate) {
     const previousArguments = argumentCache.get(component);
-    if (previousArguments.length !== newArguments.length) {
+    if (previousArguments === newArguments) {
+      needsUpdate = false;
+    } else if (previousArguments.length !== newArguments.length) {
       needsUpdate = true;
     } else {
       for (let index = 0; index < newArguments.length; index++) {
