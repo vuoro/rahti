@@ -69,7 +69,12 @@ const startAsync = async function (component, newArguments, code) {
   return checkForUpdate(component, newArguments, code, true);
 };
 
-const checkForUpdate = (component, newArguments, code, async = false) => {
+const checkForUpdate = (
+  component,
+  newArguments = argumentCache.get(component),
+  code,
+  async = false
+) => {
   // See if the component should re-run
   let needsUpdate = needsUpdates.has(component);
 
@@ -350,11 +355,10 @@ const runUpdateQueue = () => {
   for (const component of updateQueue) {
     updateQueue.delete(component);
 
-    const args = argumentCache.get(component);
     const code = codes.get(component);
     // console.log("=== applying update to", code.name, component);
 
-    (asyncs.has(code) ? startAsync : start)(component, args, code);
+    (asyncs.has(code) ? startAsync : start)(component, null, code);
   }
 
   queueWillRun = false;
