@@ -2,12 +2,21 @@
 <html>
   <body>
     <script type="module">
-      import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
+      import {
+        component,
+        asyncComponent,
+        idle,
+        state,
+        createGlobalState,
+        mount,
+        html,
+        svg,
+      } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
       setInterval(() => setGlobalTest(Math.random()), 350);
 
-      const app = component(async function app(hello) {
+      const app = asyncComponent(async function app(hello) {
         // console.log(hello, "world");
         const [counter, setState] = state(this, 0);
         setTimeout(() => setState(counter + 1), 300);
@@ -31,7 +40,7 @@
         );
       });
 
-      const logger = component(async function logger() {
+      const logger = asyncComponent(async function logger() {
         const [value, setValue] = await globalTest(this);
         // if (Math.random() < 0.1) throw new Error();
         // console.log(value);

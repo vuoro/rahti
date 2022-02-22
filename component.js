@@ -19,12 +19,9 @@ const needsUpdates = new Set();
 const mightReturns = new Set();
 const updateQueue = new Set();
 
-export const component = (code) => {
-  const contents = code.toString();
-  const seemsAsync = contents.match(/async[\s(]/g);
+export const asyncComponent = (code) => component(code, true);
 
-  if (seemsAsync) asyncs.add(code);
-
+export const component = (code, async = false) => {
   const apply = function (...newArguments) {
     let parent, key;
     const [first, second] = newArguments;
@@ -45,12 +42,13 @@ export const component = (code) => {
     const component = found || createComponent(code, parent, key);
     currentIndexes.set(parent, currentIndexes.get(parent) + 1);
 
-    return (seemsAsync ? startAsync : start)(component, newArguments, code);
+    return (async ? startAsync : start)(component, newArguments, code);
   };
 
   Object.defineProperty(apply, "name", { value: `apply_${code.name}`, configurable: true });
 
-  // seemsAsync ? console.log("created async", code.name) : console.log("created", code.name);
+  // async ? console.log("created async", code.name) : console.log("created", code.name);
+  if (async) asyncs.add(code);
   apply.isRahtiComponent = true;
 
   return apply;
