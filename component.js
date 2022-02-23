@@ -1,9 +1,9 @@
-const reportError = self.reportError || console.error;
+const reportError = globalThis.reportError || console.error;
 
-const codes = new Map([[self, function root() {}]]);
+const codes = new Map([[globalThis, function root() {}]]);
 const asyncs = new Set();
 
-const components = new Set([self]);
+const components = new Set([globalThis]);
 const parents = new Map();
 const childrens = new Map();
 const currentIndexes = new Map();
@@ -336,7 +336,7 @@ export const update = (component) => {
     while (mightReturns.has(codes.get(current))) {
       needsUpdates.add(current);
       const parent = parents.get(current);
-      if (parent === self) break;
+      if (parent === globalThis) break;
       current = parent;
     }
 

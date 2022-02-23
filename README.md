@@ -11,7 +11,7 @@
     await idle();
     console.log(text);
   });
-  parent(self, "hello");
+  parent(globalThis, "hello");
   ```
 - Simple API
   ```js
@@ -74,8 +74,8 @@ const child = asyncComponent(async function (greeting) {
   logger(this, greeting, performance.now());
 })
 
-// the outermost components must be initialized with `self` instead of `this`
-app(self, "hello");
+// the outermost components must be initialized with `globalThis` instead of `this`
+app(globalThis, "hello");
 
 // components can have state
 // when a component's state changes, it re-runs
@@ -94,7 +94,7 @@ const timer = component(function() {
   return timestamp;
 });
 
-statefulApp(self);
+statefulApp(globalThis);
 
 // you can override the setter by passing in a function as the second argument
 const createActions = (get, set) => {

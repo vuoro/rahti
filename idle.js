@@ -1,4 +1,4 @@
-export let requestIdleCallback = window.requestIdleCallback;
+export let requestIdleCallback = globalThis.requestIdleCallback;
 
 if (!requestIdleCallback) {
   let timeAllowance = 12;
