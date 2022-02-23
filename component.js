@@ -1,4 +1,4 @@
-const reportError = window.reportError || console.error;
+const reportError = self.reportError || console.error;
 
 const codes = new Map([[self, function root() {}]]);
 const asyncs = new Set();
