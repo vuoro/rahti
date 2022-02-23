@@ -66,9 +66,6 @@ const startAsync = async function (component, newArguments, code) {
     // console.log("??? continuing with", codes.get(component).name);
   }
 
-  // Check that component is still alive
-  if (!components.has(component)) return;
-
   return checkForUpdate(component, newArguments, code, true);
 };
 
@@ -362,7 +359,6 @@ const runUpdateQueue = () => {
 
     const code = codes.get(component);
     // console.log("=== applying update to", code.name, component);
-
     (asyncs.has(code) ? startAsync : start)(component, undefined, code);
   }
 
