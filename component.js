@@ -39,7 +39,7 @@ export const component = (code, async = false) => {
 
     const found = getComponent(code, parent, key);
     const component = found || createComponent(code, parent, key);
-    currentIndexes.set(parent, currentIndexes.get(parent) + 1);
+    if (parent !== globalThis) currentIndexes.set(parent, currentIndexes.get(parent) + 1);
 
     return (async ? startAsync : start)(component, newArguments, code);
   };
