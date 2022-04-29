@@ -140,7 +140,15 @@ const style = component(function style(value, element) {
 });
 
 const attribute = component(function attribute(key, value, element) {
-  element.setAttribute(key, typeof value === "boolean" ? key : value);
+  if (typeof value === "boolean") {
+    if (value) {
+      element.setAttribute(key, key);
+    } else {
+      element.removeAttribute(key);
+    }
+  } else {
+    element.setAttribute(key, value);
+  }
 
   let cleaner = cleaners.get(this);
   if (!cleaner) {
