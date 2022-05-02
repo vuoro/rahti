@@ -24,7 +24,7 @@ const proxyHandler = {
         value: `apply_${tagName}`,
         configurable: true,
       });
-      domComponents.set(domComponent);
+      domComponents.set(tagName, domComponent);
     }
 
     return domComponent;
