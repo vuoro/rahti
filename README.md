@@ -47,7 +47,7 @@ const app = component(function(greeting) {
   const someSvg = svg.svg(this, svg.rect(this));
 
   // maintain DOM attributes by passing an object into a DOM component
-  svg.rect(this, width: 300, height: 300, fill: "red" });
+  svg.rect(this, { width: 300, height: 300, fill: "red" });
 
   // maintain event handlers with a special `events` attribute
   html.button(this, { type: "button", events: { click: console.log } });
@@ -134,8 +134,8 @@ component(function () {
   const element = document.createElement("div");
   cleanup(this, (isFinal) => {
     // if isFinal is true, the component is being destroyed
-    // else it's just updating
-    if (isFinal) element.remove();
+    // else it's just re-running
+    element.remove();
   });
   return element;
 })
