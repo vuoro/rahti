@@ -5,24 +5,24 @@
 - Write reactive JS components with async/await
   ```js
   const parent = component(function (hello) {
-    child(this, hello);
+    child(this)(hello);
   });
-  const child = asyncComponent(async function (text) {
+  const child = component(async function (text) {
     await idle();
     console.log(text);
   });
-  parent(globalThis, "hello");
+  parent(globalThis)("hello");
   ```
 - Simple API
   ```js
-  import { component, asyncComponent, html, svg, mount, state } from "rahti"; // for most use cases
-  import { cleanup, createGlobalState, idle, update } from "rahti"; // for advanced usage
+  import { component, state, html, svg, mount } from "rahti"; // for most use cases
+  import { createGlobalState, cleanup, idle, update } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements, including web components
   ```js
-  html.p(this, "hello");
-  html["my-web-component"](this, "world");
-  svg.svg(this, svg.rect(this, { width: 300, height: 300, fill: "red" }));
+  html.p(this)("hello");
+  html["my-web-component"](this)("world");
+  svg.svg(this)(svg.rect(this)({ width: 300, height: 300, fill: "red" }));
   ```
 - No compile steps
 - Low garbage generation and runtime overhead
@@ -31,70 +31,73 @@
 ## API & example
 
 ```js
-import { root, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
+import { component, html, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
 
-const app = component(function(greeting) {
-  // you can call any component inside any other component, as long as you pass `this`
-  // as the first argument
-  child(this, greeting);
+// components must be normal, non-arrow functions
+// `component(function() {})` = correct
+// `component(() => {})` = wrong
+const app = component(function (greeting) {
+  // you can call any component inside any other component
+  // call it twice: first with `this`, then with your arguments
+  child(this)(greeting);
 
-  // passing a string creates DOM component
-  // `p` here is an actual `<p>` element
-  const someHtml = html.p(this, greeting);
-  console.log(someHtml);
+  // to create HTML, use the built in `html` component proxy
+  // `paragraph` here is an actual `<p>` element
+  const paragraph = html.p(this)(greeting);
+  console.log(paragraph);
 
-  // passing DOM components into DOM components nests them inside
-  const someSvg = svg.svg(this, svg.rect(this));
+  // passing DOM components into other DOM components nests them
+  const someSvg = svg.svg(this)(svg.rect(this));
 
   // maintain DOM attributes by passing an object into a DOM component
-  svg.rect(this, { width: 300, height: 300, fill: "red" });
+  svg.rect(this)({ width: 300, height: 300, fill: "red" });
 
   // maintain event handlers with a special `events` attribute
-  html.button(this, { type: "button", events: { click: console.log } });
-  html.button(this, { type: "button", events: { pointermove: [console.log, { passive: true }] } });
+  html.button(this)({ type: "button", events: { click: console.log } });
+  html.button(this)({ type: "button", events: { pointermove: [console.log, { passive: true }] } });
 
-  // components can be given keys by passing something unique before `this`
+  // you can pass a key to a component as the second argument of the first call
   // keys help identify the same component between re-runs,
   // avoiding unexpected results when components are used inside loops or conditionals
-  html.p("keyed paragraph!", this)
+  html.p(this, "keyed paragraph!")("hello world");
 
   // none of the above DOM components will actually appear on the page,
   // unless passed to a `mount` component,
-  // where the first argument after `this` is the element they should be prepended into
-  mount(this, document.body, someHtml, someSvg);
-})
+  // where the first argument is the element they should be prepended into
+  mount(this)(document.body, someHtml, someSvg);
+});
 
-// components created with `asyncComponent` can be async and use await freely
-const child = asyncComponent(async function (greeting) {
-  logger(this, "waking up…", performance.now());
+// components can be async functions and may use await freely
+const child = component(async function (greeting) {
+  logger(this)("waking up…", performance.now());
 
   // `idle` is a helper that halts execution until `requestIdleCallback`
   await idle();
 
-  logger(this, greeting, performance.now());
-})
+  logger(this)(greeting, performance.now());
+});
 
-// the outermost components must be initialized with `globalThis` instead of `this`
-app(globalThis, "hello");
+// the outermost components must be called with `globalThis` instead of `this`
+app(globalThis)("hello");
 
 // components can have state
 // when a component's state changes, it re-runs
 // if it returns some value, its parent component will also re-run
-const statefulApp = component(function() {
-  const timestamp = timer(this);
+const statefulApp = component(function () {
+  const timestamp = timer(this)();
 
-  mount(this, document.body, this("p")(timestamp));
+  mount(this)(document.body, this("p")(timestamp));
 });
 
-const timer = component(function() {
+const timer = component(function () {
   // the first argument will be the state's initial value
   // returns [current value, function for changing the state]
-  const [timestamp, setTimestamp] = state(this, performance.now());
+  const [timestamp, setTimestamp] = state(this)(performance.now());
   requestAnimationFrame(setTimestamp);
   return timestamp;
 });
 
-statefulApp(globalThis);
+statefulApp(globalThis)();
 
 // you can override the setter by passing in a function as the second argument
 const createActions = (get, set) => {
@@ -104,41 +107,46 @@ const createActions = (get, set) => {
   };
 };
 
-const timer = component(function() {
-  const [timestamp, setTimestamp] = state(this, performance.now(), createActions);
-})
+const timerWithActions = component(function () {
+  const [timestamp, setTimestamp] = state(this)(performance.now(), createActions);
+});
 
 // `createGlobalState` is a helper for sharing the same state between multiple components
 // it accepts the same arguments as `state`
 const [globalTimer, setGlobalTimestamp] = createGlobalState(performance.now());
 setInterval(() => setGlobalTimestamp(performance.now()), 200);
 
-const a = component(function() {
+const a = component(function () {
   const [timestamp, setGlobalTimestamp] = globalTimer(this);
-})
+});
 
-const b = component(function() {
+const b = component(function () {
   const [timestamp, setGlobalTimestamp] = globalTimer(this);
-})
+});
+
+// global states can additionally be called with `globalThis`
+// it lets you easily check or set the state outside components,
+// or inside event handlers and such
+console.log(globalTimer(globalThis)());
 
 // you can also create custom state mechanisms with `update`
 // (check out state.js and globalState.js for how they use it)
 component(function () {
   console.log("ran at", performance.now());
   setTimeout(() => update(this), 1000);
-})
+});
 
 // finally, components can have cleanups
 // (both `cleanup` and `cleanUp` will work!)
 component(function () {
   const element = document.createElement("div");
-  cleanup(this, (isFinal) => {
+  cleanup(this)((isFinal) => {
     // if isFinal is true, the component is being destroyed
     // else it's just re-running
     element.remove();
   });
   return element;
-})
+});
 ```
 
 ## ~~Server-side rendering with Astro~~

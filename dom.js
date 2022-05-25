@@ -12,7 +12,7 @@ const proxyHandler = {
     let domComponent = domComponents.get(tagName);
     if (!domComponent) {
       domComponent = function () {
-        const el = element(this, tagName, target.isSvg);
+        const el = element(this)(tagName, target.isSvg);
         processArguments(arguments, el, this);
         return el;
       };
@@ -20,10 +20,6 @@ const proxyHandler = {
       Object.defineProperty(domComponent, "name", { value: tagName, configurable: true });
 
       domComponent = component(domComponent);
-      Object.defineProperty(domComponent, "name", {
-        value: `apply_${tagName}`,
-        configurable: true,
-      });
       domComponents.set(tagName, domComponent);
     }
 
@@ -46,7 +42,7 @@ const element = component(function element(tagName, isSvg) {
 
 const { iterator } = Symbol;
 
-const processArguments = (args, element, component, startIndex = 0) => {
+const processArguments = (args, element, instance, startIndex = 0) => {
   let slotIndex = startIndex;
 
   for (let index = 0; index < args.length; index++) {
@@ -55,34 +51,34 @@ const processArguments = (args, element, component, startIndex = 0) => {
 
     if (argument instanceof Node) {
       // it's an element
-      slot(argument, component, argument, element, slotIndex++);
+      slot(instance, argument)(argument, element, slotIndex++);
     } else if (argument && type === "object") {
       if (iterator in argument) {
         // treat as a list of arguments
-        slotIndex = processArguments(argument, element, component, slotIndex);
+        slotIndex = processArguments(argument, element, instance, slotIndex);
       } else {
         for (const key in argument) {
           const value = argument[key];
 
           if (key === "style") {
             // inline style
-            style(component, value, element);
+            style(instance)(value, element);
           } else if (key === "events") {
             // events object
             for (const key in value) {
-              event(component, key, value[key], element);
+              event(instance, key)(key, value[key], element);
             }
           } else {
             // attribute
-            attribute(key, component, key, value, element);
+            attribute(instance, key)(key, value, element);
           }
         }
       }
     } else {
       // treat as Text
-      const textNode = text(component);
+      const textNode = text(instance)();
       textNode.nodeValue = argument;
-      slot(textNode, component, textNode, element, slotIndex++);
+      slot(instance, textNode)(textNode, element, slotIndex++);
     }
   }
 

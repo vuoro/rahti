@@ -2,23 +2,14 @@
 <html>
   <body>
     <script type="module">
-      import {
-        component,
-        asyncComponent,
-        idle,
-        state,
-        createGlobalState,
-        mount,
-        html,
-        svg,
-      } from "./index.js";
+      import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
       setInterval(() => setGlobalTest(Math.random()), 350);
 
-      const app = asyncComponent(async function app(hello) {
+      const app = component(async function app(hello) {
         // console.log(hello, "world");
-        const [counter, setState] = state(this, 0);
+        const [counter, setState] = state(this)(0);
         setTimeout(() => setState(counter + 1), 1000);
 
         let deadline = await idle();
@@ -27,38 +18,35 @@
         const values = [];
         for (let index = 0; index < (0.5 + 0.5 * Math.random()) * 50; index++) {
           if (deadline.timeRemaining() <= 0) deadline = await idle();
-          if (Math.random() > 0.1) values.push(await logger(index, this, test));
+          if (Math.random() > 0.1) values.push(await logger(this, index)(test));
         }
 
-        mount(
-          this,
+        mount(this)(
           document.body,
-          html.ul(
-            this,
+          html.ul(this)(
             { style: "color: red", class: "lol", events: { click: console.log } },
             values
           )
         );
       });
 
-      const logger = asyncComponent(async function logger(test) {
+      const logger = component(async function logger(test) {
         // const [value, setValue] = globalTest(this);
 
-        const [value, setValue] = state(this, Math.random());
+        const [value, setValue] = state(this)(Math.random());
         setTimeout(setValue, 1000, Math.random());
 
         // if (Math.random() < 0.1) throw new Error();
 
-        return html.li(
-          this,
+        return html.li(this)(
           test,
           " lol ",
           value,
-          html.input(this, { type: "checkbox", checked: value > 0.5 })
+          html.input(this)({ type: "checkbox", checked: value > 0.5 })
         );
       });
 
-      app(globalThis, "hello");
+      app(globalThis)("hello");
     </script>
   </body>
 </html>
