@@ -34,23 +34,12 @@ const proxyHandler = {
 export const html = new Proxy({}, proxyHandler);
 export const svg = new Proxy({ isSvg: true }, proxyHandler);
 
-const cleaners = new Map();
-
 const element = component(function element(tagName, isSvg) {
   const element = isSvg
     ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
     : document.createElement(tagName);
 
-  let cleaner = cleaners.get(this);
-  if (!cleaner) {
-    cleaner = (isFinal) => {
-      if (isFinal) {
-        element.remove();
-        cleaners.delete(this);
-      }
-    };
-  }
-  cleanup(this, cleaner);
+  cleanup(this, () => element.remove());
 
   return element;
 });
@@ -102,17 +91,7 @@ const processArguments = (args, element, component, startIndex = 0) => {
 
 const text = component(function text() {
   const node = new Text();
-
-  let cleaner = cleaners.get(this);
-  if (!cleaner) {
-    cleaner = (isFinal) => {
-      if (isFinal) {
-        node.remove();
-        cleaners.delete(this);
-      }
-    };
-  }
-  cleanup(this, cleaner);
+  cleanup(this, () => node.remove());
   return node;
 });
 
@@ -123,6 +102,8 @@ const slot = component(function slot(child, parent, index) {
     parent.insertBefore(child, parent.children[index]);
   }
 });
+
+const cleaners = new Map();
 
 const style = component(function style(value, element) {
   element.style.cssText = value;
