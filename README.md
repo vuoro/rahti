@@ -145,7 +145,7 @@ component(function () {
 // (both `cleanup` and `cleanUp` will work!)
 component(function () {
   const element = document.createElement("div");
-  cleanup(this)((isFinal) => {
+  cleanup(this, (isFinal) => {
     // if isFinal is true, the component is being destroyed
     // else it's just re-running
     element.remove();
