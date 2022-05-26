@@ -1,36 +1,74 @@
+import htm from "htm";
+
 import { component, cleanup } from "./component.js";
 
 export const mount = component(function mount(element, ...children) {
-  processArguments(children, element, this);
+  processChildren(children, element, this);
   return element;
 });
 
-const domComponents = new Map();
+const catchDom = function () {
+  return arguments;
+};
+const parseDom = htm.bind(catchDom);
 
-const proxyHandler = {
-  get(target, tagName) {
-    let domComponent = domComponents.get(tagName);
-    if (!domComponent) {
-      domComponent = function () {
-        const el = element(this)(tagName, target.isSvg);
-        processArguments(arguments, el, this);
-        return el;
-      };
+export const html = component(function html() {
+  const results = parseDom.apply(catchDom, arguments);
+  return handleDom(this, results, false);
+});
 
-      Object.defineProperty(domComponent, "name", { value: tagName, configurable: true });
+export const svg = component(function svg() {
+  const results = parseDom.apply(catchDom, arguments);
+  return handleDom(this, results, true);
+});
 
-      domComponent = component(domComponent);
-      domComponents.set(tagName, domComponent);
+const handleDom = function (instance, results, isSvg) {
+  const hasMany = Array.isArray(results);
+
+  if (hasMany) {
+    const resultsBin = [];
+
+    for (const result of results) {
+      if (typeof result === "object") resultsBin.push(processDom(instance, result, isSvg));
     }
 
-    return domComponent;
-  },
+    return resultsBin;
+  } else {
+    return processDom(instance, results, isSvg);
+  }
 };
 
-export const html = new Proxy({}, proxyHandler);
-export const svg = new Proxy({ isSvg: true }, proxyHandler);
+const processDom = function (instance, result, isSvg) {
+  const type = result[0];
+  const props = result[1];
 
-const element = component(function element(tagName, isSvg) {
+  const element = domElement(instance)(type, isSvg);
+
+  if (props) {
+    for (const key in props) {
+      const value = props[key];
+
+      if (key === "style") {
+        // inline style
+        style(instance)(value, element);
+      } else if (key === "events") {
+        // events object
+        for (const key in value) {
+          event(instance, key)(key, value[key], element);
+        }
+      } else {
+        // attribute
+        attribute(instance, key)(key, value, element);
+      }
+    }
+  }
+
+  if (result.length > 2) processChildren(result, element, instance, 0, 2, isSvg);
+
+  return element;
+};
+
+const domElement = component(function element(tagName, isSvg) {
   const element = isSvg
     ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
     : document.createElement(tagName);
@@ -40,44 +78,24 @@ const element = component(function element(tagName, isSvg) {
   return element;
 });
 
-const { iterator } = Symbol;
+const processChildren = (children, element, instance, slotIndex = 0, startIndex = 0, isSvg) => {
+  for (let index = startIndex, { length } = children; index < length; index++) {
+    const child = children[index];
 
-const processArguments = (args, element, instance, startIndex = 0) => {
-  let slotIndex = startIndex;
-
-  for (let index = 0; index < args.length; index++) {
-    const argument = args[index];
-    const type = typeof argument;
-
-    if (argument instanceof Node) {
-      // it's an element
-      slot(instance, argument)(argument, element, slotIndex++);
-    } else if (argument && type === "object") {
-      if (iterator in argument) {
-        // treat as a list of arguments
-        slotIndex = processArguments(argument, element, instance, slotIndex);
-      } else {
-        for (const key in argument) {
-          const value = argument[key];
-
-          if (key === "style") {
-            // inline style
-            style(instance)(value, element);
-          } else if (key === "events") {
-            // events object
-            for (const key in value) {
-              event(instance, key)(key, value[key], element);
-            }
-          } else {
-            // attribute
-            attribute(instance, key)(key, value, element);
-          }
-        }
-      }
+    if (child instanceof Node) {
+      // it's already an element of some kind, so let's just mount it
+      slot(instance, child)(child, element, slotIndex++);
+    } else if (Array.isArray(child)) {
+      // treat as a list of grandchildren
+      slotIndex = processChildren(child, element, instance, slotIndex);
+    } else if (typeof child === "object" && child?.length) {
+      // treat as list DOM children
+      const childElement = processDom(instance, child, isSvg);
+      slot(instance, childElement)(childElement, element, slotIndex++);
     } else {
       // treat as Text
       const textNode = text(instance)();
-      textNode.nodeValue = argument;
+      textNode.nodeValue = child;
       slot(instance, textNode)(textNode, element, slotIndex++);
     }
   }

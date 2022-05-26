@@ -5,28 +5,25 @@
       import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 350);
+      setInterval(() => setGlobalTest(Math.random()), 1000);
 
       const app = component(async function app(hello) {
         // console.log(hello, "world");
         const [counter, setState] = state(this)(0);
-        setTimeout(() => setState(counter + 1), 1000);
+        setTimeout(() => setState(counter + 1), 3000);
 
         let deadline = await idle();
         const test = Math.round(Math.random() * 10);
 
-        const values = [];
+        const testComponents = [];
         for (let index = 0; index < (0.5 + 0.5 * Math.random()) * 50; index++) {
           if (deadline.timeRemaining() <= 0) deadline = await idle();
-          if (Math.random() > 0.1) values.push(await logger(this, index)(test));
+          if (Math.random() > 0.1) testComponents.push(await logger(this, index)(test));
         }
 
         mount(this)(
           document.body,
-          html.ul(this)(
-            { style: "color: red", class: "lol", events: { click: console.log } },
-            values
-          )
+          html(this)`<ul style="color: red" class="lol">${testComponents}</ul> <div/>`
         );
       });
 
@@ -34,16 +31,17 @@
         // const [value, setValue] = globalTest(this);
 
         const [value, setValue] = state(this)(Math.random());
-        setTimeout(setValue, 1000, Math.random());
+        setTimeout(setValue, 3000, Math.random());
 
         // if (Math.random() < 0.1) throw new Error();
 
-        return html.li(this)(
-          test,
-          " lol ",
-          value,
-          html.input(this)({ type: "checkbox", checked: value > 0.5 })
-        );
+        return html(this)`<li>
+          ${test} lol ${value}
+
+          <input type="checkbox" checked=${value > 0.5} events=${{
+          click: console.log,
+        }} />
+        </li>`;
       });
 
       app(globalThis)("hello");

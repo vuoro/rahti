@@ -18,11 +18,11 @@
   import { component, state, html, svg, mount } from "rahti"; // for most use cases
   import { createGlobalState, cleanup, idle, update } from "rahti"; // for advanced usage
   ```
-- Supports any DOM elements, including web components
+- Supports any DOM elements, via <https://github.com/developit/htm>
   ```js
-  html.p(this)("hello");
-  html["my-web-component"](this)("world");
-  svg.svg(this)(svg.rect(this)({ width: 300, height: 300, fill: "red" }));
+  html(this)`<p>hello</p>`;
+  html(this)`<my-web-component>world</my-web-component>`;
+  svg(this)`<svg><rect width=${300} height=${300} fill="red"></rect></svg>`;
   ```
 - No compile steps
 - Low garbage generation and runtime overhead
@@ -39,32 +39,37 @@ import { component, html, mount, state, cleanup, createGlobalState, idle, update
 const app = component(function (greeting) {
   // you can call any component inside any other component
   // call it twice: first with `this`, then with your arguments
+  // `this` contains the component's ID, used to correctly find or create its children,
+  // even when using async/await
   child(this)(greeting);
 
-  // to create HTML, use the built in `html` component proxy
+  // to create HTML, use the built in `html` component,
+  // which uses <https://github.com/developit/htm> internally
   // `paragraph` here is an actual `<p>` element
-  const paragraph = html.p(this)(greeting);
+  const paragraph = html(this)`<p>${greeting}</p>`;
   console.log(paragraph);
 
   // passing DOM components into other DOM components nests them
-  const someSvg = svg.svg(this)(svg.rect(this));
+  const someDiv = html(this)`<div>${paragraph}</div>`;
 
-  // maintain DOM attributes by passing an object into a DOM component
-  svg.rect(this)({ width: 300, height: 300, fill: "red" });
+  // set attributes on DOM components using the <https://github.com/developit/htm> API
+  svg(this)`<svg><rect width=${300} height=${300} fill="red"></rect></svg>`;
 
-  // maintain event handlers with a special `events` attribute
-  html.button(this)({ type: "button", events: { click: console.log } });
-  html.button(this)({ type: "button", events: { pointermove: [console.log, { passive: true }] } });
+  // maintain event handlers with the special `events` attribute
+  html(this)`<button type="button" events=${{ click: console.log }}></button>`;
+  html(
+    this
+  )`<button type="button" events=${{ pointermove: [console.log, { passive: true }] }}></button>`;
 
   // you can pass a key to a component as the second argument of the first call
   // keys help identify the same component between re-runs,
   // avoiding unexpected results when components are used inside loops or conditionals
-  html.p(this, "keyed paragraph!")("hello world");
+  html(this, "keyed paragraph!")`<p>keyed hello!</p>`;
 
   // none of the above DOM components will actually appear on the page,
   // unless passed to a `mount` component,
   // where the first argument is the element they should be prepended into
-  mount(this)(document.body, someHtml, someSvg);
+  mount(this)(document.body, someDiv);
 });
 
 // components can be async functions and may use await freely
@@ -86,7 +91,7 @@ app(globalThis)("hello");
 const statefulApp = component(function () {
   const timestamp = timer(this)();
 
-  mount(this)(document.body, this("p")(timestamp));
+  mount(this)(document.body, html(this)`<p>${timestamp}</p>`);
 });
 
 const timer = component(function () {
@@ -162,7 +167,7 @@ Rahti has a custom renderer for [Astro](https://astro.build): https://github.com
 
 ## WebGL 2 Effects
 
-Since I'm using this library to develop games, I'm also building a set of Effects for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
+Since I'm using this library to develop games, I'm also building a set of cp,åpmemts for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
 
 ## Inspirations
 
