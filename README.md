@@ -87,7 +87,8 @@ app(globalThis)("hello");
 
 // components can have state
 // when a component's state changes, it re-runs
-// if it returns some value, its parent component will also re-run
+// if it returns a different value than the last time it ran,
+// it'll tell its parent to re-run too
 const statefulApp = component(function () {
   const timestamp = timer(this)();
 

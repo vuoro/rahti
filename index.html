@@ -5,7 +5,7 @@
       import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 1000);
+      setInterval(() => setGlobalTest(Math.random()), 1618);
 
       const app = component(async function app(hello) {
         // console.log(hello, "world");
@@ -28,10 +28,10 @@
       });
 
       const logger = component(async function logger(test) {
-        // const [value, setValue] = globalTest(this);
+        globalTest(this)();
 
         const [value, setValue] = state(this)(Math.random());
-        setTimeout(setValue, 3000, Math.random());
+        setTimeout(setValue, Math.random() * 10000, Math.random());
 
         // if (Math.random() < 0.1) throw new Error();
 

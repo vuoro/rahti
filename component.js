@@ -15,7 +15,6 @@ const pendings = new Map();
 
 const cleanups = new Map();
 const needsUpdates = new Set();
-const mightReturns = new Set();
 const updateQueue = new Set();
 
 export const component = (code) => {
@@ -130,9 +129,6 @@ const run = (instance, newArguments, code) => {
   try {
     result = code.apply(instance, newArguments);
 
-    // If it returned something, note that it's code might do so
-    checkReturn(code, result);
-
     // Save the new value
     valueCache.set(instance, result);
     needsUpdates.delete(instance);
@@ -157,9 +153,6 @@ const runAsync = async (instance, newArguments, code) => {
     pendings.set(instance, result);
     const finalResult = await result;
 
-    // If it returned something, note that it's code might do so
-    checkReturn(code, finalResult);
-
     // Save the new value
     valueCache.set(instance, finalResult);
     needsUpdates.delete(instance);
@@ -172,13 +165,6 @@ const runAsync = async (instance, newArguments, code) => {
 
   // console.log("returning", result, "from", code.name, instance);
   return result;
-};
-
-const checkReturn = (code, result) => {
-  if (!mightReturns.has(code) && result !== undefined) {
-    mightReturns.add(code);
-    // console.log(code.name, "might return because of", result);
-  }
 };
 
 const finish = (instance, code) => {
@@ -308,7 +294,6 @@ const destroy = (instance) => {
 
   cleanups.delete(instance);
   needsUpdates.delete(instance);
-  mightReturns.delete(instance);
   updateQueue.delete(instance);
 };
 
@@ -326,23 +311,20 @@ export const cleanUp = cleanup;
 
 let queueWillRun = false;
 
-export const update = (instance) => {
+export const update = (instance, forceParentUpdate = false) => {
   if (instances.has(instance)) {
     // console.log("=== updating", codes.get(instance).name);
 
     needsUpdates.add(instance);
-    let current = instance;
+    updateQueue.add(instance);
 
-    while (mightReturns.has(codes.get(current))) {
-      needsUpdates.add(current);
-      const parentThis = parents.get(current);
-      if (parentThis === globalThis) break;
-      current = parentThis;
+    if (forceParentUpdate) {
+      const parent = parents.get(instance);
+      if (parent !== globalThis) {
+        needsUpdates.add(parent);
+        updateQueue.add(parent);
+      }
     }
-
-    // if (current !== instance) console.log("escalated update up to", codes.get(current).name);
-    needsUpdates.add(current);
-    updateQueue.add(current);
 
     if (!queueWillRun) {
       queueWillRun = true;
@@ -353,13 +335,41 @@ export const update = (instance) => {
   }
 };
 
-const runUpdateQueue = () => {
+const updateQueuePromises = new Map();
+const updateQueuePreviousValues = new Map();
+
+const runUpdateQueue = async () => {
   for (const instance of updateQueue) {
     updateQueue.delete(instance);
 
     const code = codes.get(instance);
-    // console.log("=== applying update to", code.name, instance);
-    (asyncs.has(code) ? startAsync : start)(instance, undefined, code);
+    const isAsync = asyncs.has(code);
+    // console.log("=== applying update to", code.name);
+
+    const previousValue = valueCache.get(instance);
+    const newValue = (isAsync ? startAsync : start)(instance, undefined, code);
+
+    if (isAsync) {
+      updateQueuePromises.set(instance, newValue);
+      updateQueuePreviousValues.set(instance, previousValue);
+    } else {
+      if (newValue !== previousValue) {
+        const parent = parents.get(instance);
+        if (parent !== globalThis) update(parent);
+      }
+    }
+  }
+
+  for (const [instance, newValue] of updateQueuePromises) {
+    const previousValue = updateQueuePreviousValues.get(instance);
+
+    updateQueuePromises.delete(instance);
+    updateQueuePreviousValues.delete(instance);
+
+    if ((await newValue) !== previousValue) {
+      const parent = parents.get(instance);
+      if (parent !== globalThis) update(parent);
+    }
   }
 
   queueWillRun = false;

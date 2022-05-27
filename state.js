@@ -10,7 +10,7 @@ export const state = component(function state(initialValue, actions) {
     state = [initialValue];
     const setter = (newValue) => {
       state[0] = newValue;
-      update(this);
+      update(this, true);
     };
 
     if (actions) {

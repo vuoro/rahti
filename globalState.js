@@ -10,7 +10,7 @@ export const createGlobalState = (initialValue, actions) => {
     value = newValue;
     for (const [component, state] of states) {
       state[0] = value;
-      update(component);
+      update(component, true);
     }
   };
   const finalSetter = actions ? actions(getter, setter) : setter;
