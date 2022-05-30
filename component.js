@@ -255,8 +255,16 @@ const getInstance = (code, parentThis, key) => {
   }
 };
 
-const destroy = (instance) => {
+const destroy = async (instance) => {
   // console.log("destroying", codes.get(instance).name);
+
+  // If there's an ongoing run, wait for it
+  const pendingPromise = pendings.get(instance);
+  if (pendingPromise) {
+    // console.log("??? waiting for", codes.get(instance).name, "to finish before destroying");
+    await pendingPromise;
+    // console.log("??? continuing with destroying", codes.get(instance).name);
+  }
 
   // Run the cleanup, if there is any
   const cleaners = cleanups.get(instance);
@@ -313,26 +321,22 @@ export const cleanUp = cleanup;
 let queueWillRun = false;
 
 export const update = (instance, forceParentUpdate = false) => {
-  if (instances.has(instance)) {
-    // console.log("=== updating", codes.get(instance).name);
+  // console.log("=== updating", codes.get(instance).name);
 
-    needsUpdates.add(instance);
-    updateQueue.add(instance);
+  needsUpdates.add(instance);
+  updateQueue.add(instance);
 
-    if (forceParentUpdate) {
-      const parent = parents.get(instance);
-      if (parent !== globalThis) {
-        needsUpdates.add(parent);
-        updateQueue.add(parent);
-      }
+  if (forceParentUpdate) {
+    const parent = parents.get(instance);
+    if (parent !== undefined && parent !== globalThis) {
+      needsUpdates.add(parent);
+      updateQueue.add(parent);
     }
+  }
 
-    if (!queueWillRun) {
-      queueWillRun = true;
-      queueMicrotask(runUpdateQueue);
-    }
-  } else {
-    // console.log("!!! skipped updating destroyed", instance);
+  if (!queueWillRun) {
+    queueWillRun = true;
+    queueMicrotask(runUpdateQueue);
   }
 };
 
@@ -356,7 +360,7 @@ const runUpdateQueue = async () => {
     } else {
       if (newValue !== previousValue) {
         const parent = parents.get(instance);
-        if (parent !== globalThis) update(parent);
+        if (parent !== undefined && parent !== globalThis) update(parent);
       }
     }
   }
@@ -369,7 +373,7 @@ const runUpdateQueue = async () => {
 
     if ((await newValue) !== previousValue) {
       const parent = parents.get(instance);
-      if (parent !== globalThis) update(parent);
+      if (parent !== undefined && parent !== globalThis) update(parent);
     }
   }
 
