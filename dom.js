@@ -10,17 +10,30 @@ export const mount = component(function mount(element, ...children) {
 const catchDom = function () {
   return arguments;
 };
-const parseDom = htm.bind(catchDom);
 
-export const html = component(function html() {
-  const results = parseDom.apply(catchDom, arguments);
-  return handleDom(this, results, false);
-});
+export const html = (instance) => {
+  nextHtml = instance;
+  return htmlApplier;
+};
+let nextHtml = null;
+const htmlApplier = function () {
+  const results = htm.apply(catchDom, arguments);
+  const instance = nextHtml;
+  nextHtml = null;
+  return handleDom(instance, results, false);
+};
 
-export const svg = component(function svg() {
-  const results = parseDom.apply(catchDom, arguments);
-  return handleDom(this, results, true);
-});
+export const svg = (instance) => {
+  nextSvg = instance;
+  return svgApplier;
+};
+let nextSvg = null;
+const svgApplier = function () {
+  const results = htm.apply(catchDom, arguments);
+  const instance = nextSvg;
+  nextSvg = null;
+  return handleDom(instance, results, true);
+};
 
 const handleDom = function (instance, results, isSvg) {
   const hasMany = Array.isArray(results);
