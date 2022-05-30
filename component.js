@@ -45,11 +45,11 @@ export const component = (code) => {
   return starter;
 };
 
-const start = function (instance, newArguments, code) {
-  return checkForUpdate(instance, newArguments, code);
+const start = function (instance, newArguments, code, forceUpdate = false) {
+  return checkForUpdate(instance, newArguments, code, false, forceUpdate);
 };
 
-const startAsync = async function (instance, newArguments, code) {
+const startAsync = async function (instance, newArguments, code, forceUpdate = false) {
   // If instance is already running, delay this run until it finishes
   const pendingPromise = pendings.get(instance);
   if (pendingPromise) {
@@ -58,17 +58,18 @@ const startAsync = async function (instance, newArguments, code) {
     // console.log("??? continuing with", codes.get(instance).name);
   }
 
-  return checkForUpdate(instance, newArguments, code, true);
+  return checkForUpdate(instance, newArguments, code, true, forceUpdate);
 };
 
 const checkForUpdate = (
   instance,
   newArguments = argumentCache.get(instance),
   code,
-  async = false
+  async = false,
+  forceUpdate = false
 ) => {
   // See if the instance should re-run
-  let needsUpdate = needsUpdates.has(instance);
+  let needsUpdate = forceUpdate || needsUpdates.has(instance);
 
   if (!needsUpdate) {
     const previousArguments = argumentCache.get(instance);
@@ -347,7 +348,7 @@ const runUpdateQueue = async () => {
     // console.log("=== applying update to", code.name);
 
     const previousValue = valueCache.get(instance);
-    const newValue = (isAsync ? startAsync : start)(instance, undefined, code);
+    const newValue = (isAsync ? startAsync : start)(instance, undefined, code, true);
 
     if (isAsync) {
       updateQueuePromises.set(instance, newValue);
@@ -372,5 +373,9 @@ const runUpdateQueue = async () => {
     }
   }
 
-  queueWillRun = false;
+  if (updateQueue.size) {
+    runUpdateQueue();
+  } else {
+    queueWillRun = false;
+  }
 };
