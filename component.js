@@ -352,7 +352,14 @@ const runUpdateQueue = async () => {
     // console.log("=== applying update to", code.name);
 
     const previousValue = valueCache.get(instance);
-    const newValue = (isAsync ? startAsync : start)(instance, undefined, code, true);
+    let newValue;
+
+    try {
+      newValue = (isAsync ? startAsync : start)(instance, undefined, code, true);
+    } catch (error) {
+      reportError(newValue);
+      continue;
+    }
 
     if (isAsync) {
       updateQueuePromises.set(instance, newValue);
@@ -366,12 +373,20 @@ const runUpdateQueue = async () => {
   }
 
   for (const [instance, newValue] of updateQueuePromises) {
-    const previousValue = updateQueuePreviousValues.get(instance);
-
     updateQueuePromises.delete(instance);
     updateQueuePreviousValues.delete(instance);
 
-    if ((await newValue) !== previousValue) {
+    const previousValue = updateQueuePreviousValues.get(instance);
+    let newResolvedValue;
+
+    try {
+      newResolvedValue = await newValue;
+    } catch (error) {
+      reportError(error);
+      continue;
+    }
+
+    if (newResolvedValue !== previousValue) {
       const parent = parents.get(instance);
       if (parent !== undefined && parent !== globalThis) update(parent);
     }
