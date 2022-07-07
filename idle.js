@@ -1,4 +1,5 @@
 export let requestIdleCallback = globalThis.requestIdleCallback;
+export let cancelIdleCallback = globalThis.cancelIdleCallback;
 
 if (!requestIdleCallback) {
   let timeAllowance = 12;
@@ -14,7 +15,11 @@ if (!requestIdleCallback) {
   requestIdleCallback = (callback) => {
     fallbackSchedule.add(callback);
     fallbackStep = fallbackStep || setTimeout(runFallbackSchedule);
+    return fallbackStep;
   };
+
+  cancelIdleCallback = (id) => clearTimeout(id);
+
   const runFallbackSchedule = () => {
     startedAt = performance.now();
 
