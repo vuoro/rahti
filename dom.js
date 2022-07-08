@@ -67,7 +67,7 @@ const processDom = function (instance, result, isSvg) {
       } else if (key === "events") {
         // events object
         for (const key in value) {
-          event(instance, key)(key, value[key], element);
+          eventHandler(instance, key)(element, key, value[key]);
         }
       } else {
         // attribute
@@ -188,8 +188,8 @@ const attribute = component(
 const eventKeys = new Map();
 const eventValues = new Map();
 
-const event = component(
-  function event(key, value, element) {
+export const eventHandler = component(
+  function eventHandler(element, key, value) {
     if (Array.isArray(value)) {
       element.addEventListener(key, value[0], value[1]);
     } else {
