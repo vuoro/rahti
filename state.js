@@ -1,36 +1,33 @@
-import { cleanup, component, update } from "./component.js";
+import { component, update } from "./component.js";
 
 const states = new Map();
-const cleaners = new Map();
 
-export const state = component(function state(initialValue, actions) {
-  let state = states.get(this);
+export const state = component(
+  function state(initialValue, actions) {
+    let state = states.get(this);
 
-  if (!state) {
-    state = [initialValue];
-    const setter = (newValue) => {
-      state[0] = newValue;
-      update(this, true);
-    };
+    if (!state) {
+      state = [initialValue];
+      const setter = (newValue) => {
+        state[0] = newValue;
+        update(this, true);
+      };
 
-    if (actions) {
-      const getter = () => state[0];
-      state.push(actions(getter, setter));
-    } else {
-      state.push(setter);
+      if (actions) {
+        const getter = () => state[0];
+        state.push(actions(getter, setter));
+      } else {
+        state.push(setter);
+      }
+
+      states.set(this, state);
     }
 
-    states.set(this, state);
-
-    cleaners.set(this, (isFinal) => {
-      if (isFinal) {
-        states.delete(this);
-        cleaners.delete(this);
-      }
-    });
+    return state;
+  },
+  function (isFinal) {
+    if (isFinal) {
+      states.delete(this);
+    }
   }
-
-  cleanup(this, cleaners.get(this));
-
-  return state;
-});
+);

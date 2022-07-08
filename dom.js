@@ -1,6 +1,6 @@
 import htm from "htm";
 
-import { component, cleanup } from "./component.js";
+import { component } from "./component.js";
 
 export const mount = component(function mount(element, ...children) {
   processChildren(children, element, this);
@@ -81,15 +81,26 @@ const processDom = function (instance, result, isSvg) {
   return element;
 };
 
-const domElement = component(function element(tagName, isSvg) {
-  const element = isSvg
-    ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
-    : document.createElement(tagName);
+const nodes = new Map();
+const nodeCleanup = function (isFinal) {
+  if (isFinal) {
+    nodes.get(this).remove();
+    nodes.delete(this);
+  }
+};
 
-  cleanup(this, () => element.remove());
+const domElement = component(function element(tagName, isSvg) {
+  let element = nodes.get(this);
+
+  if (!element) {
+    element = isSvg
+      ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
+      : document.createElement(tagName);
+    nodes.set(this, element);
+  }
 
   return element;
-});
+}, nodeCleanup);
 
 const processChildren = (children, element, instance, slotIndex = 0, startIndex = 0, isSvg) => {
   for (let index = startIndex, { length } = children; index < length; index++) {
@@ -117,10 +128,15 @@ const processChildren = (children, element, instance, slotIndex = 0, startIndex 
 };
 
 const text = component(function text() {
-  const node = new Text();
-  cleanup(this, () => node.remove());
+  let node = nodes.get(this);
+
+  if (!node) {
+    node = new Text();
+    nodes.set(this, node);
+  }
+
   return node;
-});
+}, nodeCleanup);
 
 const slot = component(function slot(child, parent, index) {
   if (index >= parent.children.length) {
@@ -130,52 +146,75 @@ const slot = component(function slot(child, parent, index) {
   }
 });
 
-const cleaners = new Map();
-
-const style = component(function style(value, element) {
-  element.style.cssText = value;
-
-  let cleaner = cleaners.get(this);
-  if (!cleaner) {
-    cleaner = (isFinal) => {
-      if (isFinal) {
-        element.style.cssText = "";
-        cleaners.delete(this);
-      }
-    };
-  }
-  cleanup(this, cleaner);
-});
-
-const attribute = component(function attribute(key, value, element) {
-  if (typeof value === "boolean") {
-    if (value) {
-      element.setAttribute(key, key);
-    } else {
-      element.removeAttribute(key);
+const style = component(
+  function style(value, element) {
+    element.style.cssText = value;
+    nodes.set(this, element);
+  },
+  function (isFinal) {
+    if (isFinal) {
+      nodes.get(this).style.cssText = "";
+      nodes.delete(this);
     }
-  } else {
-    element.setAttribute(key, value);
   }
+);
 
-  let cleaner = cleaners.get(this);
-  if (!cleaner) {
-    cleaner = (isFinal) => {
-      if (isFinal) {
+const attributeKeys = new Map();
+
+const attribute = component(
+  function attribute(key, value, element) {
+    if (typeof value === "boolean") {
+      if (value) {
+        element.setAttribute(key, key);
+      } else {
         element.removeAttribute(key);
-        cleaners.delete(this);
       }
-    };
-  }
-  cleanup(this, cleaner);
-});
+    } else {
+      element.setAttribute(key, value);
+    }
 
-const event = component(function event(key, value, element) {
-  if (Array.isArray(value)) {
-    element.addEventListener(key, value[0], value[1]);
-    cleanup(this, () => element.removeEventListener(key, value[0]));
-  } else {
-    element.addEventListener(key, value);
-    cleanup(this, () => element.removeEventListener(key, value));
+    nodes.set(this, element);
+    attributeKeys.set(this, element);
+  },
+  function (isFinal) {
+    if (isFinal) {
+      nodes.get(this).removeAttribute(attributeKeys.get(this));
+      nodes.delete(this);
+      attributeKeys.delete(this);
+    }
   }
-});
+);
+
+const eventKeys = new Map();
+const eventValues = new Map();
+
+const event = component(
+  function event(key, value, element) {
+    if (Array.isArray(value)) {
+      element.addEventListener(key, value[0], value[1]);
+    } else {
+      element.addEventListener(key, value);
+    }
+
+    nodes.set(this, element);
+    eventKeys.set(this, key);
+    eventValues.set(this, value);
+  },
+  function (isFinal) {
+    const key = eventKeys.get(this);
+    const value = eventValues.get(this);
+    const node = nodes.get(this);
+
+    if (Array.isArray(value)) {
+      node.removeEventListener(key, value[0], value[1]);
+    } else {
+      node.removeEventListener(key, value);
+    }
+
+    if (isFinal) {
+      nodes.delete(this);
+      eventKeys.delete(this);
+      eventValues.delete(this);
+    }
+  }
+);

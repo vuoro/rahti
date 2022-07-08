@@ -17,7 +17,7 @@ const cleanups = new Map();
 const needsUpdates = new Set();
 const updateQueue = new Set();
 
-export const component = (code) => {
+export const component = (code, cleanup) => {
   const async = code.constructor.name === "AsyncFunction";
   let nextInstance = null;
 
@@ -41,6 +41,8 @@ export const component = (code) => {
 
   starter._isRahtiComponent = true;
   Object.defineProperty(starter, "name", { value: `${code.name}__starter`, configurable: true });
+
+  if (cleanup) cleanups.set(code, cleanup);
 
   return starter;
 };
@@ -69,10 +71,10 @@ const checkForUpdate = (
   forceUpdate = false
 ) => {
   // See if the instance should re-run
+  const previousArguments = argumentCache.get(instance);
   let needsUpdate = forceUpdate || needsUpdates.has(instance);
 
   if (!needsUpdate) {
-    const previousArguments = argumentCache.get(instance);
     if (previousArguments === newArguments) {
       needsUpdate = false;
     } else if (previousArguments.length !== newArguments.length) {
@@ -96,7 +98,8 @@ const checkForUpdate = (
     // Run the instance
     // console.log("+++ start of", code.name);
     // Run the cleanup, if there is one
-    return runCleanup(instance, newArguments, code, async);
+    if (previousArguments) (async ? runAsyncCleanup : runCleanup)(instance, code);
+    return (async ? runAsync : run)(instance, newArguments, code);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", code.name);
@@ -104,22 +107,28 @@ const checkForUpdate = (
   }
 };
 
-const runCleanup = (instance, newArguments, code, async = false) => {
-  const cleaners = cleanups.get(instance);
-  if (cleaners) {
-    // console.log("running cleanup for", codes.get(instance).name);
-    for (const cleaner of cleaners) {
-      try {
-        cleaner(false);
-      } catch (error) {
-        reportError(error);
-      }
+const runCleanup = (instance, code) => {
+  const cleanup = cleanups.get(code);
+
+  if (cleanup) {
+    try {
+      cleanup.call(instance, false);
+    } catch (error) {
+      reportError(error);
     }
-
-    cleaners.clear();
   }
+};
 
-  return (async ? runAsync : run)(instance, newArguments, code);
+const runAsyncCleanup = async (instance, code) => {
+  const cleanup = cleanups.get(code);
+
+  if (cleanup) {
+    try {
+      await cleanup.call(instance, false);
+    } catch (error) {
+      reportError(error);
+    }
+  }
 };
 
 const run = (instance, newArguments, code) => {
@@ -267,19 +276,15 @@ const destroy = async (instance) => {
   }
 
   // Run the cleanup, if there is any
-  const cleaners = cleanups.get(instance);
+  const cleanup = cleanups.get(codes.get(instance));
 
-  if (cleaners) {
+  if (cleanup) {
     // console.log("running cleanup for", codes.get(instance).name);
-    for (const cleaner of cleaners) {
-      try {
-        cleaner(true);
-      } catch (error) {
-        reportError(error);
-      }
+    try {
+      cleanup.call(instance, true);
+    } catch (error) {
+      reportError(error);
     }
-
-    cleaners.clear();
   }
 
   const children = childrens.get(instance);
@@ -301,22 +306,9 @@ const destroy = async (instance) => {
   valueCache.delete(instance);
   pendings.delete(instance);
 
-  cleanups.delete(instance);
   needsUpdates.delete(instance);
   updateQueue.delete(instance);
 };
-
-export const cleanup = (instance, callback) => {
-  let cleaners = cleanups.get(instance);
-
-  if (!cleaners) {
-    cleaners = new Set();
-    cleanups.set(instance, cleaners);
-  }
-
-  cleaners.add(callback);
-};
-export const cleanUp = cleanup;
 
 let queueWillRun = false;
 
