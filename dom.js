@@ -67,7 +67,12 @@ const processDom = function (instance, result, isSvg) {
       } else if (key === "events") {
         // events object
         for (const key in value) {
-          eventHandler(instance, key)(element, key, value[key]);
+          const eventValue = value[key];
+          if (Array.isArray(eventValue)) {
+            eventHandler(instance, key)(element, key, ...eventValue);
+          } else {
+            eventHandler(instance, key)(element, key, eventValue);
+          }
         }
       } else {
         // attribute
@@ -187,34 +192,30 @@ const attribute = component(
 
 const eventKeys = new Map();
 const eventValues = new Map();
+const eventOptions = new Map();
 
 export const eventHandler = component(
-  function eventHandler(element, key, value) {
-    if (Array.isArray(value)) {
-      element.addEventListener(key, value[0], value[1]);
-    } else {
-      element.addEventListener(key, value);
-    }
+  function eventHandler(target, key, value, options) {
+    target.addEventListener(key, value, options);
 
-    nodes.set(this, element);
+    nodes.set(this, target);
     eventKeys.set(this, key);
     eventValues.set(this, value);
+    eventOptions.set(this, options);
   },
   function (isFinal) {
+    const node = nodes.get(this);
     const key = eventKeys.get(this);
     const value = eventValues.get(this);
-    const node = nodes.get(this);
+    const options = eventValues.get(this);
 
-    if (Array.isArray(value)) {
-      node.removeEventListener(key, value[0], value[1]);
-    } else {
-      node.removeEventListener(key, value);
-    }
+    node.removeEventListener(key, value, options);
 
     if (isFinal) {
       nodes.delete(this);
       eventKeys.delete(this);
       eventValues.delete(this);
+      eventOptions.delete(this);
     }
   }
 );
