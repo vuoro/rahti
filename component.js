@@ -283,7 +283,7 @@ const destroy = async (instance) => {
       // Many cleanups
       for (const cleaner of cleanup) {
         try {
-          cleaner.call(instance, false);
+          cleaner.call(instance, true);
         } catch (error) {
           reportError(error);
         }
@@ -292,7 +292,7 @@ const destroy = async (instance) => {
       cleanup.clear();
     } else {
       // 1 cleanup
-      cleanup.call(instance, false);
+      cleanup.call(instance, true);
       cleanups.delete(instance);
     }
   }
