@@ -1,6 +1,6 @@
 import htm from "htm";
 
-import { component } from "./component.js";
+import { component, cleanup } from "./component.js";
 
 export const mount = component(function mount(element, ...children) {
   processChildren(children, element, this);
@@ -69,9 +69,9 @@ const processDom = function (instance, result, isSvg) {
         for (const key in value) {
           const eventValue = value[key];
           if (Array.isArray(eventValue)) {
-            eventHandler(instance, key)(element, key, ...eventValue);
+            eventListener(instance, key)(element, key, ...eventValue);
           } else {
-            eventHandler(instance, key)(element, key, eventValue);
+            eventListener(instance, key)(element, key, eventValue);
           }
         }
       } else {
@@ -87,25 +87,22 @@ const processDom = function (instance, result, isSvg) {
 };
 
 const nodes = new Map();
-const nodeCleanup = function (isFinal) {
-  if (isFinal) {
-    nodes.get(this).remove();
-    nodes.delete(this);
-  }
-};
 
 const domElement = component(function element(tagName, isSvg) {
-  let element = nodes.get(this);
+  const element = isSvg
+    ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
+    : document.createElement(tagName);
 
-  if (!element) {
-    element = isSvg
-      ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
-      : document.createElement(tagName);
-    nodes.set(this, element);
-  }
+  nodes.set(this, element);
+  cleanup(this, cleanNode);
 
   return element;
-}, nodeCleanup);
+});
+
+function cleanNode() {
+  nodes.get(this).remove();
+  nodes.delete(this);
+}
 
 const processChildren = (children, element, instance, slotIndex = 0, startIndex = 0, isSvg) => {
   for (let index = startIndex, { length } = children; index < length; index++) {
@@ -133,15 +130,11 @@ const processChildren = (children, element, instance, slotIndex = 0, startIndex 
 };
 
 const text = component(function text() {
-  let node = nodes.get(this);
-
-  if (!node) {
-    node = new Text();
-    nodes.set(this, node);
-  }
-
+  const node = new Text();
+  nodes.set(this, node);
+  cleanup(this, cleanNode);
   return node;
-}, nodeCleanup);
+});
 
 const slot = component(function slot(child, parent, index) {
   if (index >= parent.children.length) {
@@ -151,71 +144,73 @@ const slot = component(function slot(child, parent, index) {
   }
 });
 
-const style = component(
-  function style(value, element) {
-    element.style.cssText = value;
-    nodes.set(this, element);
-  },
-  function (isFinal) {
-    if (isFinal) {
-      nodes.get(this).style.cssText = "";
-      nodes.delete(this);
-    }
+const style = component(function style(value, element) {
+  element.style.cssText = value;
+
+  nodes.set(this, element);
+  cleanup(this, cleanStyle);
+});
+
+function cleanStyle(isFinal) {
+  if (isFinal) {
+    nodes.get(this).style.cssText = "";
+    nodes.delete(this);
   }
-);
+}
+
+const attribute = component(function attribute(key, value, element) {
+  if (typeof value === "boolean") {
+    if (value) {
+      element.setAttribute(key, key);
+    } else {
+      element.removeAttribute(key);
+    }
+  } else {
+    element.setAttribute(key, value);
+  }
+
+  nodes.set(this, element);
+  attributeKeys.set(this, key);
+  cleanup(this, cleanAttribute);
+});
 
 const attributeKeys = new Map();
 
-const attribute = component(
-  function attribute(key, value, element) {
-    if (typeof value === "boolean") {
-      if (value) {
-        element.setAttribute(key, key);
-      } else {
-        element.removeAttribute(key);
-      }
-    } else {
-      element.setAttribute(key, value);
-    }
-
-    nodes.set(this, element);
-    attributeKeys.set(this, element);
-  },
-  function (isFinal) {
-    if (isFinal) {
-      nodes.get(this).removeAttribute(attributeKeys.get(this));
-      nodes.delete(this);
-      attributeKeys.delete(this);
-    }
+function cleanAttribute(isFinal) {
+  if (isFinal) {
+    nodes.get(this).removeAttribute(attributeKeys.get(this));
+    nodes.delete(this);
+    attributeKeys.delete(this);
   }
-);
+}
+
+export const eventListener = component(function eventListener(target, key, value, options) {
+  target.addEventListener(key, value, options);
+
+  nodes.set(this, target);
+  eventKeys.set(this, key);
+  eventValues.set(this, value);
+  eventOptions.set(this, options);
+
+  cleanup(this, cleanEventListener);
+});
 
 const eventKeys = new Map();
 const eventValues = new Map();
 const eventOptions = new Map();
 
-export const eventHandler = component(
-  function eventHandler(target, key, value, options) {
-    target.addEventListener(key, value, options);
+function cleanEventListener(isFinal) {
+  const node = nodes.get(this);
+  const key = eventKeys.get(this);
+  const value = eventValues.get(this);
+  const options = eventValues.get(this);
 
-    nodes.set(this, target);
-    eventKeys.set(this, key);
-    eventValues.set(this, value);
-    eventOptions.set(this, options);
-  },
-  function (isFinal) {
-    const node = nodes.get(this);
-    const key = eventKeys.get(this);
-    const value = eventValues.get(this);
-    const options = eventValues.get(this);
+  node.removeEventListener(key, value, options);
 
-    node.removeEventListener(key, value, options);
-
-    if (isFinal) {
-      nodes.delete(this);
-      eventKeys.delete(this);
-      eventValues.delete(this);
-      eventOptions.delete(this);
-    }
+  if (isFinal) {
+    nodes.delete(this);
+    eventKeys.delete(this);
+    eventValues.delete(this);
+    eventOptions.delete(this);
   }
-);
+}

@@ -1,4 +1,4 @@
-import { component, update } from "./component.js";
+import { cleanup, component, update } from "./component.js";
 
 export const createGlobalState = (initialValue, actions) => {
   let value = initialValue;
@@ -14,23 +14,23 @@ export const createGlobalState = (initialValue, actions) => {
   };
   const finalSetter = actions ? actions(getter, setter) : setter;
 
-  const globalState = component(
-    function globalState() {
-      let state = states.get(this);
+  const globalState = component(function globalState() {
+    let state = states.get(this);
 
-      if (!state) {
-        state = [value, finalSetter];
-        states.set(this, state);
-      }
-
-      return state;
-    },
-    function (isFinal) {
-      if (isFinal) {
-        states.delete(this);
-      }
+    if (!state) {
+      state = [value, finalSetter];
+      states.set(this, state);
     }
-  );
+
+    cleanup(this, cleanGlobalState);
+    return state;
+  });
+
+  function cleanGlobalState(isFinal) {
+    if (isFinal) {
+      states.delete(this);
+    }
+  }
 
   return [globalState, finalSetter];
 };

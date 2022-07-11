@@ -16,7 +16,7 @@
 - Simple API
   ```js
   import { component, state, html, svg, mount } from "rahti"; // for most use cases
-  import { createGlobalState, idle, update } from "rahti"; // for advanced usage
+  import { createGlobalState, cleanup, idle, update } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements, via <https://github.com/developit/htm>
   ```js
@@ -31,7 +31,7 @@
 ## API & example
 
 ```js
-import { component, html, mount, state, createGlobalState, idle, update } from "rahti";
+import { component, html, mount, state, cleanup, createGlobalState, idle, update } from "rahti";
 
 // components must be normal, non-arrow functions
 // `component(function() {})` = correct
@@ -142,31 +142,17 @@ component(function () {
   setTimeout(() => update(this), 1000);
 });
 
-// finally, components can have an optional cleanup function,
-// passed as the second argument to `component`
-// it runs before the component is re-run, and when it's being destroyed
-const elements = new Map();
-
-component(
-  function () {
-    let element = elements.get(this);
-
-    if (!element) {
-      element = document.createElement("div");
-      elements.set(this, element);
-    }
-
-    return element;
-  },
-  function (isFinal) {
+// finally, components can have cleanups
+// (both `cleanup` and `cleanUp` will work!)
+component(function () {
+  const element = document.createElement("div");
+  cleanup(this, (isFinal) => {
     // if isFinal is true, the component is being destroyed
     // else it's just re-running
-    if (isFinal) {
-      elements.get(this).remove();
-      elements.delete(this);
-    }
-  }
-);
+    element.remove();
+  });
+  return element;
+});
 ```
 
 ## ~~Server-side rendering with Astro~~

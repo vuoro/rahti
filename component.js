@@ -17,7 +17,7 @@ const cleanups = new Map();
 const needsUpdates = new Set();
 const updateQueue = new Set();
 
-export const component = (code, cleanup) => {
+export const component = (code) => {
   const async = code.constructor.name === "AsyncFunction";
   let nextInstance = null;
 
@@ -41,8 +41,6 @@ export const component = (code, cleanup) => {
 
   starter._isRahtiComponent = true;
   Object.defineProperty(starter, "name", { value: `${code.name}__starter`, configurable: true });
-
-  if (cleanup) cleanups.set(code, cleanup);
 
   return starter;
 };
@@ -71,10 +69,10 @@ const checkForUpdate = (
   forceUpdate = false
 ) => {
   // See if the instance should re-run
-  const previousArguments = argumentCache.get(instance);
   let needsUpdate = forceUpdate || needsUpdates.has(instance);
 
   if (!needsUpdate) {
+    const previousArguments = argumentCache.get(instance);
     if (previousArguments === newArguments) {
       needsUpdate = false;
     } else if (previousArguments.length !== newArguments.length) {
@@ -98,8 +96,7 @@ const checkForUpdate = (
     // Run the instance
     // console.log("+++ start of", code.name);
     // Run the cleanup, if there is one
-    if (previousArguments) (async ? runAsyncCleanup : runCleanup)(instance, code);
-    return (async ? runAsync : run)(instance, newArguments, code);
+    return runCleanup(instance, newArguments, code, async);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", code.name);
@@ -107,28 +104,30 @@ const checkForUpdate = (
   }
 };
 
-const runCleanup = (instance, code) => {
-  const cleanup = cleanups.get(code);
+const runCleanup = (instance, newArguments, code, async = false) => {
+  const cleanup = cleanups.get(instance);
 
   if (cleanup) {
-    try {
+    // console.log("running cleanup for", codes.get(instance).name);
+    if (cleanup instanceof Set) {
+      // Many cleanups
+      for (const cleaner of cleanup) {
+        try {
+          cleaner.call(instance, false);
+        } catch (error) {
+          reportError(error);
+        }
+      }
+
+      cleanup.clear();
+    } else {
+      // 1 cleanup
       cleanup.call(instance, false);
-    } catch (error) {
-      reportError(error);
+      cleanups.delete(instance);
     }
   }
-};
 
-const runAsyncCleanup = async (instance, code) => {
-  const cleanup = cleanups.get(code);
-
-  if (cleanup) {
-    try {
-      await cleanup.call(instance, false);
-    } catch (error) {
-      reportError(error);
-    }
-  }
+  return (async ? runAsync : run)(instance, newArguments, code);
 };
 
 const run = (instance, newArguments, code) => {
@@ -276,14 +275,25 @@ const destroy = async (instance) => {
   }
 
   // Run the cleanup, if there is any
-  const cleanup = cleanups.get(codes.get(instance));
+  const cleanup = cleanups.get(instance);
 
   if (cleanup) {
     // console.log("running cleanup for", codes.get(instance).name);
-    try {
-      cleanup.call(instance, true);
-    } catch (error) {
-      reportError(error);
+    if (cleanup instanceof Set) {
+      // Many cleanups
+      for (const cleaner of cleanup) {
+        try {
+          cleaner.call(instance, false);
+        } catch (error) {
+          reportError(error);
+        }
+      }
+
+      cleanup.clear();
+    } else {
+      // 1 cleanup
+      cleanup.call(instance, false);
+      cleanups.delete(instance);
     }
   }
 
@@ -306,9 +316,29 @@ const destroy = async (instance) => {
   valueCache.delete(instance);
   pendings.delete(instance);
 
+  cleanups.delete(instance);
   needsUpdates.delete(instance);
   updateQueue.delete(instance);
 };
+
+export const cleanup = (instance, callback) => {
+  let cleanup = cleanups.get(instance);
+
+  if (cleanup instanceof Set) {
+    // 3rd+ cleanup
+    cleanup.add(callback);
+  } else if (cleanup) {
+    // 2nd cleanup
+    const cleaners = new Set();
+    cleaners.add(cleanup);
+    cleaners.add(callback);
+    cleanups.set(instance, cleaners);
+  } else {
+    // 1st cleanup
+    cleanups.set(instance, callback);
+  }
+};
+export const cleanUp = cleanup;
 
 let queueWillRun = false;
 
