@@ -146,13 +146,29 @@ component(function () {
 // (both `cleanup` and `cleanUp` will work!)
 component(function () {
   const element = document.createElement("div");
-  cleanup(this, (isFinal) => {
+  cleanup(this, function (isFinal) {
     // if isFinal is true, the component is being destroyed
     // else it's just re-running
     element.remove();
   });
   return element;
 });
+
+// cleanups are also called with the component's `this`
+// so in some cases you can share the same cleanup function with multiple components
+component(function () {
+  const element = document.createElement("div");
+  elements.set(this, element);
+  cleanup(this, cleanElement);
+  return element;
+});
+
+const elements = new Map();
+
+function cleanElement(isFinal) {
+  elements.get(this).remove();
+  if (isFinal) elements.delete(this);
+})
 ```
 
 ## ~~Server-side rendering with Astro~~
