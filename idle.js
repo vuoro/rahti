@@ -5,7 +5,7 @@ if (!requestIdleCallback) {
   let timeAllowance = 12;
   let startedAt = performance.now();
   const fallbackDeadline = {
-    timeRemaining: () => timeAllowance - (performance.now() - startedAt),
+    timeRemaining: () => Math.max(0, timeAllowance - (performance.now() - startedAt)),
     didTimeout: false,
   };
   const { timeRemaining } = fallbackDeadline;
