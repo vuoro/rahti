@@ -5,40 +5,40 @@
       import { component, idle, state, createGlobalState, mount, html, svg } from "./index.js";
 
       const [globalTest, setGlobalTest] = createGlobalState(0);
-      setInterval(() => setGlobalTest(Math.random()), 100);
+      setInterval(setGlobalTest, 1000, Math.random());
 
       const app = component(async function app(hello) {
-        // console.log(hello, "world");
+        console.log(hello, "world");
+        mount(this)(document.body, await testWrapper(this)());
+      });
+
+      const testWrapper = component(async function test() {
+        globalTest(this)();
         const [counter, setState] = state(this)(0);
-        setTimeout(() => setState(counter + 1), 200);
+        setTimeout(setState, 2000, counter + 1);
 
         let deadline = await idle();
         const test = Math.round(Math.random() * 10);
 
         const testComponents = [];
-        const max = 3;
+        const max = 10;
         for (let index = 0; index < (0.5 + 0.5 * Math.random()) * max; index++) {
           if (deadline.timeRemaining() <= 0) deadline = await idle();
           if (Math.random() > 0.1) testComponents.push(await logger(this, index)(test));
         }
 
-        mount(this)(
-          document.body,
-          html(this)`
-            <p>If there's ever over ${max} items here something is wrong.</p>
-            
-            <ul style="color: red" class="lol" events=${{
-              click: console.log,
-            }}>${testComponents}</ul> <div/>
-          `
-        );
+        return html(this)`
+          <p>If there's ever over ${max} items here something is wrong.</p>
+          
+          <ol style="color: red" class="lol" events=${{
+            click: console.log,
+          }}>${testComponents}</ol> <div/>
+        `;
       });
 
       const logger = component(async function logger(test) {
-        globalTest(this)();
-
         const [value, setValue] = state(this)(Math.random());
-        setTimeout(setValue, Math.random() * 200, Math.random());
+        setTimeout(setValue, Math.random() * 5000, Math.random());
 
         // if (Math.random() < 0.1) throw new Error();
 
