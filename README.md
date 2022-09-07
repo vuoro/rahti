@@ -184,7 +184,7 @@ Rahti has a custom renderer for [Astro](https://astro.build): https://github.com
 
 ## WebGL 2 Effects
 
-Since I'm using this library to develop games, I'm also building a set of cp,åpmemts for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
+Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
 
 ## Inspirations
 
