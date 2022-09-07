@@ -1,94 +1,49 @@
-import htm from "htm";
+import { cleanup } from "./component.js";
 
-import { component, cleanup } from "./component.js";
-
-export const mount = component(function mount(element, ...children) {
+export const Mount = function (props, ...children) {
+  const element = props?.to;
+  if (!element) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
   processChildren(children, element, this);
   return element;
-});
-
-const catchDom = function () {
-  return arguments;
 };
 
-export const html = (instance) => {
-  nextHtml = instance;
-  return htmlApplier;
-};
-let nextHtml = null;
-const htmlApplier = function () {
-  const results = htm.apply(catchDom, arguments);
-  const instance = nextHtml;
-  nextHtml = null;
-  return handleDom(instance, results, false);
-};
+export const DomElement = function (props) {
+  const isSvg = false;
 
-export const svg = (instance) => {
-  nextSvg = instance;
-  return svgApplier;
-};
-let nextSvg = null;
-const svgApplier = function () {
-  const results = htm.apply(catchDom, arguments);
-  const instance = nextSvg;
-  nextSvg = null;
-  return handleDom(instance, results, true);
-};
+  const element = this(Element, null, props["rahti:element"], isSvg);
 
-const handleDom = function (instance, results, isSvg) {
-  const hasMany = Array.isArray(results);
+  for (const key in props) {
+    if (key === "rahti:element") continue;
 
-  if (hasMany) {
-    const resultsBin = [];
+    const value = props[key];
 
-    for (const result of results) {
-      if (typeof result === "object") resultsBin.push(processDom(instance, result, isSvg));
-    }
-
-    return resultsBin;
-  } else {
-    return processDom(instance, results, isSvg);
-  }
-};
-
-const processDom = function (instance, result, isSvg) {
-  const type = result[0];
-  const props = result[1];
-
-  const element = domElement(instance)(type, isSvg);
-
-  if (props) {
-    for (const key in props) {
-      const value = props[key];
-
-      if (key === "style") {
-        // inline style
-        style(instance)(value, element);
-      } else if (key === "events") {
-        // events object
-        for (const key in value) {
-          const eventValue = value[key];
-          if (Array.isArray(eventValue)) {
-            eventListener(instance, key)(element, key, ...eventValue);
-          } else {
-            eventListener(instance, key)(element, key, eventValue);
-          }
+    if (key === "style") {
+      // inline style
+      this(Style, null, value, element);
+    } else if (key === "events") {
+      // events object
+      for (const key in value) {
+        const eventValue = value[key];
+        if (Array.isArray(eventValue)) {
+          this(EventListener, null, element, key, ...eventValue);
+        } else {
+          this(EventListener, null, element, key, eventValue);
         }
-      } else {
-        // attribute
-        attribute(instance, key)(key, value, element);
       }
+    } else {
+      // attribute
+      this(Attribute, null, key, value, element);
     }
   }
 
-  if (result.length > 2) processChildren(result, element, instance, 0, 2, isSvg);
+  if (arguments.length > 1) processChildren(arguments, element, this, 0, 1, isSvg);
 
   return element;
 };
 
 const nodes = new Map();
 
-const domElement = component(function element(tagName, isSvg) {
+const Element = function (tagName, isSvg) {
   const element = isSvg
     ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
     : document.createElement(tagName);
@@ -97,7 +52,7 @@ const domElement = component(function element(tagName, isSvg) {
   cleanup(this, cleanNode);
 
   return element;
-});
+};
 
 function cleanNode() {
   nodes.get(this).remove();
@@ -110,46 +65,42 @@ const processChildren = (children, element, instance, slotIndex = 0, startIndex 
 
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
-      slot(instance, child)(child, element, slotIndex++);
+      instance(Slot, null, child, element, slotIndex++);
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
       slotIndex = processChildren(child, element, instance, slotIndex);
-    } else if (typeof child === "object" && child?.length) {
-      // treat as list DOM children
-      const childElement = processDom(instance, child, isSvg);
-      slot(instance, childElement)(childElement, element, slotIndex++);
     } else {
       // treat as Text
-      const textNode = text(instance)();
+      const textNode = instance(TextNode);
       textNode.nodeValue = child;
-      slot(instance, textNode)(textNode, element, slotIndex++);
+      instance(Slot, null, textNode, element, slotIndex++);
     }
   }
 
   return slotIndex;
 };
 
-const text = component(function text() {
+const TextNode = function () {
   const node = new Text();
   nodes.set(this, node);
   cleanup(this, cleanNode);
   return node;
-});
+};
 
-const slot = component(function slot(child, parent, index) {
+const Slot = function (child, parent, index) {
   if (index >= parent.children.length) {
     parent.appendChild(child);
   } else {
     parent.insertBefore(child, parent.children[index]);
   }
-});
+};
 
-const style = component(function style(value, element) {
+const Style = function (value, element) {
   element.style.cssText = value;
 
   nodes.set(this, element);
   cleanup(this, cleanStyle);
-});
+};
 
 function cleanStyle(isFinal) {
   if (isFinal) {
@@ -158,7 +109,7 @@ function cleanStyle(isFinal) {
   }
 }
 
-const attribute = component(function attribute(key, value, element) {
+const Attribute = function (key, value, element) {
   if (typeof value === "boolean") {
     if (value) {
       element.setAttribute(key, key);
@@ -172,7 +123,7 @@ const attribute = component(function attribute(key, value, element) {
   nodes.set(this, element);
   attributeKeys.set(this, key);
   cleanup(this, cleanAttribute);
-});
+};
 
 const attributeKeys = new Map();
 
@@ -184,7 +135,7 @@ function cleanAttribute(isFinal) {
   }
 }
 
-export const eventListener = component(function eventListener(target, key, value, options) {
+export const EventListener = function (target, key, value, options) {
   target.addEventListener(key, value, options);
 
   nodes.set(this, target);
@@ -193,7 +144,7 @@ export const eventListener = component(function eventListener(target, key, value
   eventOptions.set(this, options);
 
   cleanup(this, cleanEventListener);
-});
+};
 
 const eventKeys = new Map();
 const eventValues = new Map();

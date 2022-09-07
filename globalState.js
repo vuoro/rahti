@@ -1,4 +1,4 @@
-import { cleanup, component, update } from "./component.js";
+import { cleanup, update } from "./component.js";
 
 export const createGlobalState = (initialValue, actions) => {
   let value = initialValue;
@@ -14,7 +14,7 @@ export const createGlobalState = (initialValue, actions) => {
   };
   const finalSetter = actions ? actions(getter, setter) : setter;
 
-  const globalState = component(function globalState() {
+  const GlobalState = function () {
     let state = states.get(this);
 
     if (!state) {
@@ -24,7 +24,7 @@ export const createGlobalState = (initialValue, actions) => {
 
     cleanup(this, cleanGlobalState);
     return state;
-  });
+  };
 
   function cleanGlobalState(isFinal) {
     if (isFinal) {
@@ -32,5 +32,5 @@ export const createGlobalState = (initialValue, actions) => {
     }
   }
 
-  return [globalState, finalSetter];
+  return [GlobalState, finalSetter];
 };

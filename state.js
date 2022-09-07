@@ -1,8 +1,11 @@
-import { cleanup, component, update } from "./component.js";
+import { cleanup, update } from "./component.js";
 
 const states = new Map();
 
-export const state = component(function state(initialValue, actions) {
+export const State = function (props) {
+  const initialValue = props?.initialValue;
+  const actions = props?.actions;
+
   let state = states.get(this);
 
   if (!state) {
@@ -25,7 +28,7 @@ export const state = component(function state(initialValue, actions) {
   cleanup(this, cleanState);
 
   return state;
-});
+};
 
 function cleanState(isFinal) {
   if (isFinal) {
