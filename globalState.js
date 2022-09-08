@@ -1,6 +1,6 @@
 import { CleanUp, update } from "./component.js";
 
-export const createGlobalState = ({ initialValue, actions }) => {
+export const createGlobalState = ({ initialValue, actions } = {}) => {
   let value = initialValue;
   const states = new Map();
 
