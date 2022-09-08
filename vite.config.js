@@ -1,6 +1,6 @@
 export default {
   esbuild: {
-    jsxFactory: "this",
+    jsxFactory: "this.run",
     jsxFragment: "'rahti:fragment'",
   },
 };

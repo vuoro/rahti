@@ -1,4 +1,4 @@
-import { cleanup, update } from "./component.js";
+import { CleanUp, update } from "./component.js";
 
 const states = new Map();
 
@@ -25,7 +25,7 @@ export const State = function (props) {
     states.set(this, state);
   }
 
-  cleanup(this, cleanState);
+  this.run(CleanUp, { cleaner: cleanState });
 
   return state;
 };

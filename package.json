@@ -1,7 +1,7 @@
 {
   "name": "@vuoro/rahti",
-  "version": "8.0.2",
-  "description": "Write reactive JavaScript `p(\"like this\")`.",
+  "version": "9.0.0",
+  "description": "Write reactive JS <Components> with async/await.",
   "type": "module",
   "main": "index.js",
   "exports": {

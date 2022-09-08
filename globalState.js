@@ -1,6 +1,6 @@
-import { cleanup, update } from "./component.js";
+import { CleanUp, update } from "./component.js";
 
-export const createGlobalState = (initialValue, actions) => {
+export const createGlobalState = ({ initialValue, actions }) => {
   let value = initialValue;
   const states = new Map();
 
@@ -22,7 +22,7 @@ export const createGlobalState = (initialValue, actions) => {
       states.set(this, state);
     }
 
-    cleanup(this, cleanGlobalState);
+    this.run(CleanUp, { cleaner: cleanGlobalState });
     return state;
   };
 

@@ -1,16 +1,16 @@
-import { cleanup } from "./component.js";
+import { CleanUp } from "./component.js";
 
-export const Mount = function (props, ...children) {
+export const Mount = function (props) {
   const element = props?.to;
   if (!element) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
-  processChildren(children, element, this);
+  processChildren.call(this, arguments, element, 0, 1);
   return element;
 };
 
 export const DomElement = function (props) {
-  const isSvg = false;
+  const isSvg = props["rahti:element"].startsWith("svg:");
 
-  const element = this(Element, null, props["rahti:element"], isSvg);
+  const element = this.run(Element, null, props["rahti:element"], isSvg);
 
   for (const key in props) {
     if (key === "rahti:element") continue;
@@ -19,37 +19,38 @@ export const DomElement = function (props) {
 
     if (key === "style") {
       // inline style
-      this(Style, null, value, element);
+      this.run(Style, null, value, element);
     } else if (key === "events") {
       // events object
       for (const key in value) {
         const eventValue = value[key];
         if (Array.isArray(eventValue)) {
-          this(EventListener, null, element, key, ...eventValue);
+          this.run(EventListener, null, element, key, ...eventValue);
         } else {
-          this(EventListener, null, element, key, eventValue);
+          this.run(EventListener, null, element, key, eventValue);
         }
       }
     } else {
       // attribute
-      this(Attribute, null, key, value, element);
+      this.run(Attribute, null, key, value, element);
     }
   }
 
-  if (arguments.length > 1) processChildren(arguments, element, this, 0, 1, isSvg);
+  if (arguments.length > 1) processChildren.call(this, arguments, element, 0, 1);
 
   return element;
 };
 
 const nodes = new Map();
 
-const Element = function (tagName, isSvg) {
+const Element = function (props, tagName, isSvg) {
+  const finalTagName = isSvg ? tagName.slice(4) : tagName;
   const element = isSvg
-    ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
-    : document.createElement(tagName);
+    ? document.createElementNS("http://www.w3.org/2000/svg", finalTagName)
+    : document.createElement(finalTagName);
 
   nodes.set(this, element);
-  cleanup(this, cleanNode);
+  this.run(CleanUp, { cleaner: cleanNode });
 
   return element;
 };
@@ -59,35 +60,35 @@ function cleanNode() {
   nodes.delete(this);
 }
 
-const processChildren = (children, element, instance, slotIndex = 0, startIndex = 0, isSvg) => {
+const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
     const child = children[index];
 
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
-      instance(Slot, null, child, element, slotIndex++);
+      this.run(Slot, null, child, element, slotIndex++);
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
-      slotIndex = processChildren(child, element, instance, slotIndex);
+      slotIndex = processChildren.call(this, child, element, slotIndex);
     } else {
       // treat as Text
-      const textNode = instance(TextNode);
+      const textNode = this.run(TextNode);
       textNode.nodeValue = child;
-      instance(Slot, null, textNode, element, slotIndex++);
+      this.run(Slot, null, textNode, element, slotIndex++);
     }
   }
 
   return slotIndex;
 };
 
-const TextNode = function () {
+const TextNode = function (props) {
   const node = new Text();
   nodes.set(this, node);
-  cleanup(this, cleanNode);
+  this.run(CleanUp, { cleaner: cleanNode });
   return node;
 };
 
-const Slot = function (child, parent, index) {
+const Slot = function (props, child, parent, index) {
   if (index >= parent.children.length) {
     parent.appendChild(child);
   } else {
@@ -95,11 +96,11 @@ const Slot = function (child, parent, index) {
   }
 };
 
-const Style = function (value, element) {
+const Style = function (props, value, element) {
   element.style.cssText = value;
 
   nodes.set(this, element);
-  cleanup(this, cleanStyle);
+  this.run(CleanUp, { cleaner: cleanStyle });
 };
 
 function cleanStyle(isFinal) {
@@ -109,7 +110,7 @@ function cleanStyle(isFinal) {
   }
 }
 
-const Attribute = function (key, value, element) {
+const Attribute = function (props, key, value, element) {
   if (typeof value === "boolean") {
     if (value) {
       element.setAttribute(key, key);
@@ -122,7 +123,7 @@ const Attribute = function (key, value, element) {
 
   nodes.set(this, element);
   attributeKeys.set(this, key);
-  cleanup(this, cleanAttribute);
+  this.run(CleanUp, { cleaner: cleanAttribute });
 };
 
 const attributeKeys = new Map();
@@ -135,7 +136,7 @@ function cleanAttribute(isFinal) {
   }
 }
 
-export const EventListener = function (target, key, value, options) {
+export const EventListener = function (props, target, key, value, options) {
   target.addEventListener(key, value, options);
 
   nodes.set(this, target);
@@ -143,7 +144,7 @@ export const EventListener = function (target, key, value, options) {
   eventValues.set(this, value);
   eventOptions.set(this, options);
 
-  cleanup(this, cleanEventListener);
+  this.run(CleanUp, { cleaner: cleanEventListener });
 };
 
 const eventKeys = new Map();

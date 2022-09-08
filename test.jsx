@@ -1,25 +1,30 @@
-import { rahti, idle, createGlobalState, State, Mount } from "./index.js";
+import { rahti, idle, createGlobalState, State, Mount, CleanUp } from "./index.js";
 
 const [GlobalTest, setGlobalTest] = createGlobalState(0);
-setInterval(setGlobalTest, 1000, Math.random());
+setInterval(() => setGlobalTest(Math.random()), 3000);
 
 const TestWrapper = async function () {
-  const [testValue, setGlobalTest] = <GlobalTest />;
+  <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
   setTimeout(setState, 3500, counter + 1);
 
   let deadline = await idle();
 
   const testComponents = [];
-  const max = 10;
-  for (let index = 0; index < (0.5 + 0.5 * Math.random()) * max; index++) {
+  const max = 20;
+  for (let index = 0; index < (0.5 + Math.random() * 0.5) * max; index++) {
     if (deadline.timeRemaining() <= 0) deadline = await idle();
-    if (Math.random() > 0.1) testComponents.push(await (<TestItem>{counter}</TestItem>));
+    try {
+      if (Math.random() > 0.1) testComponents.push(await (<TestItem>{counter}</TestItem>));
+    } catch (e) {}
   }
 
   return (
     <>
-      <p style="color: red">If there's ever over {max} items here, something is wrong.</p>
+      <p style="color: red">
+        Something is wrong if there's ever <em>consistently</em> over {max} items here, or if{" "}
+        <em>every</em> element is flashing red on updates.
+      </p>
       <style>
         {`
           * { 
@@ -41,16 +46,18 @@ const TestWrapper = async function () {
       >
         {testComponents}
       </ol>
-      <div>This is the bottom</div>
+      <div>an SVG follows:</div>
     </>
   );
 };
 
-const TestItem = async function (counter) {
-  const [value, setValue] = <State></State>;
+const TestItem = async function (props, counter) {
+  const [local, setLocal] = <State initialValue={0} />;
+  const [global] = <GlobalTest />;
 
-  setTimeout(setValue, Math.random() * 20000, Math.random());
-  if (Math.random() < 0.01) throw new Error();
+  const timer = setTimeout(setLocal, Math.random() * 10000, Math.random());
+  <CleanUp cleaner={() => clearTimeout(timer)} />;
+  // if (Math.random() < 0.05) throw new Error();
 
   await idle();
 
@@ -58,25 +65,24 @@ const TestItem = async function (counter) {
     <li>
       <input
         type="checkbox"
-        checked={value > 0.5}
+        checked={local > 0.5}
         events={{
           click: console.log,
         }}
       />{" "}
-      {value > 0.5} {counter} / {value}
+      Parent: {counter} / Global: {global} / Local: {local}
     </li>
   );
 };
 
-const App = async function (hello) {
+const App = async function (props, hello) {
   console.log(hello, "world");
   <Mount to={document.body}>
     {await (<TestWrapper />)}
-    <svg>
-      <svg:a></svg:a>
-    </svg>
-    <p></p>
+    <svg:svg>
+      <svg:rect fill="none" stroke="black" width="300" height="150" />
+    </svg:svg>
   </Mount>;
 };
 
-rahti(App, null, "Hello");
+rahti.run(App, null, "Hello");

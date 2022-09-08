@@ -23,32 +23,49 @@ const updateQueue = new Set();
 
 const isAsync = (Component) => Component.constructor.name === "AsyncFunction";
 
-export const rahti = function (inputComponent, inputProps) {
-  const isFragment = inputComponent === "rahti:fragment";
-  if (isFragment) {
-    const contents = [];
-    for (let index = 2, { length } = arguments; index < length; index++) {
-      contents.push(arguments[index]);
+class Instance {
+  run(inputComponent, inputProps) {
+    // Cleanups
+    if (inputComponent === CleanUp) {
+      return CleanUp(this.id, inputProps.cleaner);
     }
-    return contents;
+
+    // Fragments
+    const isFragment = inputComponent === "rahti:fragment";
+    if (isFragment) {
+      const contents = [];
+      for (let index = 2, { length } = arguments; index < length; index++) {
+        contents.push(arguments[index]);
+      }
+      return contents;
+    }
+
+    // DOM components
+    const seemsLikeDom = typeof inputComponent === "string";
+
+    const Component = seemsLikeDom ? DomElement : inputComponent;
+    const props = seemsLikeDom && !inputProps ? {} : inputProps;
+    if (seemsLikeDom) props["rahti:element"] = inputComponent;
+
+    // Normal components
+    const parentId = this.id;
+    const key = props?.key;
+    const instance =
+      getInstance(Component, parentId, key) || createInstance(Component, parentId, key);
+    const id = instanceIds.get(instance);
+
+    if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
+
+    return (isAsync(Component) ? startAsync : start)(id, instance, arguments, props, Component);
   }
+}
 
-  const seemsLikeDom = typeof inputComponent === "string";
+export const rahti = new Instance();
+rahti.id = null;
 
-  const Component = seemsLikeDom ? DomElement : inputComponent;
-  const props = seemsLikeDom && !inputProps ? {} : inputProps;
-  if (seemsLikeDom) props["rahti:element"] = inputComponent;
-
-  const parentId = this || null;
-  const key = props?.key;
-  const instance =
-    getInstance(Component, parentId, key) || createInstance(Component, parentId, key);
-  const id = instanceIds.get(instance);
-
-  if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
-
-  return (isAsync(Component) ? startAsync : start)(id, instance, arguments, props, Component);
-};
+let instancePoolSize = 512;
+export const setInstancePoolSize = (size) => (instancePoolSize = size);
+const instancePool = [];
 
 const createInstance = (Component, parentId, key) => {
   const id = idCounter++;
@@ -73,14 +90,17 @@ const createInstance = (Component, parentId, key) => {
   // Mark as needing an update
   needsUpdates.add(id);
 
-  const instance = rahti.bind(id);
+  // console.log("instance pool length", instancePool.length);
+  const instance = instancePool.length > 0 ? instancePool.pop() : new Instance();
+  instance.id = id;
+
   instanceIds.set(instance, id);
   idInstances.set(id, instance);
 
   // console.log(
   //   "created",
   //   Component.name,
-  //   "in",
+  //   "for",
   //   Components.get(parentId).name,
   //   "at",
   //   currentIndexes.get(parentId)
@@ -104,7 +124,7 @@ const getInstance = (Component, parentId, key) => {
       keys.get(currentChild) === key
     ) {
       // The child looks like what we're looking for
-      // console.log("found here", Components.get(currentChild).name);
+      // console.log("found here", Component.name, "for", Components.get(parentId).name);
       return idInstances.get(currentChild);
     } else {
       // Try to find the a matching child further on
@@ -114,19 +134,17 @@ const getInstance = (Component, parentId, key) => {
           // This one looks correct, so move it into its new place
           children.splice(index, 1);
           children.splice(currentIndex, 0, child);
-          // console.log("found later", Components.get(child).name);
+          // console.log("found later", Component.name, "for", Components.get(parentId).name);
           return idInstances.get(child);
         }
       }
     }
 
-    // console.log("did not find matching children");
+    // console.log("did not find matching children", Component.name);
   } else {
-    // console.log("there were no children");
+    // console.log("there were no children for", Components.get(parentId).name);
   }
 };
-
-// old
 
 const start = function (id, instance, newArguments, newProps, Component, forceUpdate = false) {
   return checkForUpdate(id, instance, newArguments, newProps, Component, false, forceUpdate);
@@ -207,7 +225,7 @@ const checkForUpdate = (
 
   if (needsUpdate) {
     // Run the instance
-    // console.log("+++ start of", Component.name, newProps, newArguments);
+    // console.log("+++ start of", Component.name, newProps);
     // Run the cleanup, if there is one
     return runCleanup(id, instance, newArguments, newProps, Component, async);
   } else {
@@ -228,6 +246,7 @@ const runCleanup = (id, instance, newArguments, newProps, Component, async = fal
         try {
           cleaner.call(instance, false);
         } catch (error) {
+          // console.log("caught");
           reportError(error);
         }
       }
@@ -244,17 +263,14 @@ const runCleanup = (id, instance, newArguments, newProps, Component, async = fal
 };
 
 const prepareArguments = (props, args) => {
-  if (props || args?.length > 2) {
-    const newArguments = [];
+  const newArguments = [];
+  newArguments.push(props);
 
-    if (props) newArguments.push(props);
-
-    for (let index = 2, { length } = args; index < length; index++) {
-      newArguments.push(args[index]);
-    }
-
-    return newArguments;
+  for (let index = 2, { length } = args; index < length; index++) {
+    newArguments.push(args[index]);
   }
+
+  return newArguments;
 };
 
 const run = (id, instance, newArguments, newProps, Component) => {
@@ -269,9 +285,10 @@ const run = (id, instance, newArguments, newProps, Component) => {
     valueCache.set(id, result);
     needsUpdates.delete(id);
   } catch (error) {
+    // console.log("caught");
     reportError(error);
   } finally {
-    finish(id, instance, Component);
+    finish(id);
   }
 
   // console.log("--- returning", result, "from", Component.name, instance);
@@ -295,7 +312,7 @@ const runAsync = async (id, instance, newArguments, newProps, Component) => {
   } catch (error) {
     reportError(error);
   } finally {
-    finish(id, instance, Component);
+    finish(id);
     pendings.delete(id);
   }
 
@@ -303,7 +320,7 @@ const runAsync = async (id, instance, newArguments, newProps, Component) => {
   return result;
 };
 
-const finish = (id, instance, Component) => {
+const finish = (id) => {
   // Destroy children that were not visited on this execution
   const children = childrens.get(id);
   if (children) {
@@ -322,6 +339,7 @@ const finish = (id, instance, Component) => {
 
 const destroy = async (id) => {
   // console.log("destroying", Components.get(id).name);
+  const instance = idInstances.get(id);
 
   // If there's an ongoing run, wait for it
   const pendingPromise = pendings.get(id);
@@ -336,7 +354,6 @@ const destroy = async (id) => {
 
   if (cleanup) {
     // console.log("\\\\ running cleanup for", Components.get(id).name);
-    const instance = idInstances.get(id);
     if (cleanup instanceof Set) {
       // Many cleanups
       for (const cleaner of cleanup) {
@@ -377,29 +394,30 @@ const destroy = async (id) => {
   cleanups.delete(id);
   needsUpdates.delete(id);
   updateQueue.delete(id);
-  instanceIds.delete(idInstances.get(id));
+  instanceIds.delete(instance);
   idInstances.delete(id);
+
+  instance.id = null;
+  if (instancePool.length <= instancePoolSize) instancePool.push(instance);
 };
 
-export const cleanup = (instance, callback) => {
-  const id = instanceIds.get(instance);
+export const CleanUp = function (id, cleaner) {
   let cleanup = cleanups.get(id);
-
   if (cleanup instanceof Set) {
     // 3rd+ cleanup
-    cleanup.add(callback);
+    cleanup.add(cleaner);
   } else if (cleanup) {
     // 2nd cleanup
     const cleaners = new Set();
     cleaners.add(cleanup);
-    cleaners.add(callback);
+    cleaners.add(cleaner);
     cleanups.set(id, cleaners);
   } else {
     // 1st cleanup
-    cleanups.set(id, callback);
+    cleanups.set(id, cleaner);
   }
 };
-export const cleanUp = cleanup;
+export const Cleanup = CleanUp;
 
 let queueWillRun = false;
 
@@ -448,8 +466,9 @@ const runUpdateQueue = async () => {
     try {
       newValue = (async ? startAsync : start)(id, instance, undefined, undefined, Component, true);
     } catch (error) {
+      // console.log("caught");
       reportError(newValue);
-      continue;
+      // continue;
     }
 
     if (async) {
@@ -476,8 +495,9 @@ const runUpdateQueue = async () => {
     try {
       newResolvedValue = await newValue;
     } catch (error) {
+      // console.log("caught");
       reportError(error);
-      continue;
+      // continue;
     }
 
     if (newResolvedValue !== previousValue) {
