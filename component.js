@@ -262,9 +262,11 @@ const runCleanup = (id, instance, newArguments, newProps, Component, async = fal
   return (async ? runAsync : run)(id, instance, newArguments, newProps, Component);
 };
 
+const dummyPropsSoPeopleCanAlwaysDestructureThem = {};
+
 const prepareArguments = (props, args) => {
   const newArguments = [];
-  newArguments.push(props);
+  newArguments.push(props || dummyPropsSoPeopleCanAlwaysDestructureThem);
 
   for (let index = 2, { length } = args; index < length; index++) {
     newArguments.push(args[index]);

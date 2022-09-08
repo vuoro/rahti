@@ -2,10 +2,7 @@ import { CleanUp, update } from "./component.js";
 
 const states = new Map();
 
-export const State = function (props) {
-  const initialValue = props?.initialValue;
-  const actions = props?.actions;
-
+export const State = function ({ initialValue, actions }) {
   let state = states.get(this);
 
   if (!state) {

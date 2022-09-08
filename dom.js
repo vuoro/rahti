@@ -1,10 +1,9 @@
 import { CleanUp } from "./component.js";
 
-export const Mount = function (props) {
-  const element = props?.to;
-  if (!element) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
-  processChildren.call(this, arguments, element, 0, 1);
-  return element;
+export const Mount = function ({ to }) {
+  if (!to) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
+  processChildren.call(this, arguments, to, 0, 1);
+  return to;
 };
 
 export const DomElement = function (props) {
@@ -81,7 +80,7 @@ const processChildren = function (children, element, slotIndex = 0, startIndex =
   return slotIndex;
 };
 
-const TextNode = function (props) {
+const TextNode = function () {
   const node = new Text();
   nodes.set(this, node);
   this.run(CleanUp, { cleaner: cleanNode });
