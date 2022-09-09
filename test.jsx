@@ -15,7 +15,8 @@ const TestWrapper = async function () {
   for (let index = 0; index < (0.5 + Math.random() * 0.5) * max; index++) {
     if (deadline.timeRemaining() <= 0) deadline = await idle();
     try {
-      if (Math.random() > 0.1) testComponents.push(await (<TestItem>{counter}</TestItem>));
+      if (Math.random() > 0.1)
+        testComponents.push(await (<TestItem counter={counter} index={testComponents.length} />));
     } catch (e) {}
   }
 
@@ -51,7 +52,7 @@ const TestWrapper = async function () {
   );
 };
 
-const TestItem = async function (props, counter) {
+const TestItem = async function ({ parentValue, index }) {
   const [local, setLocal] = <State initialValue={0} />;
   const [global] = <GlobalTest />;
 
@@ -63,6 +64,7 @@ const TestItem = async function (props, counter) {
 
   return (
     <li>
+      {index + 1}
       <input
         type="checkbox"
         checked={local > 0.5}
@@ -70,7 +72,7 @@ const TestItem = async function (props, counter) {
           click: console.log,
         }}
       />{" "}
-      Parent: {counter} / Global: {global} / Local: {local}
+      Parent: {parentValue} / Global: {global} / Local: {local}
     </li>
   );
 };

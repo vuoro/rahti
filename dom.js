@@ -59,13 +59,16 @@ function cleanNode() {
   nodes.delete(this);
 }
 
+let tempProps = {};
+
 const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
     const child = children[index];
 
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
-      this.run(Slot, null, child, element, slotIndex++);
+      tempProps.key = child;
+      this.run(Slot, tempProps, child, element, slotIndex++);
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
       slotIndex = processChildren.call(this, child, element, slotIndex);
@@ -73,7 +76,8 @@ const processChildren = function (children, element, slotIndex = 0, startIndex =
       // treat as Text
       const textNode = this.run(TextNode);
       textNode.nodeValue = child;
-      this.run(Slot, null, textNode, element, slotIndex++);
+      tempProps.key = textNode;
+      this.run(Slot, tempProps, textNode, element, slotIndex++);
     }
   }
 
@@ -90,7 +94,7 @@ const TextNode = function () {
 const Slot = function (props, child, parent, index) {
   if (index >= parent.children.length) {
     parent.appendChild(child);
-  } else {
+  } else if (parent.children.item(index) !== child) {
     parent.insertBefore(child, parent.children[index]);
   }
 };
