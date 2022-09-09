@@ -54,10 +54,20 @@ const Element = function (props, tagName, isSvg) {
   return element;
 };
 
+const TextNode = function () {
+  const node = new Text();
+  nodes.set(this, node);
+  this.run(CleanUp, { cleaner: cleanNode });
+  return node;
+};
+
 function cleanNode(isFinal) {
   if (isFinal) {
-    nodes.get(this).remove();
+    const node = nodes.get(this);
+    node.remove();
     nodes.delete(this);
+    slotChildren.delete(node);
+    slotIndexes.delete(node);
   }
 }
 
@@ -86,19 +96,35 @@ const processChildren = function (children, element, slotIndex = 0, startIndex =
   return slotIndex;
 };
 
-const TextNode = function () {
-  const node = new Text();
-  nodes.set(this, node);
-  this.run(CleanUp, { cleaner: cleanNode });
-  return node;
+const Slot = function (props, child, parent, index) {
+  slotChildren.set(child, parent);
+  slotIndexes.set(child, index);
+
+  if (!slotQueueWillRun) {
+    slotQueueWillRun = true;
+    queueMicrotask(processSlotQueue);
+  }
 };
 
-const Slot = function (props, child, parent, index) {
-  if (index >= parent.children.length) {
-    parent.appendChild(child);
-  } else if (parent.children.item(index) !== child) {
-    parent.insertBefore(child, parent.children[index]);
+let slotQueueWillRun = false;
+const slotChildren = new Map();
+const slotIndexes = new Map();
+
+const processSlotQueue = () => {
+  for (const [child, parent] of slotChildren) {
+    const index = slotIndexes.get(child);
+
+    if (index > parent.children.length) {
+      parent.appendChild(child);
+    } else if (parent.children.item(index) !== child) {
+      parent.insertBefore(child, parent.children[index]);
+    }
+
+    slotChildren.delete(child);
+    slotIndexes.delete(child);
   }
+
+  slotQueueWillRun = false;
 };
 
 const Style = function (props, value, element) {

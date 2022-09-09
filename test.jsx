@@ -23,7 +23,7 @@ const TestWrapper = async function () {
   return (
     <>
       <p style="color: red">
-        Something is wrong if there's ever <em>consistently</em> over {max} items here, or if{" "}
+        Something is wrong if: a) there's ever <em>consistently</em> over {max} items here, b){" "}
         <em>every</em> element is flashing red on updates.
       </p>
       <style>
@@ -58,7 +58,7 @@ const TestItem = async function ({ parentValue, index }) {
 
   const timer = setTimeout(setLocal, Math.random() * 10000, Math.random());
   <CleanUp cleaner={() => clearTimeout(timer)} />;
-  // if (Math.random() < 0.05) throw new Error();
+  if (Math.random() < 0.05) throw new Error();
 
   await idle();
 
@@ -78,7 +78,7 @@ const TestItem = async function ({ parentValue, index }) {
 };
 
 const App = async function (props, hello) {
-  console.log(hello, "world");
+  console.log("========", hello, "world");
   <Mount to={document.body}>
     {await (<TestWrapper />)}
     <svg:svg>
