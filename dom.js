@@ -54,9 +54,11 @@ const Element = function (props, tagName, isSvg) {
   return element;
 };
 
-function cleanNode() {
-  nodes.get(this).remove();
-  nodes.delete(this);
+function cleanNode(isFinal) {
+  if (isFinal) {
+    nodes.get(this).remove();
+    nodes.delete(this);
+  }
 }
 
 let tempProps = {};
