@@ -162,20 +162,20 @@ function () {
   return element;
 };
 
-// Cleanups are also called with the component's `this`,
+// Cleanups are also called with the component's `this`, which has a unique `.id`,
 // so in some cases you can share the same cleanup function with multiple components.
 const elements = new Map();
 
 function () {
   const element = document.createElement("div");
-  elements.set(this, element);
+  elements.set(this.id, element);
   <CleanUp cleaner={cleanElement} />
   return element;
 };
 
 function cleanElement(isFinal) {
-  elements.get(this).remove();
-  if (isFinal) elements.delete(this);
+  elements.get(this.id).remove();
+  if (isFinal) elements.delete(this.id);
 })
 ```
 
