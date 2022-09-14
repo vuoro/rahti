@@ -7,19 +7,19 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
   const getter = () => value;
   const setter = (newValue) => {
     value = newValue;
-    for (const [component, state] of states) {
+    for (const [id, state] of states) {
       state[0] = value;
-      update(component, true);
+      update(id, true);
     }
   };
   const finalSetter = actions ? actions(getter, setter) : setter;
 
   const GlobalState = function () {
-    let state = states.get(this);
+    let state = states.get(this.id);
 
     if (!state) {
       state = [value, finalSetter];
-      states.set(this, state);
+      states.set(this.id, state);
     }
 
     this.run(CleanUp, { cleaner: cleanGlobalState });
@@ -28,7 +28,7 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
 
   function cleanGlobalState(isFinal) {
     if (isFinal) {
-      states.delete(this);
+      states.delete(this.id);
     }
   }
 

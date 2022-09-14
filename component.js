@@ -423,9 +423,9 @@ export const Cleanup = CleanUp;
 
 let queueWillRun = false;
 
-export const update = (instance, forceParentUpdate = false) => {
-  const id = instanceIds.get(instance);
-  if (id === undefined) {
+export const update = (id, forceParentUpdate = false) => {
+  const instance = idInstances.get(id);
+  if (instance === undefined) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }

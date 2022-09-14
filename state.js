@@ -3,13 +3,13 @@ import { CleanUp, update } from "./component.js";
 const states = new Map();
 
 export const State = function ({ initialValue, actions }) {
-  let state = states.get(this);
+  let state = states.get(this.id);
 
   if (!state) {
     state = [initialValue];
     const setter = (newValue) => {
       state[0] = newValue;
-      update(this, true);
+      update(this.id, true);
     };
 
     if (actions) {
@@ -19,7 +19,7 @@ export const State = function ({ initialValue, actions }) {
       state.push(setter);
     }
 
-    states.set(this, state);
+    states.set(this.id, state);
   }
 
   this.run(CleanUp, { cleaner: cleanState });
@@ -29,6 +29,6 @@ export const State = function ({ initialValue, actions }) {
 
 function cleanState(isFinal) {
   if (isFinal) {
-    states.delete(this);
+    states.delete(this.id);
   }
 }
