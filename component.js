@@ -481,7 +481,7 @@ const runUpdateQueue = async () => {
         const parentId = parents.get(id);
         if (parentId !== null && parentId !== undefined) {
           // console.log("escalating update to", Components.get(parentId));
-          update(idInstances.get(parentId));
+          update(parentId);
         }
       }
     }
@@ -506,7 +506,7 @@ const runUpdateQueue = async () => {
       const parentId = parents.get(id);
       if (parentId !== null && parentId !== undefined) {
         // console.log("escalating update to", Components.get(parentId));
-        update(idInstances.get(parentId));
+        update(parentId);
       }
     }
   }

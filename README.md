@@ -147,7 +147,7 @@ const [timestamp, setGlobalTimestamp] = rahti.run(GlobalTimer);
 // (Check out state.js and globalState.js for how they use it.)
 const CustomStateTest = function () {
   console.log("ran at", performance.now());
-  setTimeout(() => update(this), 1000);
+  setTimeout(() => update(this.id), 1000);
 };
 
 // Finally, components can have "cleanups" using the CleanUp component.
