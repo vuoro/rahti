@@ -6,7 +6,8 @@ setInterval(() => setGlobalTest(Math.random()), 3000);
 const TestWrapper = async function () {
   <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
-  setTimeout(setState, 3500, counter + 1);
+  const timer = setTimeout(setState, 3500, counter + 1);
+  <CleanUp cleaner={() => clearTimeout(timer)} />;
 
   let deadline = await idle();
 

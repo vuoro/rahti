@@ -423,6 +423,11 @@ export const Cleanup = CleanUp;
 
 let queueWillRun = false;
 
+export const updateParent = (id) => {
+  const parentId = parents.get(id);
+  update(parentId);
+};
+
 export const update = (id, forceParentUpdate = false) => {
   const instance = idInstances.get(id);
   if (instance === undefined) {

@@ -1,4 +1,4 @@
-import { CleanUp, update } from "./component.js";
+import { CleanUp, updateParent } from "./component.js";
 
 export const createGlobalState = ({ initialValue, actions } = {}) => {
   let value = initialValue;
@@ -9,7 +9,7 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
     value = newValue;
     for (const [id, state] of states) {
       state[0] = value;
-      update(id, true);
+      updateParent(id);
     }
   };
   const finalSetter = actions ? actions(getter, setter) : setter;

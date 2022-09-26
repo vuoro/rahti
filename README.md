@@ -18,7 +18,7 @@
 - Simple API
   ```js
   import { rahti, State, Mount } from "rahti"; // for most use cases
-  import { CleanUp, createGlobalState, idle, update } from "rahti"; // for advanced usage
+  import { CleanUp, createGlobalState, idle, update, updateParent } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements
   ```js
@@ -35,7 +35,7 @@
 ## API & example
 
 ```js
-import { rahti, Mount, State, CleanUp, createGlobalState, idle, update } from "rahti";
+import { rahti, Mount, State, CleanUp, createGlobalState, idle, update, updateParent } from "rahti";
 
 // Components must be normal, non-arrow functions
 // `function() {}` = correct
@@ -143,7 +143,7 @@ const b = function () {
 // or inside event handlers and such.
 const [timestamp, setGlobalTimestamp] = rahti.run(GlobalTimer);
 
-// You can also create custom state mechanisms with `update`.
+// You can also create custom state mechanisms with `update` and `updateParent`.
 // (Check out state.js and globalState.js for how they use it.)
 const CustomStateTest = function () {
   console.log("ran at", performance.now());

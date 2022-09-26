@@ -1,4 +1,4 @@
-import { CleanUp, update } from "./component.js";
+import { CleanUp, updateParent } from "./component.js";
 
 const states = new Map();
 
@@ -9,7 +9,7 @@ export const State = function ({ initialValue, actions }) {
     state = [initialValue];
     const setter = (newValue) => {
       state[0] = newValue;
-      update(this.id, true);
+      updateParent(this.id);
     };
 
     if (actions) {
