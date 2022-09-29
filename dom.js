@@ -85,11 +85,15 @@ const processChildren = function (children, element, slotIndex = 0, startIndex =
       // treat as a list of grandchildren
       slotIndex = processChildren.call(this, child, element, slotIndex);
     } else {
-      // treat as Text
-      const textNode = this.run(TextNode);
-      textNode.nodeValue = child;
-      tempProps.key = textNode;
-      this.run(Slot, tempProps, textNode, element, slotIndex++);
+      const type = typeof child;
+
+      if (type === "string" || type === "number") {
+        // treat as Text
+        const textNode = this.run(TextNode);
+        textNode.nodeValue = child;
+        tempProps.key = textNode;
+        this.run(Slot, tempProps, textNode, element, slotIndex++);
+      }
     }
   }
 
