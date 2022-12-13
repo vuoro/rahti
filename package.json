@@ -25,30 +25,10 @@
   },
   "homepage": "https://github.com/vuoro/rahti#readme",
   "devDependencies": {
-    "eslint": "^8.19.0",
-    "vite": "^3.0.7"
+    "vite": "^4.0.1"
   },
   "prettier": {
     "printWidth": 100
-  },
-  "eslintConfig": {
-    "env": {
-      "browser": true,
-      "es2021": true
-    },
-    "extends": [
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "ecmaVersion": 12,
-      "sourceType": "module",
-      "ecmaFeatures": {
-        "jsx": true
-      }
-    },
-    "rules": {
-      "no-unused-vars": 1
-    }
   },
   "packageManager": "pnpm@7.0.1"
 }

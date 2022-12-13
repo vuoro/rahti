@@ -1,0 +1,22 @@
+{
+  "linter": {
+    "rules": {
+      "style": {
+        "useBlockStatements": "off",
+        "noUnusedTemplateLiteral": "off",
+        "noArguments": "off"
+      },
+      "performance": {
+        "noDelete": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUndeclaredVariables": "error"
+      }
+    }
+  },
+  "formatter": {
+    "lineWidth": 100,
+    "indentStyle": "space"
+  }
+}
