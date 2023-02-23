@@ -124,24 +124,28 @@ const TimerWithActions = function () {
 
 // `createGlobalState` is a helper for sharing the same state between multiple components.
 // It accepts the same props as State.
-// It returns a component that works like State, and a setter.
-const [GlobalTimer, setGlobalTimestamp] = createGlobalState({initialValue: performance.now()});
-requestAnimationFrame(setGlobalTimestamp);
+// It returns a component that works like State, a setter function, and a getter function.
+const [
+  GlobalTimer, 
+  setGlobalTimestamp, 
+  getGlobalTimestamp
+] = createGlobalState({initialValue: performance.now()});
 
 const a = function () {
-  const [timestamp] = <GlobalTimer />;
-  console.log("a", timestamp);
+  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
+  console.log("from a", timestamp);
 };
 
 const b = function () {
-  const [timestamp] = <GlobalTimer />;
-  console.log("b", timestamp);
+  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
+  console.log("from b", timestamp);
 };
 
-// Global states can additionally be called using `rahti.run`.
-// This lets you easily check or set the state outside components,
-// or inside event handlers and such.
-const [timestamp, setGlobalTimestamp] = rahti.run(GlobalTimer);
+requestAnimationFrame(setGlobalTimestamp);
+
+// The getter function lets you easily check or set the state outside components,
+// inside event handlers and such.
+setTimeout(() => console.log("from setTimeout", getGlobalTimestamp()), 1000);
 
 // You can also create custom state mechanisms with `update` and `updateParent`.
 // (Check out state.js and globalState.js for how they use it.)

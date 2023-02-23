@@ -18,7 +18,7 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
     let state = states.get(this.id);
 
     if (!state) {
-      state = [value, finalSetter];
+      state = [value, finalSetter, getter];
       states.set(this.id, state);
     }
 
@@ -32,5 +32,5 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
     }
   }
 
-  return [GlobalState, finalSetter];
+  return [GlobalState, finalSetter, getter];
 };
