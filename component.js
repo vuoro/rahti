@@ -36,7 +36,7 @@ class Instance {
 	run(inputComponent, inputProps) {
 		// Cleanups
 		if (inputComponent === CleanUp) {
-			return CleanUp(this.id, inputProps.cleaner);
+			return CleanUp(this.id, inputProps?.cleaner || arguments[2]);
 		}
 
 		// Fragments
@@ -468,7 +468,7 @@ const destroy = async (id) => {
 };
 
 export const CleanUp = function (id, cleaner) {
-	let cleanup = cleanups.get(id);
+	const cleanup = cleanups.get(id);
 	if (cleanup instanceof Set) {
 		// 3rd+ cleanup
 		cleanup.add(cleaner);
