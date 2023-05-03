@@ -22,7 +22,7 @@ export const State = function ({ initialValue, actions }) {
     states.set(this.id, state);
   }
 
-  this.run(CleanUp, { cleaner: cleanState });
+  this.run(CleanUp, null, cleanState);
 
   return state;
 };

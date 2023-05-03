@@ -49,7 +49,7 @@ const Element = function (props, tagName, isSvg) {
     : document.createElement(finalTagName);
 
   nodes.set(this, element);
-  this.run(CleanUp, { cleaner: cleanNode });
+  this.run(CleanUp, null, cleanNode);
 
   return element;
 };
@@ -57,7 +57,7 @@ const Element = function (props, tagName, isSvg) {
 const TextNode = function () {
   const node = new Text();
   nodes.set(this, node);
-  this.run(CleanUp, { cleaner: cleanNode });
+  this.run(CleanUp, null, cleanNode);
   return node;
 };
 
@@ -135,7 +135,7 @@ const Style = function (props, value, element) {
   element.style.cssText = value;
 
   nodes.set(this, element);
-  this.run(CleanUp, { cleaner: cleanStyle });
+  this.run(CleanUp, null, cleanStyle);
 };
 
 function cleanStyle(isFinal) {
@@ -158,7 +158,7 @@ const Attribute = function (props, key, value, element) {
 
   nodes.set(this, element);
   attributeKeys.set(this, key);
-  this.run(CleanUp, { cleaner: cleanAttribute });
+  this.run(CleanUp, null, cleanAttribute);
 };
 
 const attributeKeys = new Map();
@@ -179,7 +179,7 @@ export const EventListener = function (props, target, key, value, options) {
   eventValues.set(this, value);
   eventOptions.set(this, options);
 
-  this.run(CleanUp, { cleaner: cleanEventListener });
+  this.run(CleanUp, null, cleanEventListener);
 };
 
 const eventKeys = new Map();

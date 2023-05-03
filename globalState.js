@@ -22,7 +22,7 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
       states.set(this.id, state);
     }
 
-    this.run(CleanUp, { cleaner: cleanGlobalState });
+    this.run(CleanUp, null, cleanGlobalState);
     return state;
   };
 
