@@ -280,10 +280,11 @@ const run = (id, instance, newArguments, newProps, Component) => {
   let result;
 
   try {
-    result = Component.apply(instance, [
+    result = Component.call(
+      instance,
       newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
       ...newArguments,
-    ]);
+    );
 
     // Save the new value
     valueCache.set(id, result);
@@ -305,10 +306,11 @@ const runAsync = async (id, instance, newArguments, newProps, Component) => {
   let result;
 
   try {
-    result = Component.apply(instance, [
+    result = Component.call(
+      instance,
       newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
       ...newArguments,
-    ]);
+    );
 
     pendings.set(id, result);
     const finalResult = await result;
