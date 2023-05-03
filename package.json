@@ -8,7 +8,7 @@
     ".": "./index.js"
   },
   "scripts": {
-    "start": "vite dev"
+    "start": "vite dev --open"
   },
   "repository": {
     "type": "git",
