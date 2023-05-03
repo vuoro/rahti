@@ -13,7 +13,6 @@ const currentIndexes = new Map([[null, 0]]);
 const keys = new Map();
 
 const argumentCache = new Map();
-const propCache = new Map();
 const valueCache = new Map();
 const pendings = new Map();
 
@@ -32,53 +31,53 @@ const isAsync = (Component) => {
   return isIt;
 };
 
-class Instance {
-  run(inputComponent, inputProps, ...inputArguments) {
-    // Cleanups
-    if (inputComponent === CleanUp) {
-      return CleanUp(this.id, inputProps?.cleaner || inputArguments[0]);
-    }
+const dummyProps = {};
 
+class Instance {
+  run(inputComponent, ...inputArguments) {
     // Fragments
     if (inputComponent === "rahti:fragment") {
       return inputArguments;
     }
 
+    inputArguments[0] = inputArguments[0] || dummyProps;
+    const inputProps = inputArguments[0];
+
+    // Cleanups
+    if (inputComponent === CleanUp) {
+      const cleaner = inputProps.cleaner || inputArguments[1];
+      if (!cleaner) throw new Error("Callback missing from CleanUp");
+      return CleanUp(this.id, cleaner);
+    }
+
     // DOM components
     const seemsLikeDom = typeof inputComponent === "string";
-
     const Component = seemsLikeDom ? DomElement : inputComponent;
-    const props = seemsLikeDom && !inputProps ? {} : inputProps;
-    if (seemsLikeDom) props["rahti:element"] = inputComponent;
+    if (seemsLikeDom) inputArguments.unshift(inputComponent);
 
-    // Normal components
+    // Normal & DOM components
     const parentId = this.id;
-    const key = props?.key;
+    const key = inputProps?.key;
     const instance =
       getInstance(Component, parentId, key) || createInstance(Component, parentId, key);
     const id = instanceIds.get(instance);
 
     if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
 
-    return (isAsync(Component) ? startAsync : start)(
-      id,
-      instance,
-      inputArguments,
-      props,
-      Component,
-    );
+    return (isAsync(Component) ? startAsync : start)(id, instance, inputArguments, Component);
   }
 }
 
 export const rahti = new Instance();
 rahti.id = null;
 
-let instancePoolSize = 512;
+let instancePoolSize = 128;
 export const setInstancePoolSize = (size) => (instancePoolSize = size);
 const instancePool = [];
 
 const createInstance = (Component, parentId, key) => {
-  const id = idCounter++;
+  idCounter = idCounter + (1 % Number.MAX_SAFE_INTEGER);
+  const id = idCounter;
 
   // Get or create parent's children
   let children = childrens.get(parentId);
@@ -100,7 +99,6 @@ const createInstance = (Component, parentId, key) => {
   // Mark as needing an update
   needsUpdates.add(id);
 
-  // console.log("instance pool length", instancePool.length);
   const instance = instancePool.length > 0 ? instancePool.pop() : new Instance();
   instance.id = id;
 
@@ -156,18 +154,11 @@ const getInstance = (Component, parentId, key) => {
   }
 };
 
-const start = function (id, instance, newArguments, newProps, Component, forceUpdate = false) {
-  return checkForUpdate(id, instance, newArguments, newProps, Component, false, forceUpdate);
+const start = function (id, instance, newArguments, Component, forceUpdate = false) {
+  return checkForUpdate(id, instance, newArguments, Component, false, forceUpdate);
 };
 
-const startAsync = async function (
-  id,
-  instance,
-  newArguments,
-  newProps,
-  Component,
-  forceUpdate = false,
-) {
+const startAsync = async function (id, instance, newArguments, Component, forceUpdate = false) {
   // If instance is already running, delay this run until it finishes
   const pendingPromise = pendings.get(id);
   if (pendingPromise) {
@@ -176,14 +167,13 @@ const startAsync = async function (
     // console.log("??? continuing with", Components.get(id).name);
   }
 
-  return checkForUpdate(id, instance, newArguments, newProps, Component, true, forceUpdate);
+  return checkForUpdate(id, instance, newArguments, Component, true, forceUpdate);
 };
 
 const checkForUpdate = (
   id,
   instance,
   newArguments = argumentCache.get(id) || null,
-  newProps = propCache.get(id) || null,
   Component,
   async = false,
   forceUpdate = false,
@@ -195,26 +185,23 @@ const checkForUpdate = (
 
   if (!needsUpdate) {
     const previousArguments = argumentCache.get(id);
-    const previousProps = propCache.get(id);
 
-    if ((newProps === null) !== (previousProps === null)) {
-      // console.log("prop existence changed", { newProps, previousProps });
-      needsUpdate = true;
-    } else if (previousArguments?.length !== newArguments?.length) {
+    if (previousArguments?.length !== newArguments?.length) {
       // console.log("argument length changed", previousArguments, newArguments);
       needsUpdate = true;
     } else {
-      if (newProps && previousProps) {
-        for (const key in newProps) {
-          if (newProps[key] !== previousProps[key]) {
-            // console.log("prop has changed", key, previousProps[key], newProps[key]);
-            needsUpdate = true;
-            break;
-          }
+      const newProps = newArguments[0];
+      const previousProps = previousArguments[0];
+
+      for (const key in newProps) {
+        if (newProps[key] !== previousProps[key]) {
+          // console.log("prop has changed", key, previousProps[key], newProps[key]);
+          needsUpdate = true;
+          break;
         }
       }
 
-      if (newArguments && previousArguments) {
+      if (!needsUpdate && newArguments && previousArguments) {
         for (let index = 0; index < newArguments.length; index++) {
           const previousArgument = previousArguments[index];
           const newArgument = newArguments[index];
@@ -231,13 +218,12 @@ const checkForUpdate = (
 
   // Save this run's arguments and props for next time
   argumentCache.set(id, newArguments);
-  propCache.set(id, newProps);
 
   if (needsUpdate) {
     // Run the instance
     // console.log("+++ start of", Component.name, newProps);
     // Run the cleanup, if there is one
-    return runCleanup(id, instance, newArguments, newProps, Component, async);
+    return runCleanup(id, instance, newArguments, Component, async);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", Component.name);
@@ -245,7 +231,7 @@ const checkForUpdate = (
   }
 };
 
-const runCleanup = (id, instance, newArguments, newProps, Component, async = false) => {
+const runCleanup = (id, instance, newArguments, Component, async = false) => {
   const cleanup = cleanups.get(id);
 
   if (cleanup) {
@@ -269,22 +255,16 @@ const runCleanup = (id, instance, newArguments, newProps, Component, async = fal
     }
   }
 
-  return (async ? runAsync : run)(id, instance, newArguments, newProps, Component);
+  return (async ? runAsync : run)(id, instance, newArguments, Component);
 };
 
-const dummyPropsSoPeopleCanAlwaysDestructureThem = {};
-
-const run = (id, instance, newArguments, newProps, Component) => {
+const run = (id, instance, newArguments, Component) => {
   // Run the instance's Component
   currentIndexes.set(id, 0);
   let result;
 
   try {
-    result = Component.call(
-      instance,
-      newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
-      ...newArguments,
-    );
+    result = Component.apply(instance, newArguments);
 
     // Save the new value
     valueCache.set(id, result);
@@ -300,17 +280,13 @@ const run = (id, instance, newArguments, newProps, Component) => {
   return result;
 };
 
-const runAsync = async (id, instance, newArguments, newProps, Component) => {
+const runAsync = async (id, instance, newArguments, Component) => {
   // Run the instance's Component
   currentIndexes.set(id, 0);
   let result;
 
   try {
-    result = Component.call(
-      instance,
-      newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
-      ...newArguments,
-    );
+    result = Component.apply(instance, newArguments);
 
     pendings.set(id, result);
     const finalResult = await result;
@@ -390,21 +366,21 @@ const destroy = async (id) => {
     }
   }
 
+  instanceIds.delete(instance);
+  idInstances.delete(id);
+
   parents.delete(id);
   childrens.delete(id);
   currentIndexes.delete(id);
   keys.delete(id);
 
   argumentCache.delete(id);
-  propCache.delete(id);
   valueCache.delete(id);
   pendings.delete(id);
 
   cleanups.delete(id);
   needsUpdates.delete(id);
   updateQueue.delete(id);
-  instanceIds.delete(instance);
-  idInstances.delete(id);
 
   instance.id = null;
   if (instancePool.length <= instancePoolSize) instancePool.push(instance);
@@ -478,7 +454,7 @@ const runUpdateQueue = async () => {
     let newValue;
 
     try {
-      newValue = (async ? startAsync : start)(id, instance, undefined, undefined, Component, true);
+      newValue = (async ? startAsync : start)(id, instance, undefined, Component, true);
     } catch (error) {
       // console.log("caught");
       reportError(newValue);

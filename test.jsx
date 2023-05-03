@@ -6,7 +6,7 @@ setInterval(() => setGlobalTest(Math.random()), 3000);
 const TestWrapper = async function () {
   <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
-  const timer = setTimeout(setState, 3500, counter + 1);
+  const timer = setTimeout(setState, 1000, counter + 1);
   <CleanUp>{() => clearTimeout(timer)}</CleanUp>;
 
   let deadline = await idle();
@@ -48,16 +48,15 @@ const TestWrapper = async function () {
       >
         {testComponents}
       </ol>
-      <div>an SVG follows:</div>
     </>
   );
 };
 
-const TestItem = async function ({ parentValue, index }) {
+const TestItem = async function ({ counter, index }) {
   const [local, setLocal] = <State initialValue={0} />;
   const [global] = <GlobalTest />;
 
-  const timer = setTimeout(setLocal, Math.random() * 10000, Math.random());
+  const timer = setTimeout(setLocal, 200 + Math.random() * 10000, Math.random());
   <CleanUp cleaner={() => clearTimeout(timer)} />;
   if (Math.random() < 0.05) throw new Error();
 
@@ -73,7 +72,7 @@ const TestItem = async function ({ parentValue, index }) {
           click: console.log,
         }}
       />{" "}
-      Parent: {parentValue} / Global: {global} / Local: {local}
+      Parent: {counter} / Global: {global} / Local: {local}
     </li>
   );
 };
@@ -82,8 +81,9 @@ const App = async function (props, hello) {
   console.log("========", hello, "world");
   <Mount to={document.body}>
     {await (<TestWrapper />)}
+    <div>an SVG follows:</div>
     <svg:svg>
-      <svg:rect fill="none" stroke="black" width="300" height="150" />
+      <svg:rect fill="none" stroke="red" width="300" height="150" />
     </svg:svg>
   </Mount>;
 };

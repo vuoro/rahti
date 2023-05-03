@@ -1,15 +1,14 @@
 import { CleanUp } from "./component.js";
 
-export const Mount = function ({ to }) {
+export const Mount = function ({ to }, ...children) {
   if (!to) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
-  processChildren.call(this, arguments, to, 0, 1);
+  processChildren.call(this, children, to, 0, 0);
   return to;
 };
 
-export const DomElement = function (props) {
-  const isSvg = props["rahti:element"].startsWith("svg:");
-
-  const element = this.run(Element, null, props["rahti:element"], isSvg);
+export const DomElement = function (type, props, ...children) {
+  const isSvg = type.startsWith("svg:");
+  const element = this.run(Element, null, type, isSvg);
 
   for (const key in props) {
     if (key === "rahti:element") continue;
@@ -35,7 +34,7 @@ export const DomElement = function (props) {
     }
   }
 
-  if (arguments.length > 1) processChildren.call(this, arguments, element, 0, 1);
+  if (children.length > 0) processChildren.call(this, children, element, 0, 0);
 
   return element;
 };
