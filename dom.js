@@ -6,7 +6,7 @@ export const Mount = function ({ to }, ...children) {
   return to;
 };
 
-export const DomElement = function (type, props, ...children) {
+export const DomElement = function (props, type, ...children) {
   const isSvg = type.startsWith("svg:");
   const element = this.run(Element, null, type, isSvg);
 

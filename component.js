@@ -53,7 +53,7 @@ class Instance {
     // DOM components
     const seemsLikeDom = typeof inputComponent === "string";
     const Component = seemsLikeDom ? DomElement : inputComponent;
-    if (seemsLikeDom) inputArguments.unshift(inputComponent);
+    if (seemsLikeDom) inputArguments.splice(1, 0, inputComponent);
 
     // Normal & DOM components
     const parentId = this.id;
@@ -202,7 +202,7 @@ const checkForUpdate = (
       }
 
       if (!needsUpdate && newArguments && previousArguments) {
-        for (let index = 0; index < newArguments.length; index++) {
+        for (let index = 1; index < newArguments.length; index++) {
           const previousArgument = previousArguments[index];
           const newArgument = newArguments[index];
 
