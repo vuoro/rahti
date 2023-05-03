@@ -33,20 +33,15 @@ const isAsync = (Component) => {
 };
 
 class Instance {
-  run(inputComponent, inputProps) {
+  run(inputComponent, inputProps, ...inputArguments) {
     // Cleanups
     if (inputComponent === CleanUp) {
-      return CleanUp(this.id, inputProps?.cleaner || arguments[2]);
+      return CleanUp(this.id, inputProps?.cleaner || inputArguments[0]);
     }
 
     // Fragments
-    const isFragment = inputComponent === "rahti:fragment";
-    if (isFragment) {
-      const contents = [];
-      for (let index = 2, { length } = arguments; index < length; index++) {
-        contents.push(arguments[index]);
-      }
-      return contents;
+    if (inputComponent === "rahti:fragment") {
+      return inputArguments;
     }
 
     // DOM components
@@ -65,7 +60,13 @@ class Instance {
 
     if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
 
-    return (isAsync(Component) ? startAsync : start)(id, instance, arguments, props, Component);
+    return (isAsync(Component) ? startAsync : start)(
+      id,
+      instance,
+      inputArguments,
+      props,
+      Component,
+    );
   }
 }
 
@@ -214,7 +215,7 @@ const checkForUpdate = (
       }
 
       if (newArguments && previousArguments) {
-        for (let index = 2; index < newArguments.length; index++) {
+        for (let index = 0; index < newArguments.length; index++) {
           const previousArgument = previousArguments[index];
           const newArgument = newArguments[index];
 
@@ -273,24 +274,16 @@ const runCleanup = (id, instance, newArguments, newProps, Component, async = fal
 
 const dummyPropsSoPeopleCanAlwaysDestructureThem = {};
 
-const prepareArguments = (props, args) => {
-  const newArguments = [];
-  newArguments.push(props || dummyPropsSoPeopleCanAlwaysDestructureThem);
-
-  for (let index = 2, { length } = args; index < length; index++) {
-    newArguments.push(args[index]);
-  }
-
-  return newArguments;
-};
-
 const run = (id, instance, newArguments, newProps, Component) => {
   // Run the instance's Component
   currentIndexes.set(id, 0);
   let result;
 
   try {
-    result = Component.apply(instance, prepareArguments(newProps, newArguments));
+    result = Component.apply(instance, [
+      newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
+      ...newArguments,
+    ]);
 
     // Save the new value
     valueCache.set(id, result);
@@ -312,7 +305,10 @@ const runAsync = async (id, instance, newArguments, newProps, Component) => {
   let result;
 
   try {
-    result = Component.apply(instance, prepareArguments(newProps, newArguments));
+    result = Component.apply(instance, [
+      newProps || dummyPropsSoPeopleCanAlwaysDestructureThem,
+      ...newArguments,
+    ]);
 
     pendings.set(id, result);
     const finalResult = await result;

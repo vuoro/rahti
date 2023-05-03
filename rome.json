@@ -12,6 +12,9 @@
       "correctness": {
         "noUnusedVariables": "warn",
         "noUndeclaredVariables": "error"
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": "warn"
       }
     }
   },
