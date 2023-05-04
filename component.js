@@ -404,8 +404,6 @@ export const CleanUp = function (id, cleaner) {
 };
 export const Cleanup = CleanUp;
 
-let queueWillRun = false;
-
 export const updateParent = (id) => {
   const parentId = parents.get(id);
   update(parentId);
@@ -432,14 +430,8 @@ export const update = (id, forceParentUpdate = false) => {
     }
   }
 
-  if (!queueWillRun) {
-    queueWillRun = true;
-    queueMicrotask(runUpdateQueue);
-  }
+  queueMicrotask(runUpdateQueue);
 };
-
-const updateQueuePromises = new Map();
-const updateQueuePreviousValues = new Map();
 
 const runUpdateQueue = async () => {
   for (const id of updateQueue) {
@@ -454,17 +446,12 @@ const runUpdateQueue = async () => {
     let newValue;
 
     try {
-      newValue = (async ? startAsync : start)(id, instance, undefined, Component, true);
-    } catch (error) {
-      // console.log("caught");
-      reportError(newValue);
-      // continue;
-    }
+      if (async) {
+        newValue = await startAsync(id, instance, undefined, Component, true);
+      } else {
+        newValue = start(id, instance, undefined, Component, true);
+      }
 
-    if (async) {
-      updateQueuePromises.set(id, newValue);
-      updateQueuePreviousValues.set(id, previousValue);
-    } else {
       if (newValue !== previousValue) {
         const parentId = parents.get(id);
         if (parentId !== null && parentId !== undefined) {
@@ -472,36 +459,10 @@ const runUpdateQueue = async () => {
           update(parentId);
         }
       }
-    }
-  }
-
-  for (const [id, newValue] of updateQueuePromises) {
-    updateQueuePromises.delete(id);
-    updateQueuePreviousValues.delete(id);
-
-    const previousValue = updateQueuePreviousValues.get(id);
-    let newResolvedValue;
-
-    try {
-      newResolvedValue = await newValue;
     } catch (error) {
       // console.log("caught");
-      reportError(error);
+      reportError(newValue);
       // continue;
     }
-
-    if (newResolvedValue !== previousValue) {
-      const parentId = parents.get(id);
-      if (parentId !== null && parentId !== undefined) {
-        // console.log("escalating update to", Components.get(parentId));
-        update(parentId);
-      }
-    }
-  }
-
-  if (updateQueue.size) {
-    runUpdateQueue();
-  } else {
-    queueWillRun = false;
   }
 };
