@@ -433,9 +433,14 @@ export const update = (id, forceParentUpdate = false) => {
   queueMicrotask(runUpdateQueue);
 };
 
+const ongoingUpdates = new Set();
+
 const runUpdateQueue = async () => {
   for (const id of updateQueue) {
+    if (ongoingUpdates.has(id)) continue;
+
     updateQueue.delete(id);
+    ongoingUpdates.add(id);
 
     const instance = idInstances.get(id);
     const Component = Components.get(id);
@@ -460,9 +465,9 @@ const runUpdateQueue = async () => {
         }
       }
     } catch (error) {
-      // console.log("caught");
-      reportError(newValue);
-      // continue;
+      reportError(error);
     }
+
+    ongoingUpdates.delete(id);
   }
 };
