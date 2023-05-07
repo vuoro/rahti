@@ -47,12 +47,12 @@ const App = function (props, greeting) {
   // Here's the same as above, but without JSX.
   // JSX hides `this`, which is used to identify the currently running component,
   // without getting confused by any `await`s it might use.
-  this(Child, null, "greeting")
+  this.run(Child, null, "greeting")
 
   // HTML works the same as in other JSX-based libraries.
   // `paragraph` here is an actual `<p>` DOM element.
   const paragraph = <p>{greeting}</p>;
-  // const paragraph = this("p", null, greeting);
+  // const paragraph = this.run("p", null, greeting);
   console.log(paragraph);
 
   // SVG elements need to be prefixed with `svg:`.
@@ -70,7 +70,7 @@ const App = function (props, greeting) {
   // You can pass a key to a component using the special `key` prop.
   // Keys help identify the same component between re-runs,
   // avoiding unexpected results when components are used inside loops or conditionals.
-  <p key="keyed paragraph!"}>keyed hello!</p>;
+  <p key="keyed paragraph!">keyed hello!</p>;
 
   // Finally, none of the above DOM components will actually appear on the page,
   // unless passed to a `mount` component.
@@ -95,7 +95,7 @@ rahti.run(App, null, "hello");
 // If it returns a different value than the last time it ran,
 // it'll tell its parent to re-run too.
 const StatefulApp = function () {
-  const [timestamp, setTimestamp] = <State initialValue={performance.now()}/>;
+  const [timestamp, setTimestamp, getTimestamp] = <State initialValue={performance.now()}/>;
   requestAnimationFrame(setTimestamp);
 
   <Mount to={document.body}>
@@ -114,7 +114,7 @@ const createActions = (get, set) => {
 };
 
 const TimerWithActions = function () {
-  const [timestamp, {increment, decrement}] = (
+  const [timestamp, {increment, decrement}, getTimestamp] = (
     <State
       initialValue={performance.now()}
       actions={createActions}
