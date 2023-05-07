@@ -28,7 +28,7 @@
     <svg:rect width={300} height={300} fill="red"></svg:rect>
   </svg:svg>;
   ```
-- Low garbage generation and runtime overhead
+- Somewhat low garbage generation and runtime overhead
 - Also works without JSX
 - Bad docs 😅
 
