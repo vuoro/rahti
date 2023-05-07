@@ -18,7 +18,7 @@
 - Simple API
   ```js
   import { rahti, State, Mount } from "rahti"; // for most use cases
-  import { CleanUp, createGlobalState, idle, update, updateParent } from "rahti"; // for advanced usage
+  import { CleanUp, EventListener, createGlobalState, idle, update, updateParent } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements
   ```js
@@ -66,6 +66,9 @@ const App = function (props, greeting) {
   // Maintain event handlers with the special `events` attribute.
   <button type="button" events={{ click: console.log }}></button>;
   <button type="button" events={{ pointermove: [console.log, { passive: true }] }}></button>;
+  
+  // Or use the EventListener component.
+  <EventListener>{document.body}{"click"}{(event) => console.log(event)}{{ passive: true }}</Event>
 
   // You can pass a key to a component using the special `key` prop.
   // Keys help identify the same component between re-runs,
