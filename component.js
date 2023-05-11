@@ -406,68 +406,66 @@ export const Cleanup = CleanUp;
 
 export const updateParent = (id) => {
   const parentId = parents.get(id);
-  update(parentId);
+  if (parentId !== undefined) update(parentId);
 };
 
-export const update = (id, forceParentUpdate = false) => {
+export const update = (id) => {
   const instance = idInstances.get(id);
   if (instance === undefined) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }
 
-  // console.log("=== updating", Components.get(id).name);
+  const Component = Components.get(id);
+  // console.log("=== updating", Component.name);
 
-  needsUpdates.add(id);
-  updateQueue.add(id);
-
-  if (forceParentUpdate) {
-    const parentId = parents.get(id);
-    if (parentId !== undefined && parentId !== null) {
-      // console.log("also updating parent", Components.get(parentId).name);
-      needsUpdates.add(parentId);
-      updateQueue.add(parentId);
-    }
+  if (isAsync(Component)) {
+    runUpdateAsync(id, instance, Component);
+  } else {
+    runUpdate(id, instance, Component);
   }
-
-  queueMicrotask(runUpdateQueue);
 };
 
-const ongoingUpdates = new Set();
+const ongoingUpdates = new Map();
 
-const runUpdateQueue = async () => {
-  for (const id of updateQueue) {
-    if (ongoingUpdates.has(id)) continue;
-
-    updateQueue.delete(id);
-    ongoingUpdates.add(id);
-
-    const instance = idInstances.get(id);
-    const Component = Components.get(id);
-    const async = isAsync(Component);
-    // console.log("=== applying update to", Component.name, id);
-
+const runUpdate = function (id, instance, Component) {
+  try {
+    needsUpdates.add(id);
     const previousValue = valueCache.get(id);
-    let newValue;
 
-    try {
-      if (async) {
-        newValue = await startAsync(id, instance, undefined, Component, true);
-      } else {
-        newValue = start(id, instance, undefined, Component, true);
-      }
+    const newValue = start(id, instance, undefined, Component, true);
 
-      if (newValue !== previousValue) {
-        const parentId = parents.get(id);
-        if (parentId !== null && parentId !== undefined) {
-          // console.log("escalating update to", Components.get(parentId));
-          update(parentId);
-        }
-      }
-    } catch (error) {
-      reportError(error);
+    if (newValue !== previousValue) {
+      // console.log("escalating update to parent from", Component.name);
+      updateParent(id);
     }
+  } catch (error) {
+    reportError(error);
+  }
+};
 
+const runUpdateAsync = async function (id, instance, Component) {
+  if (ongoingUpdates.has(id)) {
+    // console.log("waiting for previous update to finish in", Component.name);
+    await ongoingUpdates.get(id);
+    return update(id);
+  }
+
+  try {
+    needsUpdates.add(id);
+    const previousValue = valueCache.get(id);
+
+    let newValue = startAsync(id, instance, undefined, Component, true);
+    ongoingUpdates.set(id, newValue);
+    newValue = await newValue;
+
+    if (newValue !== previousValue) {
+      // console.log("escalating update to parent from", Component.name);
+      updateParent(id);
+    }
+  } catch (error) {
+    reportError(error);
+  } finally {
     ongoingUpdates.delete(id);
   }
 };
