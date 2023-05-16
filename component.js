@@ -18,7 +18,7 @@ const pendings = new Map();
 
 const cleanups = new Map();
 const needsUpdates = new Set();
-const updateQueue = new Set();
+const saves = new Map();
 
 const asyncs = new Map();
 const isAsync = (Component) => {
@@ -32,6 +32,15 @@ const isAsync = (Component) => {
 };
 
 const dummyProps = {};
+
+export const save = function (id, data) {
+  saves.set(id, data);
+  return data;
+};
+
+export const load = function (id) {
+  return saves.get(id);
+};
 
 class Instance {
   run(inputComponent, ...inputArguments) {
@@ -380,7 +389,7 @@ const destroy = async (id) => {
 
   cleanups.delete(id);
   needsUpdates.delete(id);
-  updateQueue.delete(id);
+  saves.delete(id);
 
   instance.id = null;
   if (instancePool.length <= instancePoolSize) instancePool.push(instance);

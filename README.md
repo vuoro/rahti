@@ -134,12 +134,12 @@ const [
   getGlobalTimestamp
 ] = createGlobalState({initialValue: performance.now()});
 
-const a = function () {
+const A = function () {
   const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
   console.log("from a", timestamp);
 };
 
-const b = function () {
+const B = function () {
   const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
   console.log("from b", timestamp);
 };
@@ -155,6 +155,14 @@ setTimeout(() => console.log("from setTimeout", getGlobalTimestamp()), 1000);
 const CustomStateTest = function () {
   console.log("ran at", performance.now());
   setTimeout(() => update(this.id), 1000);
+};
+
+// save & load are an additional way to persist data between component reruns.
+// Handy for avoiding creating new objects every time the component runs.
+// The data will be cleared if the component is destroyed.
+const SaveAndLoad = function () {
+  const savedArray = load(this.id) || save(this.id, []);
+  savedArray.push(Math.random());
 };
 
 // Finally, components can have "cleanups" using the CleanUp component.

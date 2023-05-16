@@ -1,34 +1,22 @@
-import { CleanUp, updateParent } from "./component.js";
-
-const states = new Map();
+import { load, save, updateParent } from "./component.js";
 
 export const State = function ({ initialValue, actions }) {
-  let state = states.get(this.id);
+  const state = load(this.id);
+  if (state) return state;
 
-  if (!state) {
-    state = [initialValue];
-    const setter = (newValue) => {
-      state[0] = newValue;
-      updateParent(this.id);
-    };
+  const newState = [initialValue];
 
-    if (actions) {
-      const getter = () => state[0];
-      state.push(actions(getter, setter));
-    } else {
-      state.push(setter);
-    }
+  const setter = (newValue) => {
+    newState[0] = newValue;
+    updateParent(this.id);
+  };
 
-    states.set(this.id, state);
+  if (actions) {
+    const getter = () => newState[0];
+    newState[1] = actions(getter, setter);
+  } else {
+    newState[1] = setter;
   }
 
-  this.run(CleanUp, null, cleanState);
-
-  return state;
+  return save(this.id, newState);
 };
-
-function cleanState(isFinal) {
-  if (isFinal) {
-    states.delete(this.id);
-  }
-}
