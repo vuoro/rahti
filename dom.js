@@ -47,7 +47,7 @@ const Element = function (props, tagName, isSvg) {
     ? document.createElementNS("http://www.w3.org/2000/svg", finalTagName)
     : document.createElement(finalTagName);
 
-  nodes.set(this, element);
+  nodes.set(this.id, element);
   this.run(CleanUp, null, cleanNode);
 
   return element;
@@ -55,22 +55,22 @@ const Element = function (props, tagName, isSvg) {
 
 const TextNode = function () {
   const node = new Text();
-  nodes.set(this, node);
+  nodes.set(this.id, node);
   this.run(CleanUp, null, cleanNode);
   return node;
 };
 
 function cleanNode(isFinal) {
   if (isFinal) {
-    const node = nodes.get(this);
+    const node = nodes.get(this.id);
     node.remove();
-    nodes.delete(this);
+    nodes.delete(this.id);
     slotChildren.delete(node);
     slotIndexes.delete(node);
   }
 }
 
-let tempProps = {};
+const tempProps = {};
 
 const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
@@ -133,14 +133,14 @@ const processSlotQueue = () => {
 const Style = function (props, value, element) {
   element.style.cssText = value;
 
-  nodes.set(this, element);
+  nodes.set(this.id, element);
   this.run(CleanUp, null, cleanStyle);
 };
 
 function cleanStyle(isFinal) {
   if (isFinal) {
-    nodes.get(this).style.cssText = "";
-    nodes.delete(this);
+    nodes.get(this.id).style.cssText = "";
+    nodes.delete(this.id);
   }
 }
 
@@ -155,8 +155,8 @@ const Attribute = function (props, key, value, element) {
     element.setAttribute(key, value);
   }
 
-  nodes.set(this, element);
-  attributeKeys.set(this, key);
+  nodes.set(this.id, element);
+  attributeKeys.set(this.id, key);
   this.run(CleanUp, null, cleanAttribute);
 };
 
@@ -164,19 +164,19 @@ const attributeKeys = new Map();
 
 function cleanAttribute(isFinal) {
   if (isFinal) {
-    nodes.get(this).removeAttribute(attributeKeys.get(this));
-    nodes.delete(this);
-    attributeKeys.delete(this);
+    nodes.get(this.id).removeAttribute(attributeKeys.get(this.id));
+    nodes.delete(this.id);
+    attributeKeys.delete(this.id);
   }
 }
 
 export const EventListener = function (props, target, key, value, options) {
   target.addEventListener(key, value, options);
 
-  nodes.set(this, target);
-  eventKeys.set(this, key);
-  eventValues.set(this, value);
-  eventOptions.set(this, options);
+  nodes.set(this.id, target);
+  eventKeys.set(this.id, key);
+  eventValues.set(this.id, value);
+  eventOptions.set(this.id, options);
 
   this.run(CleanUp, null, cleanEventListener);
 };
@@ -186,17 +186,17 @@ const eventValues = new Map();
 const eventOptions = new Map();
 
 function cleanEventListener(isFinal) {
-  const node = nodes.get(this);
-  const key = eventKeys.get(this);
-  const value = eventValues.get(this);
-  const options = eventValues.get(this);
+  const node = nodes.get(this.id);
+  const key = eventKeys.get(this.id);
+  const value = eventValues.get(this.id);
+  const options = eventValues.get(this.id);
 
   node.removeEventListener(key, value, options);
 
   if (isFinal) {
-    nodes.delete(this);
-    eventKeys.delete(this);
-    eventValues.delete(this);
-    eventOptions.delete(this);
+    nodes.delete(this.id);
+    eventKeys.delete(this.id);
+    eventValues.delete(this.id);
+    eventOptions.delete(this.id);
   }
 }
