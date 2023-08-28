@@ -85,7 +85,7 @@ export const setInstancePoolSize = (size) => (instancePoolSize = size);
 const instancePool = [];
 
 const createInstance = (Component, parentId, key) => {
-  idCounter = idCounter + (1 % Number.MAX_SAFE_INTEGER);
+  idCounter = (idCounter + 1) % Number.MAX_SAFE_INTEGER;
   const id = idCounter;
 
   // Get or create parent's children
