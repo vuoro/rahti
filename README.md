@@ -1,5 +1,7 @@
 # Rahti
 
+(Consider this library unstable, as I still haven't found an API I'm happy with. It does follow semantic versioning though.)
+
 `npm install @vuoro/rahti`
 
 - Write reactive JS components with async/await
