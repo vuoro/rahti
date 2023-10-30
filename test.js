@@ -4,13 +4,13 @@ import { idle } from "./idle.js";
 import { Event, EventListener, Mount, html, svg } from "./dom.js";
 
 const [getGlobalTest, setGlobalTest] = State(0);
-setInterval(() => setGlobalTest(Math.random()), 3000);
+// setInterval(() => setGlobalTest(Math.random()), 3000);
 
 const TestWrapper = new Proxy(async function () {
   getGlobalTest();
   const [counter, setState] = State(0);
-  const timer = setTimeout(setState, 1000, counter + 1);
-  cleanup(() => clearTimeout(timer));
+  // const timer = setTimeout(setState, 2000, counter + 1);
+  // cleanup(() => clearTimeout(timer));
 
   let deadline = await use(idle());
 
@@ -54,9 +54,9 @@ const TestItem = new Proxy(async function (counter, index) {
   const [local, setLocal] = State(0);
   getGlobalTest();
 
-  const timer = setTimeout(setLocal, 200 + Math.random() * 10000, Math.random());
-  save(timer);
-  cleanup(cleanTestItem);
+  // const timer = setTimeout(setLocal, 4000 + Math.random() * 10000, Math.random());
+  // save(timer);
+  // cleanup(cleanTestItem);
   if (Math.random() < 0.05) throw new Error();
 
   await use(idle());
