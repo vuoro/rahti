@@ -1,108 +1,116 @@
-import { cleanup } from "./index.js";
+import { Component, cleanup, load, save } from "./index.js";
 
-export const Mount = function ({ to }, ...children) {
-  if (!to) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
-  processChildren.call(this, children, to, 0, 0);
-  return to;
-};
+export const Mount = new Proxy(function Mount(root, ...children) {
+  if (!(root instanceof Node)) throw new Error("The first argument in Mount needs to be a DOM element");
+  processChildren(children, root, 0, 0);
+  return root;
+}, Component);
 
-export const html = new Proxy({}, {});
-export const svg = new Proxy({}, {});
-
-export const DomElement = function (props, type, ...children) {
-  const isSvg = type.startsWith("svg:");
-  const element = this.run(Element, null, type, isSvg);
-
-  for (const key in props) {
-    if (key === "rahti:element") continue;
-
-    const value = props[key];
-
-    if (key === "style") {
-      // inline style
-      this.run(Style, null, value, element);
-    } else if (key === "events") {
-      // events object
-      for (const key in value) {
-        const eventValue = value[key];
-        if (Array.isArray(eventValue)) {
-          this.run(EventListener, null, element, key, ...eventValue);
-        } else {
-          this.run(EventListener, null, element, key, eventValue);
-        }
-      }
-    } else {
-      // attribute
-      this.run(Attribute, null, key, value, element);
+const domHandler = {
+  get: function (target, tagName) {
+    if (!(tagName in target)) {
+      target[tagName] = new Proxy(function DomElement(...children) {
+        const element = Element(tagName, target.namespace);
+        if (children.length > 0) processChildren(children, element, 0, 0);
+        return element;
+      }, Component);
     }
-  }
 
-  if (children.length > 0) processChildren.call(this, children, element, 0, 0);
-
-  return element;
+    return target[tagName];
+  },
 };
+export const html = new Proxy({}, domHandler);
+export const svg = new Proxy({ namespace: "http://www.w3.org/2000/svg" }, domHandler);
 
-const nodes = new Map();
-
-const Element = function (props, tagName, isSvg) {
-  const finalTagName = isSvg ? tagName.slice(4) : tagName;
-  const element = isSvg
-    ? document.createElementNS("http://www.w3.org/2000/svg", finalTagName)
-    : document.createElement(finalTagName);
-
-  nodes.set(this.id, element);
-  this.run(CleanUp, null, cleanNode);
-
+const Element = new Proxy(function Element(tagName, namespace) {
+  const element = namespace ? document.createElementNS(namespace, tagName) : document.createElement(tagName);
+  save(element);
+  cleanup(cleanNode);
   return element;
-};
+}, Component);
 
-const TextNode = function () {
+const TextNode = new Proxy(function TextNode() {
   const node = new Text();
-  nodes.set(this.id, node);
-  this.run(CleanUp, null, cleanNode);
+  save(node);
+  cleanup(cleanNode);
   return node;
-};
+}, Component);
 
-function cleanNode(isFinal) {
-  if (isFinal) {
-    const node = nodes.get(this.id);
-    node.remove();
-    nodes.delete(this.id);
-    slotChildren.delete(node);
-    slotIndexes.delete(node);
-  }
+Element.memoized = true;
+TextNode.memoized = true;
+
+function cleanNode(node) {
+  node.remove();
+  slotChildren.delete(node);
+  slotIndexes.delete(node);
 }
-
-const tempProps = {};
 
 const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
     const child = children[index];
 
+    let previousAttributes = load();
+    let newAttributes;
+
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
-      tempProps.key = child;
-      this.run(Slot, tempProps, child, element, slotIndex++);
+      Slot(child, element, slotIndex++);
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
       slotIndex = processChildren.call(this, child, element, slotIndex);
     } else {
       const type = typeof child;
 
-      if (type === "string" || type === "number") {
+      if (type === "object") {
+        // treat as list of properties
+        for (const key in child) {
+          const value = child[key];
+          newAttributes = newAttributes || new Map();
+          newAttributes.set(key, value);
+          if (previousAttributes) previousAttributes.delete(key);
+
+          if (key === "style") {
+            // inline style
+            element.style.cssText = value;
+          } else {
+            // attribute
+            if (typeof value === "boolean") {
+              if (value) {
+                element.setAttribute(key, key);
+              } else {
+                element.removeAttribute(key);
+              }
+            } else {
+              element.setAttribute(key, value);
+            }
+          }
+        }
+      } else if (type === "string" || type === "number") {
         // treat as Text
-        const textNode = this.run(TextNode);
+        const textNode = TextNode();
         textNode.nodeValue = child;
-        tempProps.key = textNode;
-        this.run(Slot, tempProps, textNode, element, slotIndex++);
+        Slot(textNode, element, slotIndex++);
       }
     }
+
+    // Remove unused previous attributes
+    if (previousAttributes) {
+      for (const [key] in previousAttributes) {
+        if (key === "style") {
+          element.style.cssText = "";
+        } else {
+          element.removeAttribute(key);
+        }
+      }
+    }
+
+    if (newAttributes?.size) save(newAttributes);
   }
 
   return slotIndex;
 };
 
-const Slot = function (props, child, parent, index) {
+const Slot = new Proxy(function Slot(child, parent, index) {
   slotChildren.set(child, parent);
   slotIndexes.set(child, index);
 
@@ -110,7 +118,7 @@ const Slot = function (props, child, parent, index) {
     slotQueueWillRun = true;
     queueMicrotask(processSlotQueue);
   }
-};
+}, Component);
 
 let slotQueueWillRun = false;
 const slotChildren = new Map();
@@ -133,75 +141,14 @@ const processSlotQueue = () => {
   slotQueueWillRun = false;
 };
 
-const Style = function (props, value, element) {
-  element.style.cssText = value;
-
-  nodes.set(this.id, element);
-  this.run(CleanUp, null, cleanStyle);
-};
-
-function cleanStyle(isFinal) {
-  if (isFinal) {
-    nodes.get(this.id).style.cssText = "";
-    nodes.delete(this.id);
-  }
-}
-
-const Attribute = function (props, key, value, element) {
-  if (typeof value === "boolean") {
-    if (value) {
-      element.setAttribute(key, key);
-    } else {
-      element.removeAttribute(key);
-    }
-  } else {
-    element.setAttribute(key, value);
-  }
-
-  nodes.set(this.id, element);
-  attributeKeys.set(this.id, key);
-  this.run(CleanUp, null, cleanAttribute);
-};
-
-const attributeKeys = new Map();
-
-function cleanAttribute(isFinal) {
-  if (isFinal) {
-    nodes.get(this.id).removeAttribute(attributeKeys.get(this.id));
-    nodes.delete(this.id);
-    attributeKeys.delete(this.id);
-  }
-}
-
-export const EventListener = function (props, target, key, value, options) {
+export const EventListener = new Proxy(function EventListener(target, key, value, options) {
   target.addEventListener(key, value, options);
+  save([target, key, value, options]);
+  cleanup(cleanEventListener);
+}, Component);
 
-  nodes.set(this.id, target);
-  eventKeys.set(this.id, key);
-  eventValues.set(this.id, value);
-  eventOptions.set(this.id, options);
-
-  this.run(CleanUp, null, cleanEventListener);
-};
-
-const eventKeys = new Map();
-const eventValues = new Map();
-const eventOptions = new Map();
-
-function cleanEventListener(isFinal) {
-  const node = nodes.get(this.id);
-  const key = eventKeys.get(this.id);
-  const value = eventValues.get(this.id);
-  const options = eventValues.get(this.id);
-
-  node.removeEventListener(key, value, options);
-
-  if (isFinal) {
-    nodes.delete(this.id);
-    eventKeys.delete(this.id);
-    eventValues.delete(this.id);
-    eventOptions.delete(this.id);
-  }
+function cleanEventListener([target, key, value, options]) {
+  target.removeEventListener(key, value, options);
 }
 
-export const Event = function () {};
+export const Event = new Proxy(function Event() {}, Component);

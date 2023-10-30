@@ -1,6 +1,6 @@
-import { getId, getParentId, load, save, update } from "./index.js";
+import { Component, getId, getParentId, load, save, update } from "./index.js";
 
-export const State = function (initialValue) {
+export const State = new Proxy(function State(initialValue) {
   const state = load();
   if (state) return state;
 
@@ -29,4 +29,4 @@ export const State = function (initialValue) {
   const newState = [getter, setter, parents];
 
   return save(newState);
-};
+}, Component);
