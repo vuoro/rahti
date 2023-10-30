@@ -1,10 +1,13 @@
-import { CleanUp } from "./component.js";
+import { cleanup } from "./index.js";
 
 export const Mount = function ({ to }, ...children) {
   if (!to) throw new Error("Missing `to` from <Mount to={DOMElement}>…</Mount>");
   processChildren.call(this, children, to, 0, 0);
   return to;
 };
+
+export const html = new Proxy({}, {});
+export const svg = new Proxy({}, {});
 
 export const DomElement = function (props, type, ...children) {
   const isSvg = type.startsWith("svg:");
@@ -200,3 +203,5 @@ function cleanEventListener(isFinal) {
     eventOptions.delete(this.id);
   }
 }
+
+export const Event = function () {};

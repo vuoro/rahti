@@ -5,30 +5,30 @@
   "type": "module",
   "main": "index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./idle.js": "./idle.js",
+    "./state.js": "./state.js",
+    "./dom.js": "./dom.js"
   },
   "scripts": {
-    "start": "vite dev --open"
+    "start": "vite dev"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuoro/rahti.git"
   },
-  "keywords": [
-    "reactive",
-    "javascript",
-    "rahti"
-  ],
+  "keywords": ["reactive", "javascript", "rahti"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vuoro/rahti/issues"
   },
   "homepage": "https://github.com/vuoro/rahti#readme",
   "devDependencies": {
-    "vite": "^4.0.1"
+    "prettier": "^3.0.3",
+    "vite": "^4.5.0"
   },
   "prettier": {
-    "printWidth": 100
+    "printWidth": 120
   },
-  "packageManager": "pnpm@7.0.1"
+  "packageManager": "pnpm@8.10.0"
 }
