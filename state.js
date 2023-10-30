@@ -1,57 +1,32 @@
-import { cleanup, load, save, updateParent } from "./index.js";
+import { getId, getParentId, load, save, update } from "./index.js";
 
-export const State = function ({ initialValue, actions }) {
-  const state = load(this.id);
+export const State = function (initialValue) {
+  const state = load();
   if (state) return state;
 
-  const newState = [initialValue];
+  let value = initialValue;
+  const parents = new Set();
+  const parentId = getParentId();
+  if (parentId !== undefined) parents.add(parentId);
 
-  const setter = (newValue) => {
-    newState[0] = newValue;
-    updateParent(this.id);
+  const getter = () => {
+    const parentId = getId();
+    if (parentId !== undefined) parents.add(parentId);
+
+    return value;
   };
 
-  if (actions) {
-    const getter = () => newState[0];
-    newState[1] = actions(getter, setter);
-  } else {
-    newState[1] = setter;
-  }
-
-  return save(this.id, newState);
-};
-
-export const createGlobalState = ({ initialValue, actions } = {}) => {
-  let value = initialValue;
-  const states = new Map();
-
-  const getter = () => value;
   const setter = (newValue) => {
     value = newValue;
-    for (const [id, state] of states) {
-      state[0] = value;
-      updateParent(id);
-    }
-  };
-  const finalSetter = actions ? actions(getter, setter) : setter;
 
-  const GlobalState = function () {
-    let state = states.get(this.id);
-
-    if (!state) {
-      state = [value, finalSetter, getter];
-      states.set(this.id, state);
+    for (const parentId of parents) {
+      update(parentId);
     }
 
-    this.run(CleanUp, null, cleanGlobalState);
-    return state;
+    return newValue;
   };
 
-  function cleanGlobalState(isFinal) {
-    if (isFinal) {
-      states.delete(this.id);
-    }
-  }
+  const newState = [getter, setter, parents];
 
-  return [GlobalState, finalSetter, getter];
+  return save(newState);
 };

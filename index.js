@@ -1,13 +1,10 @@
 const reportError = globalThis.reportError || console.error;
 
-const Components = new Map([[null, function Root() {}]]);
-const instanceIds = new Map();
-const idInstances = new Map();
 let idCounter = Number.MIN_SAFE_INTEGER;
 
+const codes = new Map();
 const parents = new Map();
 const childrens = new Map();
-const currentIndexes = new Map([[null, 0]]);
 const keys = new Map();
 
 const argumentCache = new Map();
@@ -22,63 +19,50 @@ const isAsync = (code) => {
   return code.constructor.name === "AsyncFunction";
 };
 
-export const save = function (id, data) {
-  saves.set(id, data);
-  return data;
-};
-
-export const load = function (id) {
-  return saves.get(id);
-};
-
-const createStackState = function () {
-  return {
-    stack: [],
-    index: 0,
-  };
-};
-let stackState = createStackState();
+const root = Symbol();
+let stack = [[root, 0]];
+const resetStack = () => (stack = [[root, 0]]);
 
 export const Component = {
   apply: function (code, thisArgument, argumentsList) {
-    const isMemoized = code.memoized === true;
-    const isKeyed = code.keyed === true;
+    const isMemoized = code.rahtiMemoized === true;
+    const isKeyed = code.rahtiKeyed === true;
 
-    const parentId = stackState.stack.at(-1);
+    // Find or create instance
+    const [parentId, parentChildIndex] = stack.at(-1);
+    const key = isKeyed ? argumentsList[code.rahtiKeyIndex || 0] : undefined;
+    const id =
+      getInstance(code, parentId, parentChildIndex, key) || createInstance(code, parentId, parentChildIndex, key);
 
-    const key = isKeyed ? argumentsList[0] : undefined;
-    const instance = getInstance(code, parentId, key) || createInstance(code, parentId, key);
-    const id = instanceIds.get(instance);
+    // Increment parent's child index
+    stack.at(-1)[1]++;
 
-    stackState.index++;
-
-    return [isAsync(code) ? startAsync : start](code, id);
+    return [isAsync(code) ? startAsync : start](code, id, argumentsList, isMemoized);
   },
 };
 
-const getInstance = (code, parentId, key) => {
+const getInstance = (code, parentId, parentChildIndex, key) => {
   console.log("looking for", code.name, "in", codes.get(parentId)?.name, "with key:", key);
   const children = childrens.get(parentId);
 
   if (children) {
     // Find the current child
-    const currentIndex = currentIndexes.get(parentId);
-    const currentChild = children[currentIndex];
+    const currentChild = children[parentChildIndex];
 
     if (currentChild && codes.get(currentChild) === code && keys.get(currentChild) === key) {
       // The child looks like what we're looking for
       console.log("found here", code.name, "for", codes.get(parentId)?.name);
-      return idInstances.get(currentChild);
+      return currentChild;
     } else {
       // Try to find the a matching child further on
-      for (let index = currentIndex + 1, { length } = children; index < length; index++) {
+      for (let index = parentChildIndex + 1, { length } = children; index < length; index++) {
         const child = children[index];
         if (codes.get(child) === code && keys.get(child) === key) {
           // This one looks correct, so move it into its new place
           children.splice(index, 1);
-          children.splice(currentIndex, 0, child);
+          children.splice(parentChildIndex, 0, child);
           console.log("found later", code.name, "for", codes.get(parentId)?.name);
-          return idInstances.get(child);
+          return child;
         }
       }
     }
@@ -89,170 +73,158 @@ const getInstance = (code, parentId, key) => {
   }
 };
 
-const createInstance = (Component, parentId, key) => {
-  idCounter = (idCounter + 1) % Number.MAX_SAFE_INTEGER;
+const createInstance = (code, parentId, parentChildIndex, key) => {
+  idCounter = idCounter === Number.MAX_SAFE_INTEGER ? Number.MIN_SAFE_INTEGER : idCounter + 1;
   const id = idCounter;
 
   // Get or create parent's children
   let children = childrens.get(parentId);
   if (!children) {
-    // console.log("starting children for", Components.get(parentId).name);
+    console.log("starting children for", codes.get(parentId).name);
     children = [];
     childrens.set(parentId, children);
   }
 
-  // Get parent's current index and save as a child using it
-  const index = currentIndexes.get(parentId);
-  children.splice(index, 0, id);
+  // Save this into parent's children
+  children.splice(parentChildIndex, 0, id);
 
-  // Save the parent, the key, and the Component
+  // Save the parent, the key, and the code
   parents.set(id, parentId);
   if (key !== undefined) keys.set(id, key);
-  Components.set(id, Component);
+  codes.set(id, code);
 
   // Mark as needing an update
   needsUpdates.add(id);
 
-  const instance = instancePool.length > 0 ? instancePool.pop() : new Instance();
-  instance.id = id;
+  console.log("created", code.name, "for", codes.get(parentId).name, "at", stackState.index);
 
-  instanceIds.set(instance, id);
-  idInstances.set(id, instance);
-
-  // console.log(
-  //   "created",
-  //   Component.name,
-  //   "for",
-  //   Components.get(parentId).name,
-  //   "at",
-  //   currentIndexes.get(parentId)
-  // );
-
-  return instance;
+  return id;
 };
 
-const startAsync = async function () {
+const startAsync = async function (code, id, argumentsList, isMemoized) {
   // If instance is already running, delay this run until it finishes
-  const pendingPromise = pendings.get(id);
-  if (pendingPromise) {
-    console.log("??? waiting for", Components.get(id).name, "to finish before applying");
-    // TODO: suspend
-    await pendingPromise;
-    // TODO: unsuspend
-    console.log("??? continuing with", Components.get(id).name);
+  if (pendings.has(id)) {
+    console.log("??? waiting for", code.name, "to finish before applying");
+    const suspendedStack = stack;
+    resetStack();
+    await pendings.get(id);
+    stack = suspendedStack;
+    console.log("??? continuing with", code.name);
   }
 
-  if (memoized) {
-    const needsUpdate = checkForUpdate();
+  if (isMemoized) {
+    const needsUpdate = checkForUpdate(id, argumentsList);
     if (!needsUpdate) {
-      // console.log("+++ no update needed, returning previous value", Component.name, newProps);
+      console.log("+++ no update needed, returning previous value", Component.name, newProps);
       return valueCache.get(id);
     }
   }
 
-  runCleanup();
+  console.log("+++ start of", code.name);
+  runCleanup(id);
 
   // Run the instance's Component
-  currentIndexes.set(id, 0);
+  stack.push([id, 0]);
   let awaitedResult;
 
   try {
     awaitedResult = code.apply(thisArgument, argumentsList);
 
     pendings.set(id, result);
+    const suspendedStack = stack;
+    resetStack();
     awaitedResult = await result;
+    stack = suspendedStack;
 
     // Save the new value
-    valueCache.set(id, awaitedResult);
+    if (isMemoized) valueCache.set(id, awaitedResult);
     needsUpdates.delete(id);
   } catch (error) {
     reportError(error);
   } finally {
     pendings.delete(id);
-    return finish(awaitedResult);
+    return finish(code, id, awaitedResult);
   }
 };
 
-const start = function () {
-  if (memoized) {
-    const needsUpdate = checkForUpdate();
+const start = function (code, id, argumentsList, isMemoized) {
+  if (isMemoized) {
+    const needsUpdate = checkForUpdate(id, argumentsList);
     if (!needsUpdate) {
-      // console.log("+++ no update needed, returning previous value", Component.name, newProps);
+      console.log("+++ no update needed, returning previous value", Component.name, newProps);
       return valueCache.get(id);
     }
   }
 
-  runCleanup();
+  console.log("+++ start of", code.name);
+  runCleanup(id);
 
   // Run the instance's Component
-  currentIndexes.set(id, 0);
+  stack.push([id, 0]);
   let result;
 
   try {
     result = code.apply(thisArgument, argumentsList);
 
     // Save the new value
-    valueCache.set(id, result);
+    if (isMemoized) valueCache.set(id, result);
     needsUpdates.delete(id);
   } catch (error) {
     reportError(error);
   } finally {
-    return finish(awaitedResult);
+    return finish(code, id, awaitedResult);
   }
 };
 
-const checkForUpdate = function () {
+const checkForUpdate = function (id, argumentsList) {
   // See if the instance should re-run
-  let needsUpdate = forceUpdate || needsUpdates.has(id);
+  let needsUpdate = needsUpdates.has(id);
+  if (needsUpdate) return true;
 
-  if (!needsUpdate) {
-    const previousArguments = argumentCache.get(id);
+  const previousArguments = argumentCache.get(id);
 
-    if (previousArguments?.length !== newArguments?.length) {
-      console.log("argument length changed", previousArguments, newArguments);
-      needsUpdate = true;
-    } else if (!needsUpdate && newArguments && previousArguments) {
-      for (let index = 1; index < newArguments.length; index++) {
-        const previousArgument = previousArguments[index];
-        const newArgument = newArguments[index];
+  if (previousArguments?.length !== argumentsList?.length) {
+    console.log("argument length changed", previousArguments, argumentsList);
+    needsUpdate = true;
+  } else if (!needsUpdate && argumentsList && previousArguments) {
+    for (let index = 1; index < argumentsList.length; index++) {
+      const previousArgument = previousArguments[index];
+      const newArgument = argumentsList[index];
 
-        if (Object.is(newArgument, previousArgument)) {
-          console.log("argument has changed", previousArgument, newArgument);
-          needsUpdate = true;
-          break;
-        }
+      if (Object.is(newArgument, previousArgument)) {
+        console.log("argument has changed", previousArgument, newArgument);
+        needsUpdate = true;
+        break;
       }
     }
   }
 
-  // Save this run's arguments and props for next time
-  argumentCache.set(id, newArguments);
+  // Save this run's arguments for next time
+  argumentCache.set(id, argumentsList);
 
   return needsUpdate;
 };
 
-const runCleanup = function () {
-  console.log("+++ start of", Component.name, newProps);
-
+const runCleanup = function (id) {
   // Run the cleanup, if there is one
   const cleanup = cleanups.get(id);
 
   if (cleanup) {
-    console.log("/// cleaning up", Component.name, newProps);
+    console.log("/// cleaning up");
     cleanup(saves.get(id));
     cleanups.delete(id);
   }
 };
 
-const finish = function (result) {
+const finish = function (code, id, result) {
   // Destroy children that were not visited on this execution
   const children = childrens.get(id);
   if (children) {
-    const nextIndex = currentIndexes.get(id);
+    const nextIndex = stack.at(-1)[1];
     const { length } = children;
 
     if (nextIndex < length) {
-      console.log("/// destroying leftover children in", Component.name, length - nextIndex);
+      console.log("/// destroying leftover children in", code.name, length - nextIndex);
       for (let index = nextIndex; index < length; index++) {
         destroy(children[index]);
       }
@@ -260,44 +232,26 @@ const finish = function (result) {
     }
   }
 
-  console.log("--- returning", result, "from", Component.name, instance);
+  stack.pop();
+
+  console.log("--- returning", result, "from", code.name, instance);
   return result;
 };
 
+// TODO: split this into destroy and destroyAsync
 const destroy = async (id) => {
-  // console.log("destroying", Components.get(id).name);
-  const instance = idInstances.get(id);
+  console.log("destroying", codes.get(id)?.name);
 
   // If there's an ongoing run, wait for it
   const pendingPromise = pendings.get(id);
   if (pendingPromise) {
-    // console.log("??? waiting for", Components.get(id).name, "to finish before destroying");
+    console.log("??? waiting for", codes.get(id)?.name, "to finish before destroying");
     await pendingPromise;
-    // console.log("??? continuing with destroying", Components.get(id).name);
+    console.log("??? continuing with destroying", codes.get(id)?.name);
   }
 
   // Run the cleanup, if there is any
-  const cleanup = cleanups.get(id);
-
-  if (cleanup) {
-    // console.log("\\\\ running cleanup for", Components.get(id).name);
-    if (cleanup instanceof Set) {
-      // Many cleanups
-      for (const cleaner of cleanup) {
-        try {
-          cleaner.call(id, true);
-        } catch (error) {
-          reportError(error);
-        }
-      }
-
-      cleanup.clear();
-    } else {
-      // 1 cleanup
-      cleanup.call(instance, true);
-      cleanups.delete(id);
-    }
-  }
+  runCleanup(id);
 
   const children = childrens.get(id);
 
@@ -308,12 +262,8 @@ const destroy = async (id) => {
     }
   }
 
-  instanceIds.delete(instance);
-  idInstances.delete(id);
-
   parents.delete(id);
   childrens.delete(id);
-  currentIndexes.delete(id);
   keys.delete(id);
 
   argumentCache.delete(id);
@@ -323,9 +273,6 @@ const destroy = async (id) => {
   cleanups.delete(id);
   needsUpdates.delete(id);
   saves.delete(id);
-
-  instance.id = null;
-  if (instancePool.length <= instancePoolSize) instancePool.push(instance);
 };
 
 export const cleanup = function (cleaner) {
@@ -338,33 +285,29 @@ export const updateParent = (id) => {
 };
 
 export const update = (id) => {
-  const instance = idInstances.get(id);
-  if (instance === undefined) {
-    // console.log("=== cancelling update because instance is gone");
-    return;
-  }
+  const code = codes.get(id);
+  if (!code) return console.log("!!! cancelling update because code is gone", id);
 
-  const Component = Components.get(id);
-  // console.log("=== updating", Component.name);
+  console.log("=== updating", code.name);
 
-  if (isAsync(Component)) {
-    runUpdateAsync(id, instance, Component);
+  if (isAsync(code)) {
+    runUpdateAsync(code, id);
   } else {
-    runUpdate(id, instance, Component);
+    runUpdate(code, id);
   }
 };
 
 const ongoingUpdates = new Map();
 
-const runUpdate = function (id, instance, Component) {
+const runUpdate = function (code, id) {
   try {
     needsUpdates.add(id);
     const previousValue = valueCache.get(id);
 
-    const newValue = start(id, instance, undefined, Component, true);
+    const newValue = start(code, id, argumentCache.get(id), code.isMemoized);
 
     if (newValue !== previousValue) {
-      // console.log("escalating update to parent from", Component.name);
+      console.log("escalating update to parent from", code.name);
       updateParent(id);
     }
   } catch (error) {
@@ -372,18 +315,20 @@ const runUpdate = function (id, instance, Component) {
   }
 };
 
-const runUpdateAsync = async function (id, instance, Component) {
+const runUpdateAsync = async function (code, id) {
   if (ongoingUpdates.has(id)) {
-    // console.log("waiting for previous update to finish in", Component.name);
+    console.log("waiting for previous update to finish in", Component.name);
     await ongoingUpdates.get(id);
     return update(id);
   }
+
+  if (!codes.has(id)) return console.log("!!! cancelling update because async code is gone", id);
 
   try {
     needsUpdates.add(id);
     const previousValue = valueCache.get(id);
 
-    let newValue = startAsync(id, instance, undefined, Component, true);
+    let newValue = startAsync(code, id, argumentCache.get(id), code.isMemoized);
     ongoingUpdates.set(id, newValue);
     newValue = await newValue;
 
@@ -398,4 +343,29 @@ const runUpdateAsync = async function (id, instance, Component) {
   }
 };
 
-export const use = function () {};
+export const use = async function (promise) {
+  const suspendedStack = stack;
+  resetStack();
+  const result = await promise;
+  stack = suspendedStack;
+  return result;
+};
+
+export const save = function (data) {
+  const id = getId();
+  saves.set(id, data);
+  return data;
+};
+
+export const load = function () {
+  const id = getId();
+  return saves.get(id);
+};
+
+export const getId = function () {
+  return stack.at(-1)[0];
+};
+
+export const getParentId = function () {
+  return parents.get(getId(id));
+};
