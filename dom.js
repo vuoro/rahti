@@ -10,7 +10,7 @@ const domHandler = {
   get: function (target, tagName) {
     if (!(tagName in target)) {
       target[tagName] = new Proxy(function DomElement(...children) {
-        const element = Element(tagName, target.namespace);
+        const element = Element(tagName, target.isSvg);
         if (children.length > 0) processChildren(children, element, 0, 0);
         return element;
       }, Component);
@@ -20,10 +20,12 @@ const domHandler = {
   },
 };
 export const html = new Proxy({}, domHandler);
-export const svg = new Proxy({ namespace: "http://www.w3.org/2000/svg" }, domHandler);
+export const svg = new Proxy({ isSvg: true }, domHandler);
 
-const Element = new Proxy(function Element(tagName, namespace) {
-  const element = namespace ? document.createElementNS(namespace, tagName) : document.createElement(tagName);
+const Element = new Proxy(function Element(tagName, isSvg) {
+  const element = isSvg
+    ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
+    : document.createElement(tagName);
   save(element);
   cleanup(cleanNode);
   return element;
@@ -36,14 +38,12 @@ const TextNode = new Proxy(function TextNode() {
   return node;
 }, Component);
 
-Element.memoized = true;
-TextNode.memoized = true;
-
 function cleanNode(node) {
   node.remove();
-  slotChildren.delete(node);
-  slotIndexes.delete(node);
+  removedNodes.add(node);
 }
+
+const removedNodes = new Set();
 
 const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
@@ -128,10 +128,14 @@ const processSlotQueue = () => {
   for (const [child, parent] of slotChildren) {
     const index = slotIndexes.get(child);
 
-    if (index > parent.children.length) {
-      parent.appendChild(child);
-    } else if (parent.children.item(index) !== child) {
-      parent.insertBefore(child, parent.children[index]);
+    if (removedNodes.has(child)) {
+      removedNodes.delete(child);
+    } else {
+      if (index > parent.children.length) {
+        parent.appendChild(child);
+      } else if (parent.children.item(index) !== child) {
+        parent.insertBefore(child, parent.children[index]);
+      }
     }
 
     slotChildren.delete(child);
