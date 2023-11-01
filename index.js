@@ -1,3 +1,5 @@
+import { requestIdleCallbackPonyfilled } from "./requestIdleCallback";
+
 let idCounter = Number.MIN_SAFE_INTEGER;
 
 const codes = new Map();
@@ -15,14 +17,20 @@ const saves = new Map();
 let stack = [undefined];
 let stackIndexes = [0];
 
+export class Key {
+  key = undefined;
+  constructor(key) {
+    this.key = key;
+  }
+}
+
 export const Component = {
   apply: function (code, thisArgument, argumentsList) {
-    const isKeyed = code.keyed === true;
-
     // Find or create instance
     const parentId = stack.at(-1);
     const parentChildIndex = stackIndexes.at(-1);
-    const key = isKeyed ? argumentsList[code.rahtiKeyIndex || 0] : undefined;
+    const lastArgument = argumentsList.at(-1);
+    const key = lastArgument instanceof Key ? lastArgument.key : undefined;
     const id =
       getInstance(code, parentId, parentChildIndex, key) || createInstance(code, parentId, parentChildIndex, key);
 
@@ -219,8 +227,7 @@ export const cleanup = function (cleaner) {
 export const update = (id) => {
   updateQueue.add(id);
   if (!updateQueueWillRun) {
-    queueMicrotask(runUpdateQueue);
-    updateQueueWillRun = true;
+    requestIdleCallbackPonyfilled(runUpdateQueue);
   }
 
   // const code = codes.get(id);
@@ -239,8 +246,13 @@ export const updateParent = (id) => {
 const updateQueue = new Set();
 let updateQueueWillRun = false;
 
-const runUpdateQueue = async function () {
+const runUpdateQueue = async function (deadline) {
   for (const id of updateQueue) {
+    if (deadline.timeRemaining() === 0) {
+      console.log("new deadline");
+      return requestIdleCallbackPonyfilled(runUpdateQueue);
+    }
+
     updateQueue.delete(id);
 
     const code = codes.get(id);
@@ -283,6 +295,16 @@ export const load = function () {
   return saves.get(id);
 };
 
+export const returnPromiseLater = function (promise) {
+  const id = getId();
+  const handler = (value) => {
+    valueCache.set(id, value);
+    updateParent(id);
+  };
+  promise.then(handler, handler);
+  return valueCache.get(id);
+};
+
 export const getId = function () {
   return stack.at(-1);
 };
@@ -290,15 +312,3 @@ export const getId = function () {
 export const getParentId = function () {
   return parents.get(getId());
 };
-
-export const Use = new Proxy(function Use(promise) {
-  const id = getId();
-  const handler =
-    load() ||
-    save(() => {
-      valueCache.set(id);
-      updateParent(id);
-    });
-  promise.then(handler, handler);
-  return valueCache.get(id);
-}, Component);
