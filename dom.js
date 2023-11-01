@@ -130,6 +130,7 @@ const processSlotQueue = () => {
 
     if (removedNodes.has(child)) {
       removedNodes.delete(child);
+      child.remove();
     } else {
       if (index > parent.children.length) {
         parent.appendChild(child);
