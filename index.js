@@ -224,7 +224,11 @@ export const cleanup = function (cleaner) {
   cleanups.set(getId(), cleaner);
 };
 
-export const update = (id) => {
+export const update = (id, immediately = false) => {
+  if (immediately) {
+    runUpdate(id);
+  }
+
   updateQueue.add(id);
   if (!updateQueueWillRun) {
     requestIdleCallbackPonyfilled(runUpdateQueue);
@@ -238,9 +242,9 @@ export const update = (id) => {
   // runUpdate(id, code);
 };
 
-export const updateParent = (id) => {
+export const updateParent = (id, immediately = false) => {
   const parentId = parents.get(id);
-  if (parentId !== undefined) update(parentId);
+  if (parentId !== undefined) update(parentId, immediately);
 };
 
 const updateQueue = new Set();
@@ -254,19 +258,19 @@ const runUpdateQueue = async function (deadline) {
     }
 
     updateQueue.delete(id);
-
-    const code = codes.get(id);
-    if (!code) {
-      // console.log("??? cancelling update because code is gone", id);
-      return;
-    }
-    runUpdate(id, code);
+    runUpdate(id);
   }
 
   updateQueueWillRun = false;
 };
 
-const runUpdate = function (id, code) {
+const runUpdate = function (id) {
+  const code = codes.get(id);
+  if (!code) {
+    // console.log("??? cancelling update because code is gone", id);
+    return;
+  }
+
   // console.log("=== updating", code.name);
   needsUpdates.add(id);
 

@@ -16,11 +16,11 @@ export const State = new Proxy(function State(initialValue) {
     return value;
   };
 
-  const setter = (newValue) => {
+  const setter = (newValue, immediately = false) => {
     value = newValue;
 
     for (const parentId of parents) {
-      update(parentId);
+      update(parentId, immediately);
     }
 
     return newValue;

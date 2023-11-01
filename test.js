@@ -3,7 +3,7 @@ import { State } from "./state.js";
 import { Event, EventListener, Mount, html, svg } from "./dom.js";
 
 const [getGlobalTest, setGlobalTest] = State(0);
-setInterval(() => setGlobalTest(getGlobalTest() + 1), 2618);
+setInterval(() => setGlobalTest(getGlobalTest() + 1, true), 2618);
 
 const TestWrapper = new Proxy(function TestWrapper() {
   const [getCounter, setState] = State(0);
