@@ -290,3 +290,15 @@ export const getId = function () {
 export const getParentId = function () {
   return parents.get(getId());
 };
+
+export const Use = new Proxy(function Use(promise) {
+  const id = getId();
+  const handler =
+    load() ||
+    save(() => {
+      valueCache.set(id);
+      updateParent(id);
+    });
+  promise.then(handler, handler);
+  return valueCache.get(id);
+}, Component);

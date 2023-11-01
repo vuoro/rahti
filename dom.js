@@ -9,7 +9,7 @@ export const Mount = new Proxy(function Mount(root, ...children) {
 const domHandler = {
   get: function (target, tagName) {
     if (!(tagName in target)) {
-      target[tagName] = new Proxy(function DomElement(...children) {
+      target[tagName] = new Proxy(function DomComponent(...children) {
         const element = Element(tagName, target.isSvg);
         if (children.length > 0) processChildren(children, element, 0, 0);
         return element;

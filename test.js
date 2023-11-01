@@ -1,12 +1,13 @@
-import { Component, cleanup, save, load, getId, getParentId } from "./index.js";
+import { Component, cleanup, save, load, getId, getParentId, Use } from "./index.js";
 import { State } from "./state.js";
 import { Event, EventListener, Mount, html, svg } from "./dom.js";
+import { Idle } from "./idle.js";
 
-const [getGlobalTest, setGlobalTest] = State(0);
+const [getGlobalTest, setGlobalTest] = State(this, 0);
 setInterval(() => setGlobalTest(getGlobalTest() + 1), 2618);
 
-const TestWrapper = new Proxy(function TestWrapper() {
-  const [getCounter, setState] = State(0);
+const TestWrapper = new Proxy(async function TestWrapper(rahti) {
+  const [getCounter, setState] = State(rahti, 0);
   const counter = getCounter();
   const timer = setTimeout(setState, 1000, counter + 1);
   cleanup(() => clearTimeout(timer));
@@ -17,23 +18,19 @@ const TestWrapper = new Proxy(function TestWrapper() {
     // if (deadline.timeRemaining() === 0) deadline = await use(idle());
     try {
       if (Math.random() > 0.1) {
-        const testComponent = TestItem(testComponents.length + 1, counter);
+        const testComponent = TestItem(rahti, testComponents.length + 1, counter);
         testComponents.push(testComponent);
       }
     } catch (e) {}
   }
 
-  return [
-    html.p(
-      { style: "color: red" },
-      `Something is wrong if: a) there's ever `,
-      html.em("consistently"),
-      ` over ${max} items here, b) `,
-      html.em("every"),
-      ` element is
-      flashing red on updates.`,
-    ),
-    html.style(`
+  await idle();
+
+  return Dom(rahti).html`
+    <p style="color: red">
+      Something is wrong if: a) there's ever <em>consistently</em> over ${max} items here, b) <em>every</em> element is faslhing red on updates.
+    </p>
+    <style>
       * {
         animation: enter 1000ms ease-out;
         outline: 2px solid transparent;
@@ -43,20 +40,17 @@ const TestWrapper = new Proxy(function TestWrapper() {
         0% { outline-color: rgba(255,0,0, 0.618) }
         100% { outline-color: transparent; }
       }
-    `),
-    html.p(`Parent: ${counter} / Global: ${getGlobalTest()}`),
-    html.ol(
-      {
-        class: "lol",
-      },
-      testComponents,
-      Event("click", console.log),
-    ),
-  ];
+    </style>
+    <p>${`Parent: ${counter} / Global: ${getGlobalTest()}`}</p>
+    <ol class="lol">
+      ${testComponents}
+      ${Event("click", console.log)}
+    </ol>
+  `;
 }, Component);
 
-const TestItem = new Proxy(function TestItem(index, counter) {
-  const [getLocal, setLocal] = State(0);
+const TestItem = new Proxy(function TestItem(rahti, index, counter) {
+  const [getLocal, setLocal] = State(rahti, 0);
   const local = getLocal();
   const global = getGlobalTest();
 
@@ -80,10 +74,11 @@ const cleanTestItem = function (timer) {
   clearTimeout(timer);
 };
 
-const App = new Proxy(async function App(hello) {
+const App = new Proxy(async function App(rahti, hello) {
   Mount(
+    rahti,
     document.body,
-    html.h1(hello),
+    Dom(rahti).html`<h1>${hello}</h1>`,
     TestWrapper(),
     html.div(`an SVG follows`),
     svg.svg(svg.rect({ fill: "turquoise", stroke: "green", width: "300", height: "150" })),

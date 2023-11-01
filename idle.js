@@ -1,3 +1,5 @@
+import { Component, Use } from "./index.js";
+
 let requestIdleCallbackPonyfilled = globalThis.requestIdleCallback;
 
 if (!requestIdleCallbackPonyfilled) {
@@ -31,18 +33,21 @@ if (!requestIdleCallbackPonyfilled) {
 
 let currentResolve = null;
 const promiseResolveCatcher = (resolve) => (currentResolve = resolve);
-let currentIdle = null;
+let currentIdlePromise = null;
 
 const idleCallback = (deadline) => {
-  currentIdle = null;
+  currentIdlePromise = null;
   currentResolve(deadline);
 };
 
-export const idle = async () => {
-  if (!currentIdle) {
-    currentIdle = new Promise(promiseResolveCatcher);
+const getIdlePromise = () => {
+  if (!currentIdlePromise) {
+    currentIdlePromise = new Promise(promiseResolveCatcher);
     requestIdleCallbackPonyfilled(idleCallback);
   }
-
-  return currentIdle;
+  return currentIdlePromise;
 };
+
+export const Idle = new Proxy(function Idle() {
+  return Use(getIdlePromise());
+}, Component);
