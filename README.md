@@ -65,16 +65,32 @@ const App = function (props, greeting) {
   // Passing DOM components into other DOM components nests them.
   const someDiv = <div>{paragraph}</div>;
 
-  // Maintain event handlers with the special `events` attribute.
-  <button type="button" events={{ click: console.log }}></button>;
-  <button type="button" events={{ pointermove: [console.log, { passive: true }] }}></button>;
-  
-  // Or use the EventListener component.
-  <EventListener>{document.body}{"click"}{(event) => console.log(event)}{{ passive: true }}</Event>
+  // Event handlers can be added with the `<Event>` component.
+  <button type="button">
+    <Event type="click" listener={console.log}/>
+  </button>;
+
+  <button type="button">
+    <Event
+      type="pointermove"
+      listener={console.log}
+      passive={true}
+      once={true}
+    />
+  </button>;
+
+  // Or using the `EventListener` component.
+  <EventListener
+    target={document.body}
+    type="click"
+    listener={(event) => console.log(event)}
+    passive={true}
+  />;
 
   // You can pass a key to a component using the special `key` prop.
   // Keys help identify the same component between re-runs,
   // avoiding unexpected results when components are used inside loops or conditionals.
+  <YourComponent key="keyed component!"/>;
   <p key="keyed paragraph!">keyed hello!</p>;
 
   // Finally, none of the above DOM components will actually appear on the page,
@@ -97,7 +113,7 @@ rahti.run(App, null, "hello");
 
 // Components can have state, using the State component.
 // When a component's state changes, it re-runs.
-// If it returns a different value than the last time it ran,
+// If it returns a different value than the last time it ran
 // it'll tell its parent to re-run too.
 const StatefulApp = function () {
   const [timestamp, setTimestamp, getTimestamp] = <State initialValue={performance.now()}/>;
@@ -110,39 +126,22 @@ const StatefulApp = function () {
 
 rahti.run(StatefulApp);
 
-// You can override the setter function of a State by passing in a function in the `actions` prop.
-const createActions = (get, set) => {
-  return {
-    increment: (newValue) => set(get() + 1),
-    decrement: (newValue) => set(get() - 1),
-  };
-};
-
-const TimerWithActions = function () {
-  const [timestamp, {increment, decrement}, getTimestamp] = (
-    <State
-      initialValue={performance.now()}
-      actions={createActions}
-    />
-  );
-};
-
 // `createGlobalState` is a helper for sharing the same state between multiple components.
 // It accepts the same props as State.
 // It returns a component that works like State, a setter function, and a getter function.
 const [
-  GlobalTimer, 
-  setGlobalTimestamp, 
+  GlobalTimer,
+  setGlobalTimestamp,
   getGlobalTimestamp
 ] = createGlobalState({initialValue: performance.now()});
 
 const A = function () {
-  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
+  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer initialValue={performance.now()} />;
   console.log("from a", timestamp);
 };
 
 const B = function () {
-  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer />;
+  const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer initialValue={performance.now()} />;
   console.log("from b", timestamp);
 };
 
@@ -156,44 +155,36 @@ setTimeout(() => console.log("from setTimeout", getGlobalTimestamp()), 1000);
 // (Check out state.js and globalState.js for how they use it.)
 const CustomStateTest = function () {
   console.log("ran at", performance.now());
-  setTimeout(() => update(this.id), 1000);
+  setTimeout(() => update(this), 1000);
 };
 
-// save & load are an additional way to persist data between component reruns.
+// `this.save` & `this.load` are an additional way to persist data between component reruns.
 // Handy for avoiding creating new objects every time the component runs.
 // The data will be cleared if the component is destroyed.
 const SaveAndLoad = function () {
-  const savedArray = load(this.id) || save(this.id, []);
+  const savedArray = this.load() || this.save([]);
   savedArray.push(Math.random());
 };
 
-// Finally, components can have "cleanups" using the CleanUp component.
-// (Both `Cleanup` and `CleanUp` will work!)
+// Finally, components can have a cleanup function, set using `this.cleanup()`.
 function () {
   const element = document.createElement("div");
-  <CleanUp cleaner={function (isFinal) {
-    // if isFinal is true, the component is being destroyed
-    // else it's just re-running
-    element.remove();
-  }}/>
+  this.cleanup(() => element.remove()));
   return element;
 };
 
-// Cleanups are also called with the component's `this`, which has a unique `.id`,
+// Cleanups are also called with the component's `save`'d data,
 // so in some cases you can share the same cleanup function with multiple components.
-const elements = new Map();
-
 function () {
   const element = document.createElement("div");
-  elements.set(this.id, element);
-  <CleanUp cleaner={cleanElement} />
+  this.save(element);
+  this.cleanup(cleanElement);
   return element;
 };
 
-function cleanElement(isFinal) {
-  elements.get(this.id).remove();
-  if (isFinal) elements.delete(this.id);
-})
+function cleanElement(element) {
+  element.remove();
+}
 ```
 
 # Setting up JSX for rahti
