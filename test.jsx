@@ -1,4 +1,4 @@
-import { rahti, idle, createGlobalState, State, Mount } from "./index.js";
+import { rahti, idle, createGlobalState, State, Mount, Event, EventListener } from "./index.js";
 
 const [GlobalTest, setGlobalTest] = createGlobalState(0);
 setInterval(() => setGlobalTest(Math.random()), 3000);
@@ -44,12 +44,8 @@ const TestWrapper = async function () {
           }
         `}
       </style>
-      <ol
-        class="lol"
-        events={{
-          click: console.log,
-        }}
-      >
+      <ol class="lol">
+        <Event type="click" listener={console.log} />
         {testComponents}
       </ol>
     </>
@@ -69,20 +65,16 @@ const TestItem = async function ({ counter, index }) {
   return (
     <li>
       {index + 1}
-      <input
-        type="checkbox"
-        checked={local > 0.5}
-        events={{
-          click: console.log,
-        }}
-      />{" "}
-      Parent: {counter} / Global: {global} / Local: {local}
+      <input type="checkbox" checked={local > 0.5} /> Parent: {counter} / Global: {global} / Local:{" "}
+      {local}
+      <Event type="click" listener={(...args) => console.log(...args)} passive={true} />
     </li>
   );
 };
 
 const App = async function (props, hello) {
   console.log("========", hello, "world");
+
   <Mount>
     {await (<TestWrapper />)}
     <div>an SVG follows:</div>
@@ -90,6 +82,14 @@ const App = async function (props, hello) {
       <svg:rect fill="cyan" stroke="turquoise" width="300" height="150" />
     </svg:svg>
   </Mount>;
+
+  <EventListener
+    target={document.body}
+    type="click"
+    listener={console.log}
+    passive={true}
+    once={true}
+  />;
 };
 
 rahti.run(App, null, "Hello");

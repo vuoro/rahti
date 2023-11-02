@@ -85,6 +85,9 @@ const processChildren = function (children, element, slotIndex = 0, startIndex =
       // it's already an element of some kind, so let's just mount it
       tempProps.key = child;
       this.run(Slot, tempProps, child, element, slotIndex++);
+    } else if (child instanceof EventOfferer) {
+      const { type, listener, options } = child;
+      this.run(EventListener, { target: element, type, listener, options });
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
       slotIndex = processChildren.call(this, child, element, slotIndex);
@@ -138,12 +141,26 @@ const processSlotQueue = () => {
   slotQueueWillRun = false;
 };
 
-export const EventListener = function (props, target, key, value, options) {
-  target.addEventListener(key, value, options);
-  this.save([target, key, value, options]);
+export const EventListener = function ({ target, type, listener, ...options }) {
+  target.addEventListener(type, listener, options);
+  this.save([target, type, listener, options]);
   this.cleanup(cleanEventListener);
 };
 
-function cleanEventListener([target, key, value, options]) {
-  target.removeEventListener(key, value, options);
+function cleanEventListener([target, type, listener, options]) {
+  target.removeEventListener(type, listener, options);
+}
+
+export const Event = function ({ type, listener, ...options }) {
+  const offerer = new EventOfferer();
+  offerer.type = type;
+  offerer.listener = listener;
+  offerer.options = options;
+  return offerer;
+};
+
+class EventOfferer {
+  type = "click";
+  listener = null;
+  options = null;
 }
