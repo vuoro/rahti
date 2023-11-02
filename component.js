@@ -33,38 +33,21 @@ const isAsync = (Component) => {
 
 const dummyProps = {};
 
-export const save = function (id, data) {
-  saves.set(id, data);
-  return data;
-};
-
-export const load = function (id) {
-  return saves.get(id);
-};
-
 class Instance {
+  id = 0;
   run(inputComponent, ...inputArguments) {
-    // Fragments
-    if (inputComponent === "rahti:fragment") {
-      return inputArguments;
-    }
-
     inputArguments[0] = inputArguments[0] || dummyProps;
     const inputProps = inputArguments[0];
 
-    // Cleanups
-    if (inputComponent === CleanUp) {
-      const cleaner = inputProps.cleaner || inputArguments[1];
-      if (!cleaner) throw new Error("Callback missing from CleanUp");
-      return CleanUp(this.id, cleaner);
-    }
-
     // DOM components
     const seemsLikeDom = typeof inputComponent === "string";
-    const Component = seemsLikeDom ? DomElement : inputComponent;
+    if (seemsLikeDom && inputComponent === "rahti:fragment") {
+      return inputArguments;
+    }
     if (seemsLikeDom) inputArguments.splice(1, 0, inputComponent);
 
     // Normal & DOM components
+    const Component = seemsLikeDom ? DomElement : inputComponent;
     const parentId = this.id;
     const key = inputProps?.key;
     const instance =
@@ -74,6 +57,17 @@ class Instance {
     if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
 
     return (isAsync(Component) ? startAsync : start)(id, instance, inputArguments, Component);
+  }
+  save(payload) {
+    saves.set(this.id, payload);
+    return payload;
+  }
+  load() {
+    return saves.get(this.id);
+  }
+  cleanup(cleaner) {
+    if (cleanups.has(this.id)) throw new Error("A component instance can only have 1 cleanup");
+    cleanups.set(this.id, cleaner);
   }
 }
 
@@ -85,7 +79,7 @@ export const setInstancePoolSize = (size) => (instancePoolSize = size);
 const instancePool = [];
 
 const createInstance = (Component, parentId, key) => {
-  idCounter = (idCounter + 1) % Number.MAX_SAFE_INTEGER;
+  idCounter = idCounter === Number.MAX_SAFE_INTEGER ? Number.MIN_SAFE_INTEGER : idCounter + 1;
   const id = idCounter;
 
   // Get or create parent's children
@@ -203,7 +197,7 @@ const checkForUpdate = (
       const previousProps = previousArguments[0];
 
       for (const key in newProps) {
-        if (newProps[key] !== previousProps[key]) {
+        if (!Object.is(newProps[key], previousProps[key])) {
           // console.log("prop has changed", key, previousProps[key], newProps[key]);
           needsUpdate = true;
           break;
@@ -215,7 +209,7 @@ const checkForUpdate = (
           const previousArgument = previousArguments[index];
           const newArgument = newArguments[index];
 
-          if (newArgument !== previousArgument) {
+          if (!Object.is(newArgument, previousArgument)) {
             // console.log("argument has changed", previousArgument, newArgument);
             needsUpdate = true;
             break;
@@ -244,24 +238,8 @@ const runCleanup = (id, instance, newArguments, Component, async = false) => {
   const cleanup = cleanups.get(id);
 
   if (cleanup) {
-    // console.log("running cleanup for", Components.get(id).name);
-    if (cleanup instanceof Set) {
-      // Many cleanups
-      for (const cleaner of cleanup) {
-        try {
-          cleaner.call(instance, false);
-        } catch (error) {
-          // console.log("caught");
-          reportError(error);
-        }
-      }
-
-      cleanup.clear();
-    } else {
-      // 1 cleanup
-      cleanup.call(instance, false);
-      cleanups.delete(id);
-    }
+    cleanup.call(instance, saves.get(id));
+    cleanups.delete(id);
   }
 
   return (async ? runAsync : run)(id, instance, newArguments, Component);
@@ -347,23 +325,8 @@ const destroy = async (id) => {
   const cleanup = cleanups.get(id);
 
   if (cleanup) {
-    // console.log("\\\\ running cleanup for", Components.get(id).name);
-    if (cleanup instanceof Set) {
-      // Many cleanups
-      for (const cleaner of cleanup) {
-        try {
-          cleaner.call(id, true);
-        } catch (error) {
-          reportError(error);
-        }
-      }
-
-      cleanup.clear();
-    } else {
-      // 1 cleanup
-      cleanup.call(instance, true);
-      cleanups.delete(id);
-    }
+    cleanup.call(instance, saves.get(id));
+    cleanups.delete(id);
   }
 
   const children = childrens.get(id);
@@ -394,24 +357,6 @@ const destroy = async (id) => {
   instance.id = null;
   if (instancePool.length <= instancePoolSize) instancePool.push(instance);
 };
-
-export const CleanUp = function (id, cleaner) {
-  const cleanup = cleanups.get(id);
-  if (cleanup instanceof Set) {
-    // 3rd+ cleanup
-    cleanup.add(cleaner);
-  } else if (cleanup) {
-    // 2nd cleanup
-    const cleaners = new Set();
-    cleaners.add(cleanup);
-    cleaners.add(cleaner);
-    cleanups.set(id, cleaners);
-  } else {
-    // 1st cleanup
-    cleanups.set(id, cleaner);
-  }
-};
-export const Cleanup = CleanUp;
 
 export const updateParent = (id) => {
   const parentId = parents.get(id);

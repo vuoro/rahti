@@ -1,4 +1,4 @@
-import { CleanUp, updateParent } from "./component.js";
+import { updateParent } from "./component.js";
 
 export const createGlobalState = ({ initialValue, actions } = {}) => {
   let value = initialValue;
@@ -22,7 +22,7 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
       states.set(this.id, state);
     }
 
-    this.run(CleanUp, null, cleanGlobalState);
+    this.cleanup(cleanGlobalState);
     return state;
   };
 

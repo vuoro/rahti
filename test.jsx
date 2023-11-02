@@ -1,4 +1,4 @@
-import { rahti, idle, createGlobalState, State, Mount, CleanUp } from "./index.js";
+import { rahti, idle, createGlobalState, State, Mount } from "./index.js";
 
 const [GlobalTest, setGlobalTest] = createGlobalState(0);
 setInterval(() => setGlobalTest(Math.random()), 3000);
@@ -7,7 +7,7 @@ const TestWrapper = async function () {
   <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
   const timer = setTimeout(setState, 1000, counter + 1);
-  <CleanUp>{() => clearTimeout(timer)}</CleanUp>;
+  this.cleanup(() => clearTimeout(timer));
 
   let deadline = await idle();
 
@@ -29,7 +29,7 @@ const TestWrapper = async function () {
       </p>
       <style>
         {`
-          * { 
+          * {
             animation: enter 1000ms ease-out;
             outline: 2px solid transparent;
           }
@@ -57,7 +57,7 @@ const TestItem = async function ({ counter, index }) {
   const [global] = <GlobalTest />;
 
   const timer = setTimeout(setLocal, 200 + Math.random() * 10000, Math.random());
-  <CleanUp cleaner={() => clearTimeout(timer)} />;
+  this.cleanup(() => clearTimeout(timer));
   if (Math.random() < 0.05) throw new Error();
 
   await idle();
@@ -79,11 +79,11 @@ const TestItem = async function ({ counter, index }) {
 
 const App = async function (props, hello) {
   console.log("========", hello, "world");
-  <Mount to={document.body}>
+  <Mount>
     {await (<TestWrapper />)}
     <div>an SVG follows:</div>
     <svg:svg>
-      <svg:rect fill="none" stroke="red" width="300" height="150" />
+      <svg:rect fill="cyan" stroke="turquoise" width="300" height="150" />
     </svg:svg>
   </Mount>;
 };

@@ -1,7 +1,7 @@
-import { load, save, updateParent } from "./component.js";
+import { updateParent } from "./component.js";
 
 export const State = function ({ initialValue, actions }) {
-  const state = load(this.id);
+  const state = this.load();
   if (state) return state;
 
   const newState = [initialValue];
@@ -18,5 +18,5 @@ export const State = function ({ initialValue, actions }) {
     newState[1] = setter;
   }
 
-  return save(this.id, newState);
+  return this.save(newState);
 };
