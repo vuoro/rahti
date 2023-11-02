@@ -4,13 +4,13 @@ export const State = function ({ initialValue }) {
   const state = this.load();
   if (state) return state;
 
-  const id = this.id;
+  const instance = this;
 
   const newState = [
     initialValue,
     (newValue, immediately = false) => {
       newState[0] = newValue;
-      updateParent(id, immediately);
+      updateParent(instance, immediately);
     },
     () => newState[0],
   ];

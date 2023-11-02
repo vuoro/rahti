@@ -10,8 +10,6 @@ export const DomElement = function (props, type, ...children) {
   let previousAttributes = this.load();
 
   for (const key in props) {
-    if (key === "rahti:element") continue;
-
     const value = props[key];
     newAttributes.set(key, value);
     if (previousAttributes) previousAttributes.delete(key);

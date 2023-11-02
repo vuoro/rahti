@@ -3,24 +3,6 @@ import { requestIdleCallback } from "./idle.js";
 
 const reportError = globalThis.reportError || console.error;
 
-const Components = new Map([[null, function Root() {}]]);
-const instanceIds = new Map();
-const idInstances = new Map();
-let idCounter = Number.MIN_SAFE_INTEGER;
-
-const parents = new Map();
-const childrens = new Map();
-const currentIndexes = new Map([[null, 0]]);
-const keys = new Map();
-
-const argumentCache = new Map();
-const valueCache = new Map();
-const pendings = new Map();
-
-const cleanups = new Map();
-const needsUpdates = new Set();
-const saves = new Map();
-
 const asyncs = new Map();
 const isAsync = (Component) => {
   const is = asyncs.get(Component);
@@ -36,78 +18,86 @@ const dummyProps = {};
 
 class Instance {
   id = 0;
-  run(inputComponent, ...inputArguments) {
-    inputArguments[0] = inputArguments[0] || dummyProps;
-    const inputProps = inputArguments[0];
+  currentIndex = 0;
 
+  isAsync = false;
+  needsUpdate = false;
+
+  parent = 0;
+  pendingPromise = null;
+  lastValue = null;
+  lastArguments = null;
+  savedData = null;
+  savedCleanup = null;
+
+  key = null;
+  children = null;
+  Component = null;
+
+  save(dataToSave) {
+    this.savedData = dataToSave;
+    return dataToSave;
+  }
+  load() {
+    return this.savedData;
+  }
+  cleanup(cleaner) {
+    if (this.savedCleanup) throw new Error("A component instance can only have 1 cleanup");
+    this.savedCleanup = cleaner;
+  }
+
+  run(inputComponent, ...inputArguments) {
     // DOM components
     const seemsLikeDom = typeof inputComponent === "string";
     if (seemsLikeDom && inputComponent === "rahti:fragment") {
       return inputArguments;
     }
-    if (seemsLikeDom) inputArguments.splice(1, 0, inputComponent);
 
     // Normal & DOM components
     const Component = seemsLikeDom ? DomElement : inputComponent;
-    const parentId = this.id;
-    const key = inputProps?.key;
-    const instance =
-      getInstance(Component, parentId, key) || createInstance(Component, parentId, key);
-    const id = instanceIds.get(instance);
+    inputArguments[0] = inputArguments[0] || dummyProps;
+    if (seemsLikeDom) inputArguments.splice(1, 0, inputComponent);
+    const parent = this;
+    const key = inputArguments[0].key || null;
+    const instance = getInstance(Component, parent, key) || createInstance(Component, parent, key);
 
-    if (parentId !== null) currentIndexes.set(parentId, currentIndexes.get(parentId) + 1);
+    if (parent.id !== null) parent.currentIndex++;
 
-    return (isAsync(Component) ? startAsync : start)(id, instance, inputArguments, Component);
-  }
-  save(payload) {
-    saves.set(this.id, payload);
-    return payload;
-  }
-  load() {
-    return saves.get(this.id);
-  }
-  cleanup(cleaner) {
-    if (cleanups.has(this.id)) throw new Error("A component instance can only have 1 cleanup");
-    cleanups.set(this.id, cleaner);
+    return (instance.isAsync ? startAsync : start)(instance, inputArguments);
   }
 }
 
 export const rahti = new Instance();
 rahti.id = null;
 
-let instancePoolSize = 128;
-export const setInstancePoolSize = (size) => (instancePoolSize = size);
 const instancePool = [];
+let idCounter = Number.MIN_SAFE_INTEGER;
 
-const createInstance = (Component, parentId, key) => {
-  idCounter = idCounter === Number.MAX_SAFE_INTEGER ? Number.MIN_SAFE_INTEGER : idCounter + 1;
-  const id = idCounter;
+const createInstance = (Component, parent, key) => {
+  let instance;
 
-  // Get or create parent's children
-  let children = childrens.get(parentId);
-  if (!children) {
-    // console.log("starting children for", Components.get(parentId).name);
-    children = [];
-    childrens.set(parentId, children);
+  if (instancePool.length) {
+    instance = instancePool.pop();
+  } else {
+    instance = new Instance();
+    instance.id = idCounter++;
   }
 
+  // Get or create parent's children
+  parent.children = parent.children || [];
+
   // Get parent's current index and save as a child using it
-  const index = currentIndexes.get(parentId);
-  children.splice(index, 0, id);
+  const index = parent.currentIndex;
+  parent.children.splice(index, 0, instance);
 
   // Save the parent, the key, and the Component
-  parents.set(id, parentId);
-  if (key !== undefined) keys.set(id, key);
-  Components.set(id, Component);
+  instance.parent = parent;
+  if (key !== undefined) instance.key = key;
+  instance.Component = Component;
+  instance.isAsync = isAsync(Component);
 
   // Mark as needing an update
-  needsUpdates.add(id);
-
-  const instance = instancePool.length > 0 ? instancePool.pop() : new Instance();
-  instance.id = id;
-
-  instanceIds.set(instance, id);
-  idInstances.set(id, instance);
+  instance.needsUpdate = true;
 
   // console.log(
   //   "created",
@@ -121,33 +111,27 @@ const createInstance = (Component, parentId, key) => {
   return instance;
 };
 
-const getInstance = (Component, parentId, key) => {
+const getInstance = (Component, parent, key) => {
   // console.log("looking for", Component.name, "in", Components.get(parentId).name, "with key:", key);
-  const children = childrens.get(parentId);
-
-  if (children) {
+  if (parent.children) {
     // Find the current child
-    const currentIndex = currentIndexes.get(parentId);
-    const currentChild = children[currentIndex];
+    const currentIndex = parent.currentIndex;
+    const currentChild = parent.children[currentIndex];
 
-    if (
-      currentChild &&
-      Components.get(currentChild) === Component &&
-      keys.get(currentChild) === key
-    ) {
+    if (currentChild && currentChild.Component === Component && currentChild.key === key) {
       // The child looks like what we're looking for
       // console.log("found here", Component.name, "for", Components.get(parentId).name);
-      return idInstances.get(currentChild);
+      return currentChild;
     } else {
       // Try to find the a matching child further on
-      for (let index = currentIndex + 1, { length } = children; index < length; index++) {
-        const child = children[index];
-        if (Components.get(child) === Component && keys.get(child) === key) {
+      for (let index = currentIndex + 1; index < parent.children.length; index++) {
+        const child = parent.children[index];
+        if (child.Component === Component && child.key === key) {
           // This one looks correct, so move it into its new place
-          children.splice(index, 1);
-          children.splice(currentIndex, 0, child);
+          parent.children.splice(index, 1);
+          parent.children.splice(currentIndex, 0, child);
           // console.log("found later", Component.name, "for", Components.get(parentId).name);
-          return idInstances.get(child);
+          return child;
         }
       }
     }
@@ -158,60 +142,47 @@ const getInstance = (Component, parentId, key) => {
   }
 };
 
-const start = function (id, instance, newArguments, Component, forceUpdate = false) {
-  return checkForUpdate(id, instance, newArguments, Component, false, forceUpdate);
+const start = function (instance, newArguments) {
+  return checkForUpdate(instance, newArguments, false);
 };
 
-const startAsync = async function (id, instance, newArguments, Component, forceUpdate = false) {
+const startAsync = async function (instance, newArguments) {
   // If instance is already running, delay this run until it finishes
-  const pendingPromise = pendings.get(id);
-  if (pendingPromise) {
+  if (instance.pendingPromise) {
     // console.log("??? waiting for", Components.get(id).name, "to finish before applying");
-    await pendingPromise;
+    await instance.pendingPromise;
     // console.log("??? continuing with", Components.get(id).name);
   }
 
-  return checkForUpdate(id, instance, newArguments, Component, true, forceUpdate);
+  return checkForUpdate(instance, newArguments, true);
 };
 
-const checkForUpdate = (
-  id,
-  instance,
-  newArguments = argumentCache.get(id) || null,
-  Component,
-  async = false,
-  forceUpdate = false,
-) => {
+const checkForUpdate = (instance, newArguments, async = false) => {
   // See if the instance should re-run
-  let needsUpdate = forceUpdate || needsUpdates.has(id);
-
-  // console.log({ needsUpdate, forceUpdate });
+  let needsUpdate = instance.needsUpdate;
 
   if (!needsUpdate) {
-    const previousArguments = argumentCache.get(id);
-
-    if (previousArguments?.length !== newArguments?.length) {
-      // console.log("argument length changed", previousArguments, newArguments);
+    if (instance.lastArguments?.length !== newArguments?.length) {
+      // console.log("argument length changed", instance.lastArguments, newArguments);
       needsUpdate = true;
     } else {
-      const newProps = newArguments[0];
-      const previousProps = previousArguments[0];
+      for (let index = 0; index < newArguments.length; index++) {
+        const previousArgument = instance.lastArguments[index];
+        const newArgument = newArguments[index];
 
-      for (const key in newProps) {
-        if (!Object.is(newProps[key], previousProps[key])) {
-          // console.log("prop has changed", key, previousProps[key], newProps[key]);
+        if (!Object.is(newArgument, previousArgument)) {
+          // console.log("argument has changed", previousArgument, newArgument);
           needsUpdate = true;
           break;
         }
       }
 
-      if (!needsUpdate && newArguments && previousArguments) {
-        for (let index = 1; index < newArguments.length; index++) {
-          const previousArgument = previousArguments[index];
-          const newArgument = newArguments[index];
-
-          if (!Object.is(newArgument, previousArgument)) {
-            // console.log("argument has changed", previousArgument, newArgument);
+      if (!needsUpdate) {
+        const newProps = newArguments[0];
+        const lastProps = instance.lastArguments[0];
+        for (const key in newProps) {
+          if (!Object.is(newProps[key], lastProps[key])) {
+            // console.log("prop has changed", key, instance.lastProps[key], newProps[key]);
             needsUpdate = true;
             break;
           }
@@ -221,236 +192,222 @@ const checkForUpdate = (
   }
 
   // Save this run's arguments and props for next time
-  argumentCache.set(id, newArguments);
+  instance.lastArguments = newArguments;
 
   if (needsUpdate) {
     // Run the instance
     // console.log("+++ start of", Component.name, newProps);
     // Run the cleanup, if there is one
-    return runCleanup(id, instance, newArguments, Component, async);
+    return runCleanup(instance, newArguments, async);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", Component.name);
-    return valueCache.get(id);
+    return instance.lastValue;
   }
 };
 
-const runCleanup = (id, instance, newArguments, Component, async = false) => {
-  const cleanup = cleanups.get(id);
-
-  if (cleanup) {
-    cleanup.call(instance, saves.get(id));
-    cleanups.delete(id);
+const runCleanup = (instance, newArguments, async = false) => {
+  if (instance.savedCleanup) {
+    instance.savedCleanup.call(instance, instance.load());
+    instance.savedCleanup = null;
   }
 
-  return (async ? runAsync : run)(id, instance, newArguments, Component);
+  return (async ? runAsync : run)(instance, newArguments);
 };
 
-const run = (id, instance, newArguments, Component) => {
+const run = (instance, newArguments) => {
   // Run the instance's Component
-  currentIndexes.set(id, 0);
+  instance.currentIndex = 0;
   let result;
 
   try {
-    result = Component.apply(instance, newArguments);
+    result = instance.Component.apply(instance, newArguments);
 
     // Save the new value
-    valueCache.set(id, result);
-    needsUpdates.delete(id);
-    updateQueue.delete(id); // any update can be cancelled safely, since this is not async
+    instance.lastValue = result;
+    instance.needsUpdate = false;
+    updateQueue.delete(instance.id); // any update can be cancelled safely, since this is not async
   } catch (error) {
     // console.log("caught");
     reportError(error);
   } finally {
-    finish(id);
+    finish(instance);
   }
 
   // console.log("--- returning", result, "from", Component.name, instance);
   return result;
 };
 
-const runAsync = async (id, instance, newArguments, Component) => {
+const runAsync = async (instance, newArguments) => {
   // Run the instance's Component
-  currentIndexes.set(id, 0);
+  instance.currentIndex = 0;
   let result;
 
   try {
-    result = Component.apply(instance, newArguments);
+    result = instance.Component.apply(instance, newArguments);
 
-    pendings.set(id, result);
+    instance.pendingPromise = result;
     const finalResult = await result;
 
     // Save the new value
-    valueCache.set(id, finalResult);
-    needsUpdates.delete(id);
+    instance.lastValue = finalResult;
+    instance.needsUpdate = false;
   } catch (error) {
     reportError(error);
   } finally {
-    finish(id);
-    pendings.delete(id);
+    finish(instance);
+    instance.pendingPromise = null;
   }
 
   // console.log("--- returning", result, "from", Component.name, id);
   return result;
 };
 
-const finish = (id) => {
+const finish = (instance) => {
   // Destroy children that were not visited on this execution
-  const children = childrens.get(id);
-  if (children) {
-    const nextIndex = currentIndexes.get(id);
-    const { length } = children;
+  if (instance.children) {
+    const nextIndex = instance.currentIndex;
+    const { length } = instance.children;
 
     if (nextIndex < length) {
       // console.log("/// destroying leftover children in", Component.name, length - nextIndex);
       for (let index = nextIndex; index < length; index++) {
-        destroy(children[index]);
+        destroy(instance.children[index]);
       }
-      children.splice(nextIndex);
+      instance.children.splice(nextIndex);
     }
   }
 };
 
-const destroy = async (id) => {
+const destroy = async (instance) => {
   // console.log("destroying", Components.get(id).name);
-  const instance = idInstances.get(id);
 
   // If there's an ongoing run, wait for it
-  const pendingPromise = pendings.get(id);
-  if (pendingPromise) {
+  if (instance.pendingPromise) {
     // console.log("??? waiting for", Components.get(id).name, "to finish before destroying");
-    await pendingPromise;
+    await instance.pendingPromise;
     // console.log("??? continuing with destroying", Components.get(id).name);
   }
 
   // Run the cleanup, if there is any
-  const cleanup = cleanups.get(id);
-
-  if (cleanup) {
-    cleanup.call(instance, saves.get(id));
-    cleanups.delete(id);
+  if (instance.savedCleanup) {
+    instance.savedCleanup.call(instance, instance.load());
+    instance.savedCleanup = null;
   }
 
-  const children = childrens.get(id);
-
   // Destroy children
-  if (children) {
-    for (const child of children) {
+  if (instance.children) {
+    for (const child of instance.children) {
       destroy(child);
     }
   }
 
-  instanceIds.delete(instance);
-  idInstances.delete(id);
+  // Clean up instance
+  instance.currentIndex = 0;
 
-  parents.delete(id);
-  childrens.delete(id);
-  currentIndexes.delete(id);
-  keys.delete(id);
+  instance.isAsync = false;
+  instance.needsUpdate = false;
 
-  argumentCache.delete(id);
-  valueCache.delete(id);
-  pendings.delete(id);
+  instance.parent = null;
+  instance.pendingPromise = null;
+  instance.lastValue = null;
+  instance.lastArguments = null;
+  instance.savedData = null;
+  instance.savedCleanup = null;
 
-  cleanups.delete(id);
-  needsUpdates.delete(id);
-  saves.delete(id);
+  instance.key = null;
+  if (instance.children) instance.children.splice(0, Infinity);
+  instance.Component = null;
 
-  instance.id = null;
-  if (instancePool.length <= instancePoolSize) instancePool.push(instance);
+  // Add to pool for reuse
+  instancePool.push(instance);
 };
 
-export const update = (id, immediately = false) => {
+export const update = (instance, immediately = false) => {
   if (immediately) {
-    return startUpdate(id);
+    return startUpdate(instance);
   }
 
-  updateQueue.add(id);
+  updateQueue.add(instance);
   if (!updateQueueWillRun) {
     requestIdleCallback(runUpdateQueue);
     updateQueueWillRun = true;
   }
 };
 
-export const updateParent = (id, immediately = false) => {
-  const parentId = parents.get(id);
-  if (parentId !== undefined) update(parentId, immediately);
+export const updateParent = (instance, immediately = false) => {
+  if (instance.parent !== undefined) update(instance.parent, immediately);
 };
 
 let updateQueueWillRun = false;
 const updateQueue = new Set();
 
 const runUpdateQueue = async function (deadline) {
-  for (const id of updateQueue) {
+  for (const instance of updateQueue) {
     if (deadline.timeRemaining() === 0) {
       console.log("new deadline");
       return requestIdleCallback(runUpdateQueue);
     }
 
-    updateQueue.delete(id);
-    startUpdate(id);
+    updateQueue.delete(instance);
+    startUpdate(instance);
   }
 
   updateQueueWillRun = false;
 };
 
-const startUpdate = (id) => {
-  const Component = Components.get(id);
-  (isAsync(Component) ? runUpdateAsync : runUpdate)(id, Component);
+const startUpdate = (instance) => {
+  (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
 };
 
 const ongoingUpdates = new Map();
 
-const runUpdate = function (id, Component) {
-  const instance = idInstances.get(id);
-  if (instance === undefined) {
+const runUpdate = function (instance) {
+  if (instance.Component === null) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }
 
   try {
-    needsUpdates.add(id);
-    const previousValue = valueCache.get(id);
+    instance.needsUpdate = true;
+    const lastValue = instance.lastValue;
+    const newValue = start(instance, instance.lastArguments);
 
-    const newValue = start(id, instance, undefined, Component, true);
-
-    if (newValue !== previousValue) {
+    if (newValue !== lastValue) {
       // console.log("escalating update to parent from", Component.name);
-      updateParent(id);
+      updateParent(instance);
     }
   } catch (error) {
     reportError(error);
   }
 };
 
-const runUpdateAsync = async function (id, Component) {
-  if (ongoingUpdates.has(id)) {
+const runUpdateAsync = async function (instance) {
+  if (ongoingUpdates.has(instance)) {
     // console.log("waiting for previous update to finish in", Component.name);
-    await ongoingUpdates.get(id);
-    return update(id);
+    await ongoingUpdates.get(instance);
   }
 
-  const instance = idInstances.get(id);
-  if (instance === undefined) {
+  if (instance.Component === null) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }
 
   try {
-    needsUpdates.add(id);
-    const previousValue = valueCache.get(id);
+    instance.needsUpdate = true;
+    const lastValue = instance.lastValue;
+    let newValue = startAsync(instance, instance.lastArguments);
 
-    let newValue = startAsync(id, instance, undefined, Component, true);
-    ongoingUpdates.set(id, newValue);
+    ongoingUpdates.set(instance, newValue);
     newValue = await newValue;
 
-    if (newValue !== previousValue) {
+    if (newValue !== lastValue) {
       // console.log("escalating update to parent from", Component.name);
-      updateParent(id);
+      updateParent(instance);
     }
   } catch (error) {
     reportError(error);
   } finally {
-    ongoingUpdates.delete(id);
+    ongoingUpdates.delete(instance);
   }
 };

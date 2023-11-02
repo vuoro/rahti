@@ -7,18 +7,18 @@ export const createGlobalState = ({ initialValue }) => {
   const getter = () => value;
   const setter = (newValue, immediately = false) => {
     value = newValue;
-    for (const [id, state] of states) {
+    for (const [instance, state] of states) {
       state[0] = value;
-      updateParent(id, immediately);
+      updateParent(instance, immediately);
     }
   };
 
   const GlobalState = function () {
-    let state = states.get(this.id);
+    let state = states.get(this);
 
     if (!state) {
       state = [value, setter, getter];
-      states.set(this.id, state);
+      states.set(this, state);
     }
 
     this.cleanup(cleanGlobalState);
@@ -26,7 +26,7 @@ export const createGlobalState = ({ initialValue }) => {
   };
 
   function cleanGlobalState() {
-    states.delete(this.id);
+    states.delete(this);
   }
 
   return [GlobalState, setter, getter];
