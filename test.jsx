@@ -56,7 +56,7 @@ const TestItem = async function ({ counter, index }) {
   const [local, setLocal] = <State initialValue={0} />;
   const [global] = <GlobalTest />;
 
-  const timer = setTimeout(setLocal, 200 + Math.random() * 10000, Math.random());
+  const timer = setTimeout(setLocal, 200 + Math.random() * 5000, Math.random());
   this.cleanup(() => clearTimeout(timer));
   if (Math.random() < 0.05) throw new Error();
 

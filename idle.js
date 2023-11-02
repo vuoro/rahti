@@ -2,7 +2,7 @@ export let requestIdleCallback = globalThis.requestIdleCallback;
 export let cancelIdleCallback = globalThis.cancelIdleCallback;
 
 if (!requestIdleCallback) {
-  const timeAllowance = 12;
+  const timeAllowance = 8;
   let startedAt = performance.now();
   const fallbackDeadline = {
     timeRemaining: () => Math.max(0, timeAllowance - (performance.now() - startedAt)),

@@ -1,4 +1,5 @@
 import { DomElement } from "./dom.js";
+import { requestIdleCallback } from "./idle.js";
 
 const reportError = globalThis.reportError || console.error;
 
@@ -256,6 +257,7 @@ const run = (id, instance, newArguments, Component) => {
     // Save the new value
     valueCache.set(id, result);
     needsUpdates.delete(id);
+    updateQueue.delete(id); // any update can be cancelled safely, since this is not async
   } catch (error) {
     // console.log("caught");
     reportError(error);
@@ -358,31 +360,54 @@ const destroy = async (id) => {
   if (instancePool.length <= instancePoolSize) instancePool.push(instance);
 };
 
-export const updateParent = (id) => {
-  const parentId = parents.get(id);
-  if (parentId !== undefined) update(parentId);
+export const update = (id, immediately = false) => {
+  if (immediately) {
+    return startUpdate(id);
+  }
+
+  updateQueue.add(id);
+  if (!updateQueueWillRun) {
+    requestIdleCallback(runUpdateQueue);
+    updateQueueWillRun = true;
+  }
 };
 
-export const update = (id) => {
+export const updateParent = (id, immediately = false) => {
+  const parentId = parents.get(id);
+  if (parentId !== undefined) update(parentId, immediately);
+};
+
+let updateQueueWillRun = false;
+const updateQueue = new Set();
+
+const runUpdateQueue = async function (deadline) {
+  for (const id of updateQueue) {
+    if (deadline.timeRemaining() === 0) {
+      console.log("new deadline");
+      return requestIdleCallback(runUpdateQueue);
+    }
+
+    updateQueue.delete(id);
+    startUpdate(id);
+  }
+
+  updateQueueWillRun = false;
+};
+
+const startUpdate = (id) => {
+  const Component = Components.get(id);
+  (isAsync(Component) ? runUpdateAsync : runUpdate)(id, Component);
+};
+
+const ongoingUpdates = new Map();
+
+const runUpdate = function (id, Component) {
   const instance = idInstances.get(id);
   if (instance === undefined) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }
 
-  const Component = Components.get(id);
-  // console.log("=== updating", Component.name);
-
-  if (isAsync(Component)) {
-    runUpdateAsync(id, instance, Component);
-  } else {
-    runUpdate(id, instance, Component);
-  }
-};
-
-const ongoingUpdates = new Map();
-
-const runUpdate = function (id, instance, Component) {
   try {
     needsUpdates.add(id);
     const previousValue = valueCache.get(id);
@@ -398,11 +423,17 @@ const runUpdate = function (id, instance, Component) {
   }
 };
 
-const runUpdateAsync = async function (id, instance, Component) {
+const runUpdateAsync = async function (id, Component) {
   if (ongoingUpdates.has(id)) {
     // console.log("waiting for previous update to finish in", Component.name);
     await ongoingUpdates.get(id);
     return update(id);
+  }
+
+  const instance = idInstances.get(id);
+  if (instance === undefined) {
+    // console.log("=== cancelling update because instance is gone");
+    return;
   }
 
   try {
