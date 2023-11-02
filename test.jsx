@@ -17,7 +17,11 @@ const TestWrapper = async function () {
     if (deadline.timeRemaining() <= 0) deadline = await idle();
     try {
       if (Math.random() > 0.1)
-        testComponents.push(await (<TestItem counter={counter} index={testComponents.length} />));
+        testComponents.push(
+          await (
+            <TestItem counter={counter} index={testComponents.length} key={testComponents.length} />
+          ),
+        );
     } catch (e) {}
   }
 

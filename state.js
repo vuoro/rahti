@@ -1,22 +1,19 @@
 import { updateParent } from "./component.js";
 
-export const State = function ({ initialValue, actions }) {
+export const State = function ({ initialValue }) {
   const state = this.load();
   if (state) return state;
 
-  const newState = [initialValue];
+  const id = this.id;
 
-  const setter = (newValue) => {
-    newState[0] = newValue;
-    updateParent(this.id);
-  };
-
-  if (actions) {
-    const getter = () => newState[0];
-    newState[1] = actions(getter, setter);
-  } else {
-    newState[1] = setter;
-  }
+  const newState = [
+    initialValue,
+    (newValue, immediately = false) => {
+      newState[0] = newValue;
+      updateParent(id, immediately);
+    },
+    () => newState[0],
+  ];
 
   return this.save(newState);
 };

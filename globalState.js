@@ -1,24 +1,23 @@
 import { updateParent } from "./component.js";
 
-export const createGlobalState = ({ initialValue, actions } = {}) => {
+export const createGlobalState = ({ initialValue }) => {
   let value = initialValue;
   const states = new Map();
 
   const getter = () => value;
-  const setter = (newValue) => {
+  const setter = (newValue, immediately = false) => {
     value = newValue;
     for (const [id, state] of states) {
       state[0] = value;
-      updateParent(id);
+      updateParent(id, immediately);
     }
   };
-  const finalSetter = actions ? actions(getter, setter) : setter;
 
   const GlobalState = function () {
     let state = states.get(this.id);
 
     if (!state) {
-      state = [value, finalSetter, getter];
+      state = [value, setter, getter];
       states.set(this.id, state);
     }
 
@@ -26,11 +25,9 @@ export const createGlobalState = ({ initialValue, actions } = {}) => {
     return state;
   };
 
-  function cleanGlobalState(isFinal) {
-    if (isFinal) {
-      states.delete(this.id);
-    }
+  function cleanGlobalState() {
+    states.delete(this.id);
   }
 
-  return [GlobalState, finalSetter, getter];
+  return [GlobalState, setter, getter];
 };
