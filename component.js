@@ -23,7 +23,7 @@ class Instance {
   isAsync = false;
   needsUpdate = false;
 
-  parent = 0;
+  parent = null;
   pendingPromise = null;
   lastValue = null;
   lastArguments = null;
@@ -336,7 +336,7 @@ export const update = (instance, immediately = false) => {
 };
 
 export const updateParent = (instance, immediately = false) => {
-  if (instance.parent !== undefined) update(instance.parent, immediately);
+  if (instance.parent !== null && instance.parent.id !== null) update(instance.parent, immediately);
 };
 
 let updateQueueWillRun = false;
