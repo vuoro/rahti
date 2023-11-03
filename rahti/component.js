@@ -166,23 +166,25 @@ const checkForUpdate = (instance, newArguments, async = false) => {
       // console.log("argument length changed", instance.lastArguments, newArguments);
       needsUpdate = true;
     } else {
-      for (let index = 0; index < newArguments.length; index++) {
-        const previousArgument = instance.lastArguments[index];
-        const newArgument = newArguments[index];
-
-        if (!Object.is(newArgument, previousArgument)) {
-          // console.log("argument has changed", previousArgument, newArgument);
+      // Check props
+      const newProps = newArguments[0];
+      const lastProps = instance.lastArguments[0];
+      for (const key in newProps) {
+        if (!Object.is(newProps[key], lastProps[key])) {
+          // console.log("prop has changed", key, instance.lastProps[key], newProps[key]);
           needsUpdate = true;
           break;
         }
       }
 
+      // Check arguments (skipping over the props object)
       if (!needsUpdate) {
-        const newProps = newArguments[0];
-        const lastProps = instance.lastArguments[0];
-        for (const key in newProps) {
-          if (!Object.is(newProps[key], lastProps[key])) {
-            // console.log("prop has changed", key, instance.lastProps[key], newProps[key]);
+        for (let index = 1; index < newArguments.length; index++) {
+          const previousArgument = instance.lastArguments[index];
+          const newArgument = newArguments[index];
+
+          if (!Object.is(newArgument, previousArgument)) {
+            // console.log("argument has changed", previousArgument, newArgument);
             needsUpdate = true;
             break;
           }
