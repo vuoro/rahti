@@ -5,7 +5,8 @@
   "type": "module",
   "main": "index.js",
   "exports": {
-    ".": "./index.js"
+    "./": "./rahti/rahti.js",
+    "./webgl2": "./webgl2/webgl2.js"
   },
   "scripts": {
     "start": "vite dev --open"

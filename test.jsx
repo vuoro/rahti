@@ -1,4 +1,12 @@
-import { rahti, idle, createGlobalState, State, Mount, Event, EventListener } from "./index.js";
+import {
+  rahti,
+  idle,
+  createGlobalState,
+  State,
+  Mount,
+  Event,
+  EventListener,
+} from "./rahti/rahti.js";
 
 const [GlobalTest, setGlobalTest] = createGlobalState(0);
 setInterval(() => setGlobalTest(Math.random()), 3000);
