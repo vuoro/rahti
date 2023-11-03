@@ -25,7 +25,7 @@ class Instance {
 
   parent = null;
   pendingPromise = null;
-  lastValue = null;
+  lastValue = undefined;
   lastArguments = null;
   savedData = null;
   savedCleanup = null;
@@ -310,7 +310,7 @@ const destroy = async (instance) => {
 
   instance.parent = null;
   instance.pendingPromise = null;
-  instance.lastValue = null;
+  instance.lastValue = undefined;
   instance.lastArguments = null;
   instance.savedData = null;
   instance.savedCleanup = null;
