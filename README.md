@@ -20,7 +20,7 @@
 - Simple API
   ```js
   import { rahti, State, Mount } from "rahti"; // for most use cases
-  import { CleanUp, EventListener, createGlobalState, idle, update, updateParent } from "rahti"; // for advanced usage
+  import { EventListener, createGlobalState, idle, save, load, cleanup, update, updateParent } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements
   ```js
@@ -37,7 +37,7 @@
 ## API & example
 
 ```js
-import { rahti, Mount, State, CleanUp, createGlobalState, idle, update, updateParent } from "rahti";
+import { rahti, Mount, State, cleanup, save, load, createGlobalState, idle, update, updateParent } from "rahti";
 
 // Components must be normal, non-arrow functions
 // `function() {}` = correct
@@ -125,6 +125,12 @@ const StatefulApp = function () {
   </Mount>;
 });
 
+// The setter function of a State accepts two arguments:
+// 1. the State's new value
+// 2. a boolean: `true` if it should update quickly using `queueMicrotask`, or `false` (the default) if lazily using `requestIdleCallback`
+setTimestamp(performance.now(), true); // updates as soon as possible
+setTimestamp(performance.now(), false); // updates later
+
 rahti.run(StatefulApp);
 
 // `createGlobalState` is a helper for sharing the same state between multiple components.
@@ -167,14 +173,16 @@ const SaveAndLoad = function () {
   savedArray.push(Math.random());
 };
 
-// Finally, components can have a cleanup function, set using `this.cleanup()`.
+// Finally, components can have cleanup functions, set using `this.cleanup()`.
+// They are run before a component re-runs, and when it gets destroyed.
 function () {
   const element = document.createElement("div");
+  this.cleanup(() => console.log("will remove element next")));
   this.cleanup(() => element.remove()));
   return element;
 };
 
-// Cleanups are also called with the component's `save`'d data,
+// Cleanups are also called with the component's `this` and `save()`'d data,
 // so in some cases you can share the same cleanup function with multiple components.
 function () {
   const element = document.createElement("div");
@@ -184,6 +192,7 @@ function () {
 };
 
 function cleanElement(element) {
+  console.log(this); // same as in the component above
   element.remove();
 }
 ```

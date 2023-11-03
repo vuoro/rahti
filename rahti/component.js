@@ -28,7 +28,7 @@ class Instance {
   lastValue = undefined;
   lastArguments = null;
   savedData = null;
-  savedCleanup = null;
+  cleaners = null;
 
   key = null;
   children = null;
@@ -42,8 +42,19 @@ class Instance {
     return this.savedData;
   }
   cleanup(cleaner) {
-    if (this.savedCleanup) throw new Error("A component instance can only have 1 cleanup");
-    this.savedCleanup = cleaner;
+    if (this.cleaners) {
+      if (!(this.cleaners instanceof Set)) {
+        // 2nd cleanup
+        const firstCleaner = this.cleaners;
+        this.cleaners = new Set();
+        this.cleaners.add(firstCleaner);
+      }
+      // nth cleanup
+      this.cleaners.add(cleaner);
+    } else {
+      // 1st cleanup
+      this.cleaners = cleaner;
+    }
   }
 
   run(inputComponent, ...inputArguments) {
@@ -200,7 +211,7 @@ const checkForUpdate = (instance, newArguments, async = false) => {
     // Run the instance
     // console.log("+++ start of", Component.name, newProps);
     // Run the cleanup, if there is one
-    return runCleanup(instance, newArguments, async);
+    return checkCleanup(instance, newArguments, async);
   } else {
     // Skip running and return the previous value
     // console.log("!!! skipping update for", Component.name);
@@ -208,13 +219,23 @@ const checkForUpdate = (instance, newArguments, async = false) => {
   }
 };
 
-const runCleanup = (instance, newArguments, async = false) => {
-  if (instance.savedCleanup) {
-    instance.savedCleanup.call(instance, instance.load());
-    instance.savedCleanup = null;
-  }
-
+const checkCleanup = (instance, newArguments, async = false) => {
+  runCleanup(instance);
   return (async ? runAsync : run)(instance, newArguments);
+};
+
+const runCleanup = (instance) => {
+  if (instance.cleaners) {
+    if (instance.cleaners instanceof Set) {
+      for (const cleaner of instance.cleaners) {
+        cleaner.call(instance, instance.load());
+        instance.cleaners.delete(cleaner);
+      }
+    } else {
+      instance.cleaners.call(instance, instance.load());
+      instance.cleaners = null;
+    }
+  }
 };
 
 const run = (instance, newArguments) => {
@@ -292,10 +313,7 @@ const destroy = async (instance) => {
   }
 
   // Run the cleanup, if there is any
-  if (instance.savedCleanup) {
-    instance.savedCleanup.call(instance, instance.load());
-    instance.savedCleanup = null;
-  }
+  runCleanup(instance);
 
   // Destroy children
   if (instance.children) {
@@ -315,7 +333,7 @@ const destroy = async (instance) => {
   instance.lastValue = undefined;
   instance.lastArguments = null;
   instance.savedData = null;
-  instance.savedCleanup = null;
+  instance.cleaners = null;
 
   instance.key = null;
   if (instance.children) instance.children.splice(0, Infinity);
@@ -326,13 +344,9 @@ const destroy = async (instance) => {
 };
 
 export const update = (instance, immediately = false) => {
-  if (immediately) {
-    return startUpdate(instance);
-  }
-
   updateQueue.add(instance);
   if (!updateQueueWillRun) {
-    requestIdleCallback(runUpdateQueue);
+    (immediately ? queueMicrotask : requestIdleCallback)(runUpdateQueue);
     updateQueueWillRun = true;
   }
 };
@@ -346,7 +360,7 @@ const updateQueue = new Set();
 
 const runUpdateQueue = async function (deadline) {
   for (const instance of updateQueue) {
-    if (deadline.timeRemaining() === 0) {
+    if (deadline?.timeRemaining() === 0) {
       console.log("new deadline");
       return requestIdleCallback(runUpdateQueue);
     }
