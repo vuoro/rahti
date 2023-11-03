@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+dependencies:
+  gl-mat4-esm:
+    specifier: ^1.1.4
+    version: 1.1.4
+
 devDependencies:
   vite:
     specifier: ^4.5.0
@@ -246,6 +251,10 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /gl-mat4-esm@1.1.4:
+    resolution: {integrity: sha512-Z6+GyXGZN7ZRiPcTkVovsXOnizhIdMhoJJ6zjpoxm9RJ/DfBOK3+vGSg3yIjW5Y0OjOKZQ+VyESVfH8SRaGE1w==}
+    dev: false
 
   /nanoid@3.3.6:
     resolution: {integrity: sha512-BGcqMMJuToF7i1rt+2PWSNVnWIkGCU78jBG3RxO/bZlnZPK2Cmi2QaffxGO/2RvWi9sL+FAiRiXMgsyxQ1DIDA==}

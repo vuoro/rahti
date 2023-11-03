@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+  <body>
+    <p>
+      There should be a bunch of squares that constantly get added and removed, and sometimes the
+      existing ones should change color. There should also be a grey triangle that warps to fit the
+      viewport, has an antialiased line going through it, and slowly gets filled with random colors.
+    </p>
+    <canvas id="canvas" style="width: 100%; height: 100vh"></canvas>
+
+    <script type="module">
+      import { State, rahti } from "./../rahti/rahti.js";
+      import {
+        Context,
+        UniformBlock,
+        Attribute,
+        Elements,
+        Instances,
+        Command,
+        Texture,
+        Camera,
+        AnimationFrame,
+      } from "./main.js";
+
+      // is API for resources ok?
+      // and for commands?
+      // write each piece of the API
+
+      const Graphics = function () {
+        const context = this.run(Context, {
+          canvas: document.getElementById("canvas"),
+          debug: true,
+        });
+
+        const shape = this.run(Attribute, {
+          context,
+          data: [
+            Float32Array.of(0, 0),
+            Float32Array.of(1, 0),
+            Float32Array.of(1, 1),
+            Float32Array.of(0, 1),
+          ],
+        });
+        const shared = this.run(UniformBlock, {
+          context,
+          uniforms: { time: 0, lightColor: [0, 0, 0] },
+        });
+        const smallTexture = this.run(Texture, {
+          context,
+          pixels: new Uint8Array(64 * 64 * 4).fill(128),
+          anisotropicFiltering: 16,
+        });
+
+        const [cameraController, camera] = this.run(Camera, { context });
+
+        const triangleElements = this.run(Elements, { context, data: Int16Array.of(0, 1, 2) });
+        const quadElements = this.run(Elements, { context, data: Int16Array.of(0, 1, 2, 2, 3, 0) });
+
+        const QuadInstance = this.run(Instances, {
+          context,
+          attributes: {
+            color: [1, 1, 1],
+            offset: [0, 0],
+          },
+        });
+
+        const drawTriangle = this.run(Command, {
+          context,
+          attributes: { shape },
+          textures: { smallTexture },
+          // elements: triangleElements,
+          vertex: `
+            out vec2 textureCoordinates;
+            void main () {
+              textureCoordinates = shape;
+              gl_Position = vec4(shape, 0.0, 1.0);
+            }
+          `,
+          fragment: `
+            in vec2 textureCoordinates;
+            out vec4 fragment;
+
+            float fDistance(float x) {
+              return length(vec2(dFdx(x), dFdy(x)));
+            }
+
+            float aLine(float threshold, float value, float thickness) {
+              return clamp(thickness - abs(threshold - value) / fDistance(value), 0.0, 1.0);
+            }
+
+            void main () {
+              fragment = vec4(texture(smallTexture, textureCoordinates).rgb, 1.0);
+              fragment.rgb *= 1.0 - aLine(0.5, length(textureCoordinates), 1.0);
+            }
+          `,
+        });
+
+        const drawQuad = this.run(Command, {
+          context,
+          // fragmentPrecision: `precision mediump float;`,
+          attributes: { shape },
+          uniformBlocks: { camera },
+          elements: quadElements,
+          instances: QuadInstance,
+          vertex: `
+            out vec3 colorOut;
+
+            void main () {
+              colorOut = color;
+              gl_Position = projectionView * vec4(shape + offset, -offset.x, 1.0);
+            }
+          `,
+          fragment: `
+            in vec3 colorOut;
+            out vec4 fragment;
+
+            void main () {
+              fragment = vec4(colorOut, 1.0);
+            }
+          `,
+        });
+
+        // Later
+        // const framebufferTest = framebuffer({ color: [smallTexture] });
+
+        this.run(TriangleUpdater, null, smallTexture);
+
+        return {
+          frame: context.frame,
+          resize: context.resize,
+          commands: { drawTriangle, drawQuad, clear: context.clear },
+          QuadInstance,
+          shared,
+          cameraController,
+        };
+      };
+
+      const TriangleUpdater = function (props, smallTexture) {
+        const { frameNumber } = this.run(AnimationFrame);
+
+        if (frameNumber % 16 === 0)
+          smallTexture.update(
+            Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
+            Math.random() * 64,
+            Math.random() * 64,
+          );
+      };
+
+      const App = function () {
+        const [value, setState] = this.run(State, { intialValue: 0 });
+
+        const { frame, commands, QuadInstance, shared, cameraController, resize } =
+          this.run(Graphics);
+        const { clear, drawTriangle, drawQuad } = commands;
+
+        setTimeout(
+          (newValue) => {
+            setState(newValue);
+            // resize((Math.sin(Date.now()) * 0.5 + 0.5));
+          },
+          Math.random() * 500,
+          value + 1,
+        );
+
+        frame(() => {
+          clear();
+          drawTriangle();
+          drawQuad();
+        });
+
+        const max = 20 * (0.5 + Math.random() * 0.5);
+        // const max = 500;
+        for (let index = 1; index < max; index++) {
+          if (Math.random() < 0.75) this.run(Quad, null, index, QuadInstance);
+        }
+
+        document.addEventListener("pointermove", ({ x, y }) => {
+          cameraController.target[0] = -x * 0.001;
+          cameraController.target[1] = y * 0.001;
+        });
+      };
+
+      const Quad = function (props, index, QuadInstance) {
+        const [value, setState] = this.run(State, { intialValue: 0 });
+        setTimeout(setState, Math.random() * 10000, value + 1);
+
+        const instance = this.run(QuadInstance, null, {
+          offset: Float32Array.of(-index * 0.05, -index * 0.05),
+          color: Float32Array.of(
+            Math.random() * 0.236,
+            Math.random() * 0.236,
+            Math.random() * 0.236,
+          ),
+        });
+      };
+
+      rahti.run(App);
+    </script>
+  </body>
+</html>

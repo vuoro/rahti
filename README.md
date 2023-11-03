@@ -80,6 +80,7 @@ const App = function (props, greeting) {
   </button>;
 
   // Or using the `EventListener` component.
+  <EventListener type="click" listener={console.log}>{document.body}</EventListener>;
   <EventListener
     target={document.body}
     type="click"
@@ -202,7 +203,7 @@ For a Vite-compatible configuration file, check `vite.config.js` in this reposit
 
 ## WebGL 2 Effects
 
-Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2: [rahti-webgl2](https://github.com/vuoro/rahti-webgl2).
+Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2. See the `webgl2` folder in this repo, but consider stability experimental.
 
 ## Inspirations
 
