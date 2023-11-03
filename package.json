@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "10.0.1",
+  "version": "10.1.0",
   "description": "Write reactive JS <Components> with async/await.",
   "type": "module",
   "main": "index.js",
@@ -15,11 +15,7 @@
     "type": "git",
     "url": "git+https://github.com/vuoro/rahti.git"
   },
-  "keywords": [
-    "reactive",
-    "javascript",
-    "rahti"
-  ],
+  "keywords": ["reactive", "javascript", "rahti", "jsx", "async"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vuoro/rahti/issues"
@@ -31,7 +27,7 @@
   "prettier": {
     "printWidth": 100
   },
-  "packageManager": "pnpm@7.0.1",
+  "packageManager": "pnpm@8.9.2",
   "dependencies": {
     "gl-mat4-esm": "^1.1.4"
   }

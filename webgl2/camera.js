@@ -1,6 +1,6 @@
 import { create, perspective, ortho, lookAt, multiply, invert } from "gl-mat4-esm";
 import { UniformBlock } from "./uniformBlock.js";
-import { requestPreRenderJob } from "./animation-frame.js";
+import { requestPreRenderJob } from "./animationFrame.js";
 
 export const defaultCameraIncludes = new Set([
   // "projection",

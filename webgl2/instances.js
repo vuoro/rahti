@@ -1,4 +1,4 @@
-import { preRenderJobs, requestPreRenderJob } from "./animation-frame.js";
+import { preRenderJobs, requestPreRenderJob } from "./animationFrame.js";
 import { Buffer } from "./buffer.js";
 
 export const Instances = function ({ context, attributes: attributeMap }) {
@@ -16,7 +16,7 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     attributes.set(key, bufferObject);
   }
 
-  const additions = new Map();
+  const additions = new Set();
   const deletions = new Set();
 
   const instancesToSlots = new Map();
@@ -36,7 +36,6 @@ export const Instances = function ({ context, attributes: attributeMap }) {
       const slot = instancesToSlots.get(instance);
       instancesToSlots.delete(instance);
       slotsToInstances.delete(slot);
-      datas.delete(instance);
 
       if (slot < newSize) {
         freeSlots.push(slot);
@@ -55,9 +54,8 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     }
 
     // Add new instances
-    for (const [instance, data] of additions) {
+    for (const instance of additions) {
       const slot = freeSlots.length ? freeSlots.pop() : instancesToSlots.size;
-      datas.set(instance, data);
       instancesToSlots.set(instance, slot);
       slotsToInstances.set(slot, instance);
       changes.set(instance, slot);
@@ -87,21 +85,16 @@ export const Instances = function ({ context, attributes: attributeMap }) {
       // And fill in the changes
       for (const [instance, slot] of changes) {
         const data = datas.get(instance);
-
-        const isMap = data instanceof Map;
-        const isObject = data instanceof Object;
-        const value = isMap
-          ? data.has(key)
-            ? data.get(key)
-            : defaultValue
-          : isObject && key in data
-          ? data[key]
-          : defaultValue;
+        const value = key in data ? data[key] : defaultValue;
 
         if (dimensions === 1) {
           newData[slot] = value;
         } else {
-          newData.set(value, slot * dimensions);
+          try {
+            newData.set(value, slot * dimensions);
+          } catch (error) {
+            console.log({ oldSize, newSize, slot });
+          }
         }
       }
 
@@ -114,68 +107,57 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     changes.clear();
   };
 
-  const InstanceCreator = function (props, data) {
-    const { id } = this;
-    const isNew = !instancesToSlots.has(id);
+  const updateInstance = (instance, data) => {
+    for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
+      const value = data?.[key] !== undefined ? data[key] : defaultValue;
+      const offset = dimensions * instancesToSlots.get(instance);
 
-    if (isNew) {
-      additions.set(id, data);
-      requestPreRenderJob(buildInstances);
-    } else if (data) {
-      datas.set(id, data);
+      let hasChanged = false;
 
-      const isMap = data instanceof Map;
-      const isObject = data instanceof Object;
-
-      for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
-        const value = isMap
-          ? data.has(key)
-            ? data.get(key)
-            : defaultValue
-          : isObject && key in data
-          ? data[key]
-          : defaultValue;
-
-        const offset = dimensions * instancesToSlots.get(id);
-
-        let hasChanged = false;
-
-        if (dimensions === 1) {
-          hasChanged = allData[offset] !== value;
-        } else {
-          for (let index = 0; index < dimensions; index++) {
-            hasChanged = allData[offset + index] !== value[index];
-            if (hasChanged) break;
-          }
+      if (dimensions === 1) {
+        hasChanged = allData[offset] !== value;
+      } else {
+        for (let index = 0; index < dimensions; index++) {
+          hasChanged = allData[offset + index] !== value[index];
+          if (hasChanged) break;
         }
-
-        if (hasChanged) update(value, offset);
       }
+
+      if (hasChanged) update(value, offset);
     }
-
-    this.save(id);
-    this.cleanup(cleanInstance);
-
-    return id;
   };
 
-  function cleanInstance(id) {
-    if (additions.has(id)) {
-      additions.delete(id);
-    } else if (!dead) {
-      deletions.add(id);
+  const InstanceComponent = function (props, data) {
+    datas.set(this, data);
+
+    const isNew = !instancesToSlots.has(this);
+
+    if (isNew) {
+      additions.add(this);
+      requestPreRenderJob(buildInstances);
+    } else if (data) {
+      updateInstance(this, data);
+    }
+
+    this.cleanup(cleanInstance);
+    return this;
+  };
+
+  function cleanInstance() {
+    datas.delete(this);
+
+    const isNew = !instancesToSlots.has(this);
+
+    if (isNew) {
+      additions.delete(this);
+    } else {
+      deletions.add(this);
       requestPreRenderJob(buildInstances);
     }
   }
 
-  InstanceCreator.rahti_attributes = attributes;
-  InstanceCreator.rahti_instances = instancesToSlots;
+  InstanceComponent.rahti_attributes = attributes;
+  InstanceComponent.rahti_instances = instancesToSlots;
 
-  let dead = false;
-  this.cleanup(() => {
-    preRenderJobs.delete(buildInstances);
-    dead = true;
-  });
-
-  return InstanceCreator;
+  return InstanceComponent;
 };

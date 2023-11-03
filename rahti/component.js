@@ -245,7 +245,10 @@ const run = (instance, newArguments) => {
     // Save the new value
     instance.lastValue = result;
     instance.needsUpdate = false;
-    updateQueue.delete(instance); // any update can be cancelled safely, since this is not async
+
+    // any pending update can be cancelled safely, since this is not async
+    fastUpdateQueue.delete(instance);
+    slowUpdateQueue.delete(instance);
   } catch (error) {
     // console.log("caught");
     reportError(error);
@@ -339,33 +342,51 @@ const destroy = async (instance) => {
   instancePool.push(instance);
 };
 
+let slowUpdateQueueWillRun = false;
+let fastUpdateQueueWillRun = false;
+const slowUpdateQueue = new Set();
+const fastUpdateQueue = new Set();
+
 export const update = (instance, immediately = false) => {
-  updateQueue.add(instance);
-  if (!updateQueueWillRun) {
-    (immediately ? queueMicrotask : requestIdleCallback)(runUpdateQueue);
-    updateQueueWillRun = true;
+  // FIXME: this looks horrible lol
+  (immediately ? fastUpdateQueue : slowUpdateQueue).add(instance);
+  if (!(immediately ? fastUpdateQueueWillRun : slowUpdateQueueWillRun)) {
+    (immediately ? queueMicrotask : requestIdleCallback)(
+      immediately ? runFastUpdateQueue : runUpdateQueue,
+    );
+
+    if (immediately) {
+      fastUpdateQueueWillRun = true;
+    } else {
+      slowUpdateQueueWillRun = true;
+    }
   }
 };
 
 export const updateParent = (instance, immediately = false) => {
-  if (instance.parent !== rahti) update(instance.parent, immediately);
+  if (instance.parent && instance.parent !== rahti) update(instance.parent, immediately);
 };
 
-let updateQueueWillRun = false;
-const updateQueue = new Set();
-
-const runUpdateQueue = async function (deadline) {
-  for (const instance of updateQueue) {
-    if (deadline?.timeRemaining() === 0) {
-      console.log("new deadline");
-      return requestIdleCallback(runUpdateQueue);
-    }
-
-    updateQueue.delete(instance);
+const runFastUpdateQueue = async function () {
+  for (const instance of fastUpdateQueue) {
+    fastUpdateQueue.delete(instance);
     startUpdate(instance);
   }
 
-  updateQueueWillRun = false;
+  fastUpdateQueueWillRun = false;
+};
+
+const runUpdateQueue = async function (deadline) {
+  for (const instance of slowUpdateQueue) {
+    if (deadline?.timeRemaining() === 0) {
+      return requestIdleCallback(runUpdateQueue);
+    }
+
+    slowUpdateQueue.delete(instance);
+    startUpdate(instance);
+  }
+
+  slowUpdateQueueWillRun = false;
 };
 
 const startUpdate = (instance) => {

@@ -1,5 +1,5 @@
 import { update } from "./../rahti/rahti.js";
-import { cancelJobsAndStopFrame, requestRenderJob } from "./animation-frame.js";
+import { cancelJobsAndStopFrame, requestRenderJob } from "./animationFrame.js";
 
 const defaultAttributes = {
   antialias: false,
@@ -156,6 +156,7 @@ export const Context = function ({
 
     canvas.width = width * pixelRatio;
     canvas.height = height * pixelRatio;
+
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     for (const subscriber of resizeSubscribers) {
@@ -188,6 +189,8 @@ export const Context = function ({
     observer.observe(canvas);
   }
 
+  const instance = this;
+
   const handleLost = (event) => {
     console.log("context lost");
     event.preventDefault();
@@ -196,7 +199,7 @@ export const Context = function ({
   };
   const handleRestored = () => {
     console.log("restoring context");
-    update(this);
+    update(instance);
   };
 
   canvas.addEventListener("webglcontextlost", handleLost);

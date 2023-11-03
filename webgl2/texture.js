@@ -1,4 +1,4 @@
-import { cancelPreRenderJob, requestPreRenderJob } from "./animation-frame.js";
+import { cancelPreRenderJob, requestPreRenderJob } from "./animationFrame.js";
 
 const defaultParameters = {
   TEXTURE_MIN_FILTER: "LINEAR",

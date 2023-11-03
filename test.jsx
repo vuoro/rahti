@@ -6,6 +6,7 @@ import {
   Mount,
   Event,
   EventListener,
+  update,
 } from "./rahti/rahti.js";
 import {
   Context,
@@ -16,16 +17,17 @@ import {
   Command,
   Texture,
   Camera,
-  AnimationFrame,
+  useAnimationFrame,
 } from "./webgl2/webgl2.js";
 
-const [GlobalTest, setGlobalTest] = createGlobalState(0);
-setInterval(() => setGlobalTest(Math.random()), 3000);
+const [GlobalTest, setGlobalTest, getGlobalTest] = createGlobalState({ initialValue: 0 });
+setInterval(() => setGlobalTest(getGlobalTest() + 1), 5000);
 
 const TestWrapper = async function () {
   <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
   const timer = setTimeout(setState, 1000, counter + 1);
+  this.cleanup(() => console.log("cleaning timer", timer));
   this.cleanup(() => clearTimeout(timer));
 
   let deadline = await idle();
@@ -77,7 +79,7 @@ const TestItem = async function ({ counter, index }) {
 
   const timer = setTimeout(setLocal, 200 + Math.random() * 5000, Math.random());
   this.cleanup(() => clearTimeout(timer));
-  // if (Math.random() < 0.05) throw new Error();
+  if (Math.random() < 0.05) throw new Error();
 
   await idle();
 
@@ -129,29 +131,58 @@ const WebGL2App = function ({
     listener={({ x, y }) => {
       cameraController.target[0] = -x * 0.001;
       cameraController.target[1] = y * 0.001;
-
-      smallTexture.update(
-        Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
-        Math.abs(x * 0.1),
-        Math.abs(y * 0.1),
-      );
     }}
   >
     {document}
   </EventListener>;
 
-  // const max = 20 * (0.5 + Math.random() * 0.5);
-  const max = 10;
-  for (let index = 1; index < max; index++) {
-    // if (Math.random() < 0.75) continue;
-    <Quad key={index} QuadInstance={QuadInstance} />;
-  }
+  <TriangleUpdater>{smallTexture}</TriangleUpdater>;
+  <QuadUpdater QuadInstance={QuadInstance} />;
 
   frame(() => {
     clear();
     drawTriangle();
     drawQuads();
   });
+};
+
+const TriangleUpdater = function (props, smallTexture) {
+  useAnimationFrame(this);
+  smallTexture.update(
+    Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
+    Math.random() * 64,
+    Math.random() * 64,
+  );
+};
+
+const QuadUpdater = function ({ QuadInstance }) {
+  const [max, setMax] = <State>{100}</State>;
+  console.log(max);
+  // setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5));
+
+  for (let index = 0; index < max; index++) {
+    if (Math.random() < 0.2) continue;
+    <Quad key={index} QuadInstance={QuadInstance} />;
+  }
+};
+
+const Quad = function ({ key, QuadInstance }) {
+  const [_, setState] = <State />;
+  setTimeout(setState, Math.random() * 2000, Math.random());
+
+  const data =
+    this.load() ||
+    this.save({
+      offset: Float32Array.of(-key * 0.02, -key * 0.02),
+      color: new Float32Array(3),
+    });
+
+  const quad = <QuadInstance>{data}</QuadInstance>;
+
+  data.color[0] = 0.236 + Math.random() * 0.236;
+  data.color[1] = 0.236 + Math.random() * 0.236;
+  data.color[2] = 0.236 + Math.random() * 0.236;
+  update(quad);
 };
 
 const WebGL2Renderer = function (props, canvas) {
@@ -176,7 +207,7 @@ const WebGL2Renderer = function (props, canvas) {
       anisotropicFiltering={16}
     />
   );
-  const [cameraController, camera] = <Camera context={context} />;
+  const [cameraController, camera] = <Camera context={context} fov={90} />;
 
   const triangleElements = <Elements context={context} data={Int16Array.of(0, 1, 2)} />;
   const quadElements = <Elements context={context} data={Int16Array.of(0, 1, 2, 2, 3, 0)} />;
@@ -196,7 +227,7 @@ const WebGL2Renderer = function (props, canvas) {
       context={context}
       attributes={{ shape }}
       textures={{ smallTexture }}
-      // elements={triangleElements}
+      elements={triangleElements}
       vertex={`
       out vec2 textureCoordinates;
       void main () {
@@ -261,18 +292,6 @@ const WebGL2Renderer = function (props, canvas) {
     cameraController,
     smallTexture,
   };
-};
-
-const Quad = function ({ key, QuadInstance }) {
-  const [value, setState] = <State intialValue={0} />;
-  setTimeout(setState, Math.random() * 10000, value + 1);
-
-  <QuadInstance>
-    {{
-      offset: Float32Array.of(-key * 0.05, -key * 0.05),
-      color: Float32Array.of(Math.random() * 0.236, Math.random() * 0.236, Math.random() * 0.236),
-    }}
-  </QuadInstance>;
 };
 
 rahti.run(App, null, "Hello");

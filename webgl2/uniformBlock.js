@@ -1,4 +1,4 @@
-import { cancelPreRenderJob, requestPreRenderJob } from "./animation-frame.js";
+import { cancelPreRenderJob, requestPreRenderJob } from "./animationFrame.js";
 import { dataToTypes } from "./buffer.js";
 
 export const UniformBlock = function ({ context, uniforms: uniformMap }) {

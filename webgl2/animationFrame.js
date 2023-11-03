@@ -1,4 +1,4 @@
-import { updateParent } from "./../rahti/rahti.js";
+import { update } from "./../rahti/rahti.js";
 
 export const preRenderJobs = new Set();
 export const renderJobs = new Set();
@@ -33,21 +33,20 @@ const runComponents = (timestamp, sinceLastFrame, frameNumber) => {
   componentProps.frameNumber = frameNumber;
 
   for (const instance of componentSubscribers) {
-    updateParent(instance, true);
+    update(instance, true);
   }
 };
 
-export const AnimationFrame = function () {
-  componentSubscribers.add(this);
-  this.save(this);
-  this.cleanup(cleanAnimationFrame);
-  subscribeToAnimationFrame(runComponents);
+export const useAnimationFrame = function (instance) {
+  componentSubscribers.add(instance);
+  instance.cleanup(cleanAnimationFrame);
+  if (!subscribers.has(runComponents)) subscribeToAnimationFrame(runComponents);
 
   return componentProps;
 };
 
-function cleanAnimationFrame(instance) {
-  componentSubscribers.delete(instance);
+function cleanAnimationFrame() {
+  componentSubscribers.delete(this);
   if (componentSubscribers.size === 0) unsubscribeFromAnimationFrame(runComponents);
 }
 

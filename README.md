@@ -213,7 +213,7 @@ For a Vite-compatible configuration file, check `vite.config.js` in this reposit
 
 ## WebGL 2 Effects
 
-Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2. See the `webgl2` folder in this repo, but consider stability experimental.
+Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2. See the `webgl2` folder in this repo. They are experimental, and will not follow this repository's semantic versioning.
 
 ## Inspirations
 

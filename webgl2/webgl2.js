@@ -1,5 +1,5 @@
 export * from "./context.js";
-export * from "./animation-frame.js";
+export * from "./animationFrame.js";
 export * from "./command.js";
 export { Buffer as Attribute } from "./buffer.js";
 export * from "./instances.js";
