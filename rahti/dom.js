@@ -1,5 +1,5 @@
 export const Mount = function ({ to = globalThis?.document?.body }, ...children) {
-  processChildren.call(this, children, to, 0, 0);
+  processChildren(this, children, to, 0, 0);
   return to;
 };
 
@@ -43,7 +43,7 @@ export const DomElement = function (props, type, ...children) {
   }
   if (newAttributes?.size) this.save(newAttributes);
 
-  if (children.length > 0) processChildren.call(this, children, element, 0, 0);
+  if (children.length > 0) processChildren(this, children, element, 0, 0);
 
   return element;
 };
@@ -77,29 +77,29 @@ function cleanNode(node) {
 
 const tempProps = {};
 
-const processChildren = function (children, element, slotIndex = 0, startIndex = 0) {
+const processChildren = function (instance, children, element, slotIndex = 0, startIndex = 0) {
   for (let index = startIndex, { length } = children; index < length; index++) {
     const child = children[index];
 
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
       tempProps.key = child;
-      this.run(Slot, tempProps, child, element, slotIndex++);
+      instance.run(Slot, tempProps, child, element, slotIndex++);
     } else if (child instanceof EventOfferer) {
       const { type, listener, options } = child;
-      this.run(EventListener, { target: element, type, listener, options });
+      instance.run(EventListener, { target: element, type, listener, options });
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
-      slotIndex = processChildren.call(this, child, element, slotIndex);
+      slotIndex = processChildren(instance, child, element, slotIndex);
     } else {
       const type = typeof child;
 
       if (type === "string" || type === "number") {
         // treat as Text
-        const textNode = this.run(TextNode);
+        const textNode = instance.run(TextNode);
         textNode.nodeValue = child;
         tempProps.key = textNode;
-        this.run(Slot, tempProps, textNode, element, slotIndex++);
+        instance.run(Slot, tempProps, textNode, element, slotIndex++);
       }
     }
   }

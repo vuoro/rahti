@@ -161,8 +161,9 @@ setTimeout(() => console.log("from setTimeout", getGlobalTimestamp()), 1000);
 // You can also create custom state mechanisms with `update` and `updateParent`.
 // (Check out state.js and globalState.js for how they use it.)
 const CustomStateTest = function () {
+  const instance = this;
   console.log("ran at", performance.now());
-  setTimeout(() => update(this), 1000);
+  setTimeout(() => update(instance), 1000);
 };
 
 // `this.save` & `this.load` are an additional way to persist data between component reruns.

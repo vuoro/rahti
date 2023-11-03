@@ -17,7 +17,6 @@ const isAsync = (Component) => {
 const dummyProps = {};
 
 class Instance {
-  id = 0;
   currentIndex = 0;
 
   isAsync = false;
@@ -72,17 +71,15 @@ class Instance {
     const key = inputArguments[0].key || null;
     const instance = getInstance(Component, parent, key) || createInstance(Component, parent, key);
 
-    if (parent.id !== null) parent.currentIndex++;
+    if (parent !== rahti) parent.currentIndex++;
 
     return (instance.isAsync ? startAsync : start)(instance, inputArguments);
   }
 }
 
 export const rahti = new Instance();
-rahti.id = null;
 
 const instancePool = [];
-let idCounter = Number.MIN_SAFE_INTEGER;
 
 const createInstance = (Component, parent, key) => {
   let instance;
@@ -91,7 +88,6 @@ const createInstance = (Component, parent, key) => {
     instance = instancePool.pop();
   } else {
     instance = new Instance();
-    instance.id = idCounter++;
   }
 
   // Get or create parent's children
@@ -249,7 +245,7 @@ const run = (instance, newArguments) => {
     // Save the new value
     instance.lastValue = result;
     instance.needsUpdate = false;
-    updateQueue.delete(instance.id); // any update can be cancelled safely, since this is not async
+    updateQueue.delete(instance); // any update can be cancelled safely, since this is not async
   } catch (error) {
     // console.log("caught");
     reportError(error);
@@ -352,7 +348,7 @@ export const update = (instance, immediately = false) => {
 };
 
 export const updateParent = (instance, immediately = false) => {
-  if (instance.parent !== null && instance.parent.id !== null) update(instance.parent, immediately);
+  if (instance.parent !== rahti) update(instance.parent, immediately);
 };
 
 let updateQueueWillRun = false;
