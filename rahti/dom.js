@@ -141,9 +141,10 @@ const processSlotQueue = () => {
   slotQueueWillRun = false;
 };
 
-export const EventListener = function ({ target, type, listener, ...options }) {
-  target.addEventListener(type, listener, options);
-  this.save([target, type, listener, options]);
+export const EventListener = function ({ target, type, listener, ...options }, targetChild) {
+  const finalTarget = target || targetChild;
+  finalTarget.addEventListener(type, listener, options);
+  this.save([finalTarget, type, listener, options]);
   this.cleanup(cleanEventListener);
 };
 
