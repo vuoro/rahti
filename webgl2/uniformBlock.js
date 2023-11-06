@@ -72,6 +72,8 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
   let lastDirty = 0;
 
   const update = (key, data) => {
+    if (dead) return;
+
     const length = data.length || 1;
     const offset = offsets.get(key);
 
@@ -90,6 +92,8 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
   const { UNIFORM_BUFFER } = gl;
 
   const commitUpdate = () => {
+    if (dead) return;
+
     setBuffer(buffer, UNIFORM_BUFFER);
     gl.bufferSubData(
       UNIFORM_BUFFER,
@@ -105,7 +109,10 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
     requestRendering();
   };
 
+  let dead = false;
+
   this.cleanup(() => {
+    dead = true;
     cancelPreRenderJob(commitUpdate);
     gl.deleteBuffer(buffer);
   });

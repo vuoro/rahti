@@ -1,4 +1,4 @@
-import { preRenderJobs, requestPreRenderJob } from "./animationFrame.js";
+import { requestPreRenderJob } from "./animationFrame.js";
 import { Buffer } from "./buffer.js";
 
 export const Instances = function ({ context, attributes: attributeMap }) {
@@ -28,6 +28,8 @@ export const Instances = function ({ context, attributes: attributeMap }) {
   const orphans = new Set();
 
   const buildInstances = () => {
+    if (dead) return;
+
     const oldSize = instancesToSlots.size;
     const newSize = oldSize + additions.size - deletions.size;
 
@@ -108,6 +110,8 @@ export const Instances = function ({ context, attributes: attributeMap }) {
   };
 
   const updateInstance = (instance, data) => {
+    if (dead) return;
+
     for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
       const value = data?.[key] !== undefined ? data[key] : defaultValue;
       const offset = dimensions * instancesToSlots.get(instance);
@@ -158,6 +162,12 @@ export const Instances = function ({ context, attributes: attributeMap }) {
 
   InstanceComponent.rahti_attributes = attributes;
   InstanceComponent.rahti_instances = instancesToSlots;
+
+  let dead = false;
+
+  this.cleanup(() => {
+    dead = true;
+  });
 
   return InstanceComponent;
 };

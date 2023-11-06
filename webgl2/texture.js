@@ -1,4 +1,4 @@
-import { cancelPreRenderJob, requestPreRenderJob } from "./animationFrame.js";
+import { requestPreRenderJob } from "./animationFrame.js";
 
 const defaultParameters = {
   TEXTURE_MIN_FILTER: "LINEAR",
@@ -68,24 +68,28 @@ export const Texture = function ({
   if (hasMipmaps) gl.hint(gl.GENERATE_MIPMAP_HINT, gl[mipmaps]);
 
   const generateMipmaps = () => {
+    if (dead) return;
     setTexture(texture, TARGET);
     gl.generateMipmap(TARGET);
   };
 
   const update = (data, x = 0, y = 0, width = 1, height = 1, level = 0) => {
+    if (dead) return;
     setTexture(texture, TARGET);
     gl[updater](TARGET, level, x, y, width, height, FORMAT, TYPE, data);
     if (hasMipmaps) requestPreRenderJob(generateMipmaps);
     requestRendering();
   };
 
-  gl[storer](TARGET, levels, INTERNAL_FORMAT, width, height);
-  if (pixels) update(pixels, 0, 0, width, height);
+  let dead = false;
 
   this.cleanup(() => {
-    cancelPreRenderJob(generateMipmaps);
+    dead = true;
     gl.deleteTexture(texture);
   });
+
+  gl[storer](TARGET, levels, INTERNAL_FORMAT, width, height);
+  if (pixels) update(pixels, 0, 0, width, height);
 
   return { shaderType, update, index: textureIndexes.get(texture) };
 };

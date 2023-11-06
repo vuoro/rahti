@@ -152,6 +152,8 @@ export const Context = function ({
   const unsubscribe = (subscriber) => resizeSubscribers.delete(subscriber);
 
   const resize = (pixelRatio = currentPixelRatio) => {
+    if (dead) return;
+
     currentPixelRatio = pixelRatio;
 
     canvas.width = width * pixelRatio;
@@ -193,8 +195,8 @@ export const Context = function ({
 
   const handleLost = (event) => {
     console.log("context lost");
+    dead = true;
     event.preventDefault();
-    stopped = true;
     cancelJobsAndStopFrame();
   };
   const handleRestored = () => {
@@ -206,7 +208,7 @@ export const Context = function ({
   canvas.addEventListener("webglcontextrestored", handleRestored);
 
   this.cleanup(() => {
-    stopped = true;
+    dead = true;
     cancelJobsAndStopFrame();
     observer.disconnect();
     canvas.removeEventListener("webglcontextlost", handleLost);
@@ -214,13 +216,14 @@ export const Context = function ({
   });
 
   let renderFunction;
-  let stopped = false;
+  let dead = false;
+
   const frame = (renderPass) => {
     renderFunction = renderPass;
     requestRendering();
   };
   const executeRender = (timestamp, sinceLastFrame, frameNumber) => {
-    if (renderFunction && !stopped) renderFunction(timestamp, sinceLastFrame, frameNumber);
+    if (renderFunction && !dead) renderFunction(timestamp, sinceLastFrame, frameNumber);
   };
 
   const requestRendering = () => {

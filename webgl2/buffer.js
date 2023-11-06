@@ -1,4 +1,4 @@
-import { cancelPreRenderJob, requestPreRenderJob } from "./animationFrame.js";
+import { requestPreRenderJob } from "./animationFrame.js";
 
 export const Buffer = function ({
   context,
@@ -51,6 +51,8 @@ export const Buffer = function ({
   let shouldSet = true;
 
   const set = (data = allData) => {
+    if (dead) return;
+
     allData = data;
     bufferObject.allData = allData;
     bufferObject.count = allData.length / dimensions;
@@ -66,6 +68,8 @@ export const Buffer = function ({
   requestPreRenderJob(set);
 
   const update = function (data, offset) {
+    if (dead) return;
+
     const length = data?.length;
 
     firstDirty = Math.min(offset, firstDirty);
@@ -81,6 +85,8 @@ export const Buffer = function ({
   };
 
   const commitUpdates = function () {
+    if (dead) return;
+
     setBuffer(buffer, BINDING);
 
     if (shouldSet) {
@@ -107,10 +113,11 @@ export const Buffer = function ({
   bufferObject.set = set;
   bufferObject.update = update;
 
+  let dead = false;
+
   this.cleanup(() => {
+    dead = true;
     gl.deleteBuffer(buffer);
-    cancelPreRenderJob(commitUpdates);
-    cancelPreRenderJob(set);
   });
 
   return bufferObject;

@@ -134,8 +134,12 @@ ${fragment}`;
   }
   measureCount();
 
+  let dead = false;
+
   // Rahti cleanup
   this.cleanup(() => {
+    dead = true;
+
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
     gl.deleteProgram(program);
@@ -235,6 +239,7 @@ ${fragment}`;
     overrideCount = usesElements ? elements.count : count,
     overrideInstanceCount = isInstanced && instanceList.size,
   ) => {
+    if (dead) return;
     if (isInstanced && !overrideInstanceCount) return;
 
     setProgram(program);
