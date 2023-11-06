@@ -115,6 +115,27 @@ const createInstance = (Component, parent, key) => {
   //   currentIndexes.get(parentId)
   // );
 
+  if (import.meta.hot) {
+    if (Component.name) {
+      if (!globalThis._rahtiHmrComponentVersionsRegistry.has(Component.name)) {
+        globalThis._rahtiHmrComponentVersionsRegistry.set(Component.name, new Set());
+      }
+
+      const componentVersionsRegistry = globalThis._rahtiHmrComponentVersionsRegistry.get(
+        Component.name,
+      );
+      componentVersionsRegistry.add(Component);
+
+      if (!globalThis._rahtiHmrInstanceRegistry.has(Component.name)) {
+        globalThis._rahtiHmrInstanceRegistry.set(Component.name, new Set());
+      }
+
+      const instanceRegistry = globalThis._rahtiHmrInstanceRegistry.get(Component.name);
+      instanceRegistry.add(instance);
+      instance.instanceRegistry = instanceRegistry;
+    }
+  }
+
   return instance;
 };
 
@@ -240,7 +261,11 @@ const run = (instance, newArguments) => {
   let result;
 
   try {
-    result = instance.Component.apply(instance, newArguments);
+    let Component = instance.Component;
+    if (import.meta.hot) {
+      Component = globalThis._rahtiHmrComponentRegistry.get(Component) || Component;
+    }
+    result = Component.apply(instance, newArguments);
 
     // Save the new value
     instance.lastValue = result;
@@ -266,7 +291,11 @@ const runAsync = async (instance, newArguments) => {
   let result;
 
   try {
-    result = instance.Component.apply(instance, newArguments);
+    let Component = instance.Component;
+    if (import.meta.hot) {
+      Component = globalThis._rahtiHmrComponentRegistry.get(Component) || Component;
+    }
+    result = Component.apply(instance, newArguments);
 
     instance.pendingPromise = result;
     const finalResult = await result;
@@ -321,6 +350,14 @@ const destroy = async (instance) => {
     }
   }
 
+  if (import.meta.hot) {
+    // Clean up HMR
+    if (instance.instanceRegistry) {
+      instance.instanceRegistry.delete(instance);
+      instance.instanceRegistry = null;
+    }
+  }
+
   // Clean up instance
   instance.currentIndex = 0;
 
@@ -348,12 +385,14 @@ const slowUpdateQueue = new Set();
 const fastUpdateQueue = new Set();
 
 export const update = (instance, immediately = false) => {
-  // FIXME: this looks horrible lol
-  (immediately ? fastUpdateQueue : slowUpdateQueue).add(instance);
-  if (!(immediately ? fastUpdateQueueWillRun : slowUpdateQueueWillRun)) {
-    (immediately ? queueMicrotask : requestIdleCallback)(
-      immediately ? runFastUpdateQueue : runUpdateQueue,
-    );
+  const queue = immediately ? fastUpdateQueue : slowUpdateQueue;
+  const willRun = immediately ? fastUpdateQueueWillRun : slowUpdateQueueWillRun;
+  queue.add(instance);
+
+  if (!willRun) {
+    const queueFirer = immediately ? queueMicrotask : requestIdleCallback;
+    const queueRunner = immediately ? runFastUpdateQueue : runUpdateQueue;
+    queueFirer(queueRunner);
 
     if (immediately) {
       fastUpdateQueueWillRun = true;
@@ -444,3 +483,11 @@ const runUpdateAsync = async function (instance) {
     ongoingUpdates.delete(instance);
   }
 };
+
+if (import.meta.hot) {
+  globalThis._rahtiHmrComponentVersionsRegistry =
+    globalThis._rahtiHmrComponentVersionsRegistry || new Map();
+  globalThis._rahtiHmrComponentRegistry = globalThis._rahtiHmrComponentRegistry || new Map();
+  globalThis._rahtiHmrInstanceRegistry = globalThis._rahtiHmrInstanceRegistry || new Map();
+  globalThis._rahtiUpdate = globalThis._rahtiUpdate || update;
+}

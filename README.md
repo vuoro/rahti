@@ -198,7 +198,7 @@ function cleanElement(element) {
 }
 ```
 
-# Setting up JSX for rahti
+## Setting up JSX for rahti
 
 To make JSX work for Rahti, use the following JSX factory and fragment settings.
 
@@ -211,9 +211,43 @@ To make JSX work for Rahti, use the following JSX factory and fragment settings.
 
 For a Vite-compatible configuration file, check `vite.config.js` in this repository.
 
-## WebGL 2 Effects
+## Hot module reloading for Vite
 
-Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2. See the `webgl2` folder in this repo. They are experimental, and will not follow this repository's semantic versioning.
+Rahti supports HMR in [Vite](https://vitejs.dev) when `vite-plugin-rahti` is loaded in `vite.config.js`:
+
+```js
+import { rahtiPlugin } from "@vuoro/rahti/vite-plugin-rahti";
+
+export default {
+  plugins: [rahtiPlugin()],
+  esbuild: {
+    jsxFactory: "this.run",
+    jsxFragment: "'rahti:fragment'",
+    jsxSideEffects: true,
+  }
+};
+```
+
+HMR will work in files that export nothing but what seems to be components: functions with a name that starts with an uppercase letter. Components sharing the same name in different files may get mixed up, because I'm a little out of my depth here.
+
+```js
+// These will work
+export const ComponentA = function() {};
+export function ComponentB () {};
+const somethingElseA = "hello";
+
+// These won't
+export const componentC = function() {};
+export const somethingElseB = "hello";
+```
+
+## WebGL 2 components
+
+Since I'm using this library to develop games, I'm also building a set of components for working with WebGL 2. They are experimental, and will not follow this repository's semantic versioning.
+
+```js
+import * as WebGl2 from "@vuoro/rahti/webgl2";
+```
 
 ## Inspirations
 

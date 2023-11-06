@@ -6,7 +6,8 @@
   "main": "index.js",
   "exports": {
     "./": "./rahti/rahti.js",
-    "./webgl2": "./webgl2/webgl2.js"
+    "./webgl2": "./webgl2/webgl2.js",
+    "./vite-plugin-rahti": "./vite-plugin-rahti/vite-plugin-rahti.js"
   },
   "scripts": {
     "start": "vite dev --open"
