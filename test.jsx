@@ -17,8 +17,8 @@ const TestWrapper = async function () {
   <GlobalTest />;
   const [counter, setState] = <State initialValue={0} />;
   const timer = setTimeout(setState, 1000, counter + 1);
-  // this.cleanup(() => console.log("cleaning timer", timer));
   this.cleanup(() => clearTimeout(timer));
+  this.cleanup(() => console.log("cleaning additional timer", timer));
 
   let deadline = await idle();
 
@@ -69,7 +69,7 @@ const TestItem = async function ({ counter, index }) {
 
   const timer = setTimeout(setLocal, 200 + Math.random() * 5000, Math.random());
   this.cleanup(() => clearTimeout(timer));
-  // if (Math.random() < 0.05) throw new Error();
+  if (Math.random() < 0.01) throw new Error("intentional test error");
 
   await idle();
 

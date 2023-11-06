@@ -22,8 +22,6 @@ export const Webgl2App = function ({
     {document}
   </EventListener>;
 
-  console.log("It works?");
-
   <TriangleUpdater>{smallTexture}</TriangleUpdater>;
   <QuadUpdater QuadInstance={QuadInstance} />;
 
@@ -46,19 +44,20 @@ const TriangleUpdater = function (props, smallTexture) {
 const QuadUpdater = function ({ QuadInstance }) {
   const [max, setMax] = <State>{100}</State>;
   this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
-  this.cleanup(cleanQuadUpdater);
+  this.cleanup(cleanTimer);
 
   for (let index = 0; index < max; index++) {
-    if (Math.random() < 0.2) continue;
+    if (Math.random() < 0.5) continue;
     <Quad key={index} QuadInstance={QuadInstance} />;
   }
 };
 
-const cleanQuadUpdater = (timer) => clearTimeout(timer);
+const cleanTimer = (timer) => clearTimeout(timer);
 
 const Quad = function ({ key, QuadInstance }) {
-  const [_, setState] = <State />;
-  setTimeout(setState, Math.random() * 2000, Math.random());
+  // const [_, setState] = <State />;
+  // this.save(setTimeout(setState, Math.random() * 2000, Math.random()));
+  // this.cleanup(cleanTimer);
 
   const data =
     this.load() ||

@@ -32,6 +32,8 @@ export const TestGraphics = function (props, canvas) {
     />
   );
   const [cameraController, camera] = <Camera context={context} fov={90} />;
+  cameraController.target[0] = 0.1;
+  cameraController.target[1] = 0.1;
 
   const triangleElements = <Elements context={context} data={Int16Array.of(0, 1, 2)} />;
   const quadElements = <Elements context={context} data={Int16Array.of(0, 1, 2, 2, 3, 0)} />;

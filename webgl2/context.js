@@ -223,7 +223,13 @@ export const Context = function ({
     requestRendering();
   };
   const executeRender = (timestamp, sinceLastFrame, frameNumber) => {
-    if (renderFunction && !dead) renderFunction(timestamp, sinceLastFrame, frameNumber);
+    if (renderFunction && !dead) {
+      try {
+        renderFunction(timestamp, sinceLastFrame, frameNumber);
+      } catch (error) {
+        (globalThis.reportError || console.error)(error);
+      }
+    }
   };
 
   const requestRendering = () => {

@@ -226,12 +226,12 @@ const checkForUpdate = (instance, newArguments, async = false) => {
 
   if (needsUpdate) {
     // Run the instance
-    // console.log("+++ start of", Component.name, newProps);
+    // console.log("+++ start of", instance.Component?.name);
     // Run the cleanup, if there is one
     return checkCleanup(instance, newArguments, async);
   } else {
     // Skip running and return the previous value
-    // console.log("!!! skipping update for", Component.name);
+    // console.log("!!! skipping update for", instance.Component?.name);
     return instance.lastValue;
   }
 };
@@ -429,6 +429,7 @@ const runUpdateQueue = async function (deadline) {
 };
 
 const startUpdate = (instance) => {
+  // console.log("updating", instance.Component?.name);
   (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
 };
 
