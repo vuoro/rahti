@@ -1,11 +1,11 @@
 {
   "name": "@vuoro/rahti",
-  "version": "10.2.1",
+  "version": "10.2.2",
   "description": "Write reactive JS <Components> with async/await.",
   "type": "module",
   "main": "index.js",
   "exports": {
-    "./": "./rahti/rahti.js",
+    ".": "./rahti/rahti.js",
     "./webgl2": "./webgl2/webgl2.js",
     "./vite-plugin-rahti": "./vite-plugin-rahti/vite-plugin-rahti.js"
   },
