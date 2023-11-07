@@ -1,9 +1,22 @@
 export const rahtiPlugin = () => {
+  let config;
+
   return {
     name: "add-rahti-hmr-handlers",
     apply: "serve",
+    configResolved(resolvedConfig) {
+      config = resolvedConfig;
+    },
     transform(src, id) {
-      if (id.includes("node_modules") || !(id.endsWith(".jsx") || id.endsWith(".tsx"))) return;
+      const path = id.split("?")[0];
+      if (
+        config.command === "build" ||
+        config.isProduction ||
+        id.includes("?worker") ||
+        id.includes("node_modules") ||
+        !(path.endsWith(".jsx") || path.endsWith(".tsx"))
+      )
+        return;
 
       const code = src + "\n\n // Rahti HMR handler \n" + hmrInjection;
       return { code };
