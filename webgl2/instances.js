@@ -108,6 +108,9 @@ export const Instances = function ({ context, attributes: attributeMap }) {
   };
 
   const InstanceComponent = function (_, data) {
+    this.cleanup(cleanInstance);
+    if (dead) return;
+
     const slot = instancesToSlots.get(this);
     datas.set(this, data);
 
@@ -135,8 +138,6 @@ export const Instances = function ({ context, attributes: attributeMap }) {
         if (hasChanged) update(value, offset);
       }
     }
-
-    this.cleanup(cleanInstance);
   };
 
   function cleanInstance(_, isBeingDestroyed) {
