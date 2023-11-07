@@ -1,7 +1,7 @@
 import { update } from "./rahti/component";
 import { EventListener } from "./rahti/dom";
 import { State } from "./rahti/state";
-import { useAnimationFrame } from "./webgl2/animationFrame";
+import { AnimationFrame } from "./webgl2/animationFrame";
 
 export const Webgl2App = function ({
   smallTexture,
@@ -33,7 +33,7 @@ export const Webgl2App = function ({
 };
 
 const TriangleUpdater = function (props, smallTexture) {
-  useAnimationFrame(this);
+  <AnimationFrame />;
   smallTexture.update(
     Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
     Math.random() * 64,
