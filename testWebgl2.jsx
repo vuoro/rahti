@@ -43,11 +43,15 @@ const TriangleUpdater = function (props, smallTexture) {
 
 const QuadUpdater = function ({ QuadInstance }) {
   const [max, setMax] = <State>{100}</State>;
-  this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
+  this.save(setTimeout(setMax, Math.random() * 2000, max));
   this.cleanup(cleanTimer);
 
+  // // const max = 100 * (0.5 + Math.random() * 0.5);
+  // const max = 100;
+  // <AnimationFrame />;
+
   for (let index = 0; index < max; index++) {
-    if (Math.random() < 0.5) continue;
+    if (Math.random() < 0.1) continue;
     <Quad key={index} QuadInstance={QuadInstance} />;
   }
 };
@@ -59,17 +63,17 @@ const Quad = function ({ key, QuadInstance }) {
   // this.save(setTimeout(setState, Math.random() * 2000, Math.random()));
   // this.cleanup(cleanTimer);
 
+  <AnimationFrame />;
+
   const data =
     this.load() ||
     this.save({
       offset: Float32Array.of(-key * 0.02, -key * 0.02),
-      color: new Float32Array(3),
+      color: Float32Array.of(Math.random(), Math.random(), Math.random()),
     });
 
-  const quad = <QuadInstance>{data}</QuadInstance>;
+  data.offset[0] += (Math.random() * 2 - 1) * 0.001;
+  data.offset[1] += (Math.random() * 2 - 1) * 0.001;
 
-  data.color[0] = 0.236 + Math.random() * 0.236;
-  data.color[1] = 0.236 + Math.random() * 0.236;
-  data.color[2] = 0.236 + Math.random() * 0.236;
-  update(quad);
+  const quadInstance = <QuadInstance>{data}</QuadInstance>;
 };

@@ -20,7 +20,7 @@
 - Simple API
   ```js
   import { rahti, State, Mount } from "rahti"; // for most use cases
-  import { EventListener, createGlobalState, idle, save, load, cleanup, update, updateParent } from "rahti"; // for advanced usage
+  import { EventListener, createGlobalState, idle, update, updateParent } from "rahti"; // for advanced usage
   ```
 - Supports any DOM elements
   ```js
@@ -37,7 +37,7 @@
 ## API & example
 
 ```js
-import { rahti, Mount, State, cleanup, save, load, createGlobalState, idle, update, updateParent } from "rahti";
+import { rahti, Mount, State, createGlobalState, idle, update, updateParent } from "rahti";
 
 // Components must be normal, non-arrow functions
 // `function() {}` = correct
@@ -182,8 +182,11 @@ function () {
   return element;
 };
 
-// Cleanups are also called with the component's `this` and `save()`'d data,
-// so in some cases you can share the same cleanup function with multiple components.
+// Cleanups are called with some pieces of data you can use to perform complicated cleanup logic.
+// Be very mindful when using these, as it's easy to introduce bugs with them.
+// - `this` = the same `this` as inside the component (not unique: may be reused after the component gets destroyed)
+// - 1st argument = the last data the component has saved with `this.save`, if any
+// - 2nd argument = a boolean indicating whether the component is being destroyed (`true`) or just updating (`false`)
 function () {
   const element = document.createElement("div");
   this.save(element);
@@ -191,8 +194,8 @@ function () {
   return element;
 };
 
-function cleanElement(element) {
-  console.log(this); // same as in the component above
+function cleanElement(element = null, isBeingDestroyed = false) {
+  console.log(this);
   element.remove();
 }
 ```

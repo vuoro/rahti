@@ -38,7 +38,8 @@ export const Command = function ({
   if (attributes === blank) throw new Error("missing at least one attribute");
 
   const isInstanced = !!instances;
-  const instanceList = instances?.rahti_instances;
+  const instanceAttributes = instances?._attributes;
+  const instanceList = instances?._instancesToSlots;
   const usesElements = !!elements;
   const UNSIGNED_SHORT = gl.UNSIGNED_SHORT;
 
@@ -53,7 +54,7 @@ export const Command = function ({
   }
 
   if (isInstanced) {
-    for (const [key, { shaderType }] of instances.rahti_attributes) {
+    for (const [key, { shaderType }] of instanceAttributes) {
       attributeLines += `in ${shaderType} ${key};\n`;
     }
   }
@@ -156,7 +157,7 @@ ${fragment}`;
     const { name } = gl.getActiveAttrib(program, i);
     const location = gl.getAttribLocation(program, name);
 
-    const instancedAttribute = instances?.rahti_attributes.get(name);
+    const instancedAttribute = instanceAttributes?.get(name);
     const attribute = attributes[name] || instancedAttribute;
     const isInstanced = !!instancedAttribute;
 
@@ -237,7 +238,7 @@ ${fragment}`;
     overrideCull = cull,
     overrideBlend = blend,
     overrideCount = usesElements ? elements.count : count,
-    overrideInstanceCount = isInstanced && instanceList.size,
+    overrideInstanceCount = instanceList?.size,
   ) => {
     if (dead) return;
     if (isInstanced && !overrideInstanceCount) return;

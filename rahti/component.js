@@ -21,6 +21,7 @@ class Instance {
 
   isAsync = false;
   needsUpdate = false;
+  defaultNeedsUpdate = false;
 
   parent = null;
   pendingPromise = null;
@@ -241,15 +242,15 @@ const checkCleanup = (instance, newArguments, async = false) => {
   return (async ? runAsync : run)(instance, newArguments);
 };
 
-const runCleanup = (instance) => {
+const runCleanup = (instance, isBeingDestroyed = false) => {
   if (instance.cleaners) {
     if (instance.cleaners instanceof Set) {
       for (const cleaner of instance.cleaners) {
-        cleaner.call(instance, instance.load());
+        cleaner.call(instance, instance.load(), isBeingDestroyed);
         instance.cleaners.delete(cleaner);
       }
     } else {
-      instance.cleaners.call(instance, instance.load());
+      instance.cleaners.call(instance, instance.load(), isBeingDestroyed);
       instance.cleaners = null;
     }
   }
@@ -269,7 +270,7 @@ const run = (instance, newArguments) => {
 
     // Save the new value
     instance.lastValue = result;
-    instance.needsUpdate = false;
+    instance.needsUpdate = instance.defaultNeedsUpdate;
 
     // any pending update can be cancelled safely, since this is not async
     fastUpdateQueue.delete(instance);
@@ -302,7 +303,7 @@ const runAsync = async (instance, newArguments) => {
 
     // Save the new value
     instance.lastValue = finalResult;
-    instance.needsUpdate = false;
+    instance.needsUpdate = instance.defaultNeedsUpdate;
   } catch (error) {
     reportError(error);
   } finally {
@@ -341,7 +342,7 @@ const destroy = async (instance) => {
   }
 
   // Run the cleanup, if there is any
-  runCleanup(instance);
+  runCleanup(instance, true);
 
   // Destroy children
   if (instance.children) {
@@ -363,6 +364,7 @@ const destroy = async (instance) => {
 
   instance.isAsync = false;
   instance.needsUpdate = false;
+  instance.defaultNeedsUpdate = false;
 
   instance.parent = null;
   instance.pendingPromise = null;
@@ -409,7 +411,7 @@ export const updateParent = (instance, immediately = false) => {
 const runFastUpdateQueue = async function () {
   for (const instance of fastUpdateQueue) {
     fastUpdateQueue.delete(instance);
-    startUpdate(instance);
+    (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
   }
 
   fastUpdateQueueWillRun = false;
@@ -422,15 +424,10 @@ const runUpdateQueue = async function (deadline) {
     }
 
     slowUpdateQueue.delete(instance);
-    startUpdate(instance);
+    (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
   }
 
   slowUpdateQueueWillRun = false;
-};
-
-const startUpdate = (instance) => {
-  // console.log("updating", instance.Component?.name);
-  (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
 };
 
 const ongoingUpdates = new Map();

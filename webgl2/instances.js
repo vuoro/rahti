@@ -71,32 +71,30 @@ export const Instances = function ({ context, attributes: attributeMap }) {
       changes.set(instance, slot);
     }
 
-    // Create new typedarrays
+    // Resize TypedArrays if needed
     for (const [key, { allData, Constructor, dimensions, set, defaultValue }] of attributes) {
-      let newData;
+      let newData = allData;
 
-      if (newSize <= oldSize) {
-        // slice old array
-        newData = allData.subarray(0, newSize * dimensions);
-      } else {
-        // create new array
-        newData = new Constructor(newSize * dimensions);
-        newData.set(allData);
+      if (newSize !== oldSize) {
+        if (newSize <= oldSize) {
+          // slice old array
+          newData = allData.subarray(0, newSize * dimensions);
+        } else {
+          // create new array
+          newData = new Constructor(newSize * dimensions);
+          newData.set(allData);
+        }
       }
 
       // And fill in the changes
       for (const [instance, slot] of changes) {
-        const data = datas.get(instance);
-        const value = key in data ? data[key] : defaultValue;
+        let value = datas.get(instance)?.[key];
+        if (value === undefined) value = defaultValue;
 
         if (dimensions === 1) {
           newData[slot] = value;
         } else {
-          try {
-            newData.set(value, slot * dimensions);
-          } catch (error) {
-            console.log({ oldSize, newSize, slot });
-          }
+          newData.set(value, slot * dimensions);
         }
       }
 
@@ -109,65 +107,59 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     changes.clear();
   };
 
-  const updateInstance = (instance, data) => {
-    if (dead) return;
-
-    for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
-      const value = data?.[key] !== undefined ? data[key] : defaultValue;
-      const offset = dimensions * instancesToSlots.get(instance);
-
-      let hasChanged = false;
-
-      if (dimensions === 1) {
-        hasChanged = allData[offset] !== value;
-      } else {
-        for (let index = 0; index < dimensions; index++) {
-          hasChanged = allData[offset + index] !== value[index];
-          if (hasChanged) break;
-        }
-      }
-
-      if (hasChanged) update(value, offset);
-    }
-  };
-
-  const InstanceComponent = function (props, data) {
+  const InstanceComponent = function (_, data) {
+    const slot = instancesToSlots.get(this);
     datas.set(this, data);
 
-    const isNew = !instancesToSlots.has(this);
-
-    if (isNew) {
+    if (slot === undefined) {
       additions.add(this);
       requestPreRenderJob(buildInstances);
-    } else if (data) {
-      updateInstance(this, data);
+      this.defaultNeedsUpdate = true;
+    } else {
+      for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
+        let value = data?.[key];
+        if (value === undefined) value = defaultValue;
+        const offset = dimensions * slot;
+
+        let hasChanged = false;
+
+        if (dimensions === 1) {
+          hasChanged = allData[offset] !== value;
+        } else {
+          for (let index = 0; index < dimensions; index++) {
+            hasChanged = allData[offset + index] !== value[index];
+            if (hasChanged) break;
+          }
+        }
+
+        if (hasChanged) update(value, offset);
+      }
     }
 
     this.cleanup(cleanInstance);
-    return this;
   };
 
-  function cleanInstance() {
-    datas.delete(this);
+  function cleanInstance(_, isBeingDestroyed) {
+    if (isBeingDestroyed) {
+      datas.delete(this);
 
-    const isNew = !instancesToSlots.has(this);
-
-    if (isNew) {
-      additions.delete(this);
-    } else {
-      deletions.add(this);
-      requestPreRenderJob(buildInstances);
+      if (additions.has(this)) {
+        additions.delete(this);
+      } else {
+        deletions.add(this);
+        requestPreRenderJob(buildInstances);
+      }
     }
   }
-
-  InstanceComponent.rahti_attributes = attributes;
-  InstanceComponent.rahti_instances = instancesToSlots;
 
   let dead = false;
 
   this.cleanup(() => {
     dead = true;
   });
+
+  InstanceComponent._attributes = attributes;
+  InstanceComponent._instancesToSlots = instancesToSlots;
 
   return InstanceComponent;
 };
