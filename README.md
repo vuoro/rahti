@@ -134,13 +134,12 @@ setTimestamp(performance.now(), false); // updates later
 rahti.run(StatefulApp);
 
 // `createGlobalState` is a helper for sharing the same state between multiple components.
-// It accepts the same props as State.
 // It returns a component that works like State, a setter function, and a getter function.
 const [
   GlobalTimer,
   setGlobalTimestamp,
   getGlobalTimestamp
-] = createGlobalState({initialValue: performance.now()});
+] = createGlobalState(performance.now());
 
 const A = function () {
   const [timestamp, setGlobalTimestamp, getGlobalTimestamp] = <GlobalTimer initialValue={performance.now()} />;

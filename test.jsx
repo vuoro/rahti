@@ -10,7 +10,7 @@ import {
 import { TestGraphics } from "./testGraphics.jsx";
 import { Webgl2App } from "./testWebgl2.jsx";
 
-const [GlobalTest, setGlobalTest, getGlobalTest] = createGlobalState({ initialValue: 0 });
+const [GlobalTest, setGlobalTest, getGlobalTest] = createGlobalState(0);
 setInterval(() => setGlobalTest(getGlobalTest() + 1), 5000);
 
 const TestWrapper = async function () {

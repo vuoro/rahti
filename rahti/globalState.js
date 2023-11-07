@@ -1,6 +1,6 @@
 import { updateParent } from "./component.js";
 
-export const createGlobalState = ({ initialValue }) => {
+export const createGlobalState = (initialValue) => {
   const instances = new Set();
   const state = [
     initialValue,
