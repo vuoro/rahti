@@ -230,7 +230,7 @@ export default {
 };
 ```
 
-HMR will work in files that export nothing but what seems to be components: functions with a name that starts with an uppercase letter. Components sharing the same name in different files may get mixed up, because I'm a little out of my depth here.
+HMR will work in files that export nothing but what can be identified as components: functions with a name that starts with an uppercase letter.
 
 ```js
 // These will work

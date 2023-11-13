@@ -117,24 +117,14 @@ const createInstance = (Component, parent, key) => {
   // );
 
   if (import.meta.hot) {
-    if (Component.name) {
-      if (!globalThis._rahtiHmrComponentVersionsRegistry.has(Component.name)) {
-        globalThis._rahtiHmrComponentVersionsRegistry.set(Component.name, new Set());
-      }
-
-      const componentVersionsRegistry = globalThis._rahtiHmrComponentVersionsRegistry.get(
-        Component.name,
-      );
-      componentVersionsRegistry.add(Component);
-
-      if (!globalThis._rahtiHmrInstanceRegistry.has(Component.name)) {
-        globalThis._rahtiHmrInstanceRegistry.set(Component.name, new Set());
-      }
-
-      const instanceRegistry = globalThis._rahtiHmrInstanceRegistry.get(Component.name);
-      instanceRegistry.add(instance);
-      instance.instanceRegistry = instanceRegistry;
+    // Add this instance into the HMR instance registry,
+    // so it can be found when HMR gets new versions of its Component
+    let instanceRegistry = globalThis._rahtiHmrInstances.get(Component);
+    if (!instanceRegistry) {
+      instanceRegistry = new Set();
+      globalThis._rahtiHmrInstances.set(Component, instanceRegistry);
     }
+    instanceRegistry.add(instance);
   }
 
   return instance;
@@ -264,7 +254,8 @@ const run = (instance, newArguments) => {
   try {
     let Component = instance.Component;
     if (import.meta.hot) {
-      Component = globalThis._rahtiHmrComponentRegistry.get(Component) || Component;
+      // Use the latest HMR'd version of this component, if available
+      Component = globalThis._rahtiHmrComponentReplacements.get(Component) || Component;
     }
     result = Component.apply(instance, newArguments);
 
@@ -294,7 +285,8 @@ const runAsync = async (instance, newArguments) => {
   try {
     let Component = instance.Component;
     if (import.meta.hot) {
-      Component = globalThis._rahtiHmrComponentRegistry.get(Component) || Component;
+      // Use the latest HMR'd version of this component, if available
+      Component = globalThis._rahtiHmrComponentReplacements.get(Component) || Component;
     }
     result = Component.apply(instance, newArguments);
 
@@ -352,11 +344,8 @@ const destroy = async (instance) => {
   }
 
   if (import.meta.hot) {
-    // Clean up HMR
-    if (instance.instanceRegistry) {
-      instance.instanceRegistry.delete(instance);
-      instance.instanceRegistry = null;
-    }
+    // Remove this instance from the HMR instance registry
+    globalThis._rahtiHmrInstances.get(instance.Component).delete(instance);
   }
 
   // Clean up instance
@@ -483,9 +472,6 @@ const runUpdateAsync = async function (instance) {
 };
 
 if (import.meta.hot) {
-  globalThis._rahtiHmrComponentVersionsRegistry =
-    globalThis._rahtiHmrComponentVersionsRegistry || new Map();
-  globalThis._rahtiHmrComponentRegistry = globalThis._rahtiHmrComponentRegistry || new Map();
-  globalThis._rahtiHmrInstanceRegistry = globalThis._rahtiHmrInstanceRegistry || new Map();
+  // Save the updater, so the HMR code can use it to update instances as needed
   globalThis._rahtiUpdate = globalThis._rahtiUpdate || update;
 }
