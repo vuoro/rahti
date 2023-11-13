@@ -42,13 +42,12 @@ const TriangleUpdater = function (props, smallTexture) {
 };
 
 const QuadUpdater = function ({ QuadInstance }) {
-  // const [max, setMax] = <State>{100}</State>;
-  // this.save(setTimeout(setMax, Math.random() * 2000, max));
-  // this.cleanup(cleanTimer);
+  const [max, setMax] = <State>{100}</State>;
+  this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
+  this.cleanup(cleanTimer);
 
-  const max = 100 * (0.5 + Math.random() * 0.5);
-  // const max = 100;
-  <AnimationFrame />;
+  // const max = 100 * (0.5 + Math.random() * 0.5);
+  // <AnimationFrame />;
 
   for (let index = 0; index < max; index++) {
     if (Math.random() < 0.1) continue;
@@ -72,8 +71,8 @@ const Quad = function ({ key, QuadInstance }) {
       color: Float32Array.of(Math.random(), Math.random(), Math.random()),
     });
 
-  data.offset[0] += (Math.random() * 2 - 1) * 0.001;
-  data.offset[1] += (Math.random() * 2 - 1) * 0.001;
+  data.offset[0] += (Math.random() * 2 - 1) * 0.003;
+  data.offset[1] += (Math.random() * 2 - 1) * 0.003;
 
   const quadInstance = <QuadInstance>{data}</QuadInstance>;
 };
