@@ -119,12 +119,7 @@ const createInstance = (Component, parent, key) => {
   if (import.meta.hot) {
     // Add this instance into the HMR instance registry,
     // so it can be found when HMR gets new versions of its Component
-    let instanceRegistry = globalThis._rahtiHmrInstances.get(Component);
-    if (!instanceRegistry) {
-      instanceRegistry = new Set();
-      globalThis._rahtiHmrInstances.set(Component, instanceRegistry);
-    }
-    instanceRegistry.add(instance);
+    globalThis._rahtiHmrInstances.get(Component)?.add(instance);
   }
 
   return instance;
@@ -345,7 +340,7 @@ const destroy = async (instance) => {
 
   if (import.meta.hot) {
     // Remove this instance from the HMR instance registry
-    globalThis._rahtiHmrInstances.get(instance.Component).delete(instance);
+    globalThis._rahtiHmrInstances.get(instance.Component)?.delete(instance);
   }
 
   // Clean up instance

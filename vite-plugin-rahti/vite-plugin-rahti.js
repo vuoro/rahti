@@ -18,52 +18,60 @@ export const rahtiPlugin = () => {
       )
         return;
 
-      const fileName = path.split("/").at(-1);
-
-      const code = src + getHmrCode(fileName);
+      const code = src + getHmrCode(id);
       return { code };
     },
   };
 };
 
-const getHmrCode = (fileName) => {
+const getHmrCode = (fileId) => {
   let hmrInjection = hmrCode.toString().split("\n");
   hmrInjection = hmrInjection.slice(1, hmrInjection.length - 1).join("\n");
 
-  return `if (import.meta.hot) {
+  return `import * as thisModule from /* @vite-ignore */ "${fileId}";
+if (import.meta.hot) {
   // Rahti HMR handler
-  const _rahtiFileName = "${fileName}";
-
+  const _rahtiFileName = "${fileId}";
   ${hmrInjection}
 }`;
 };
 
 const hmrCode = () => {
-  // Create HMR registries, if they haven't been already
-  globalThis._rahtiHmrOriginalModules = new Map();
-  globalThis._rahtiHmrComponentReplacements =
-    globalThis._rahtiHmrComponentReplacements || new Map();
-  globalThis._rahtiHmrComponentVersions = globalThis._rahtiHmrComponentVersions || new Map();
-  globalThis._rahtiHmrInstances = globalThis._rahtiHmrInstances || new Map();
-
   const seemsLikeComponent = (name, feature) =>
     typeof feature === "function" &&
     name[0] === name[0].toUpperCase() &&
     feature.toString().indexOf("class") !== 0;
 
-  import.meta.hot.accept(async (newModule) => {
+  // Create HMR registries, if they haven't been already
+  globalThis._rahtiHmrOriginalModules = globalThis._rahtiHmrOriginalModules || new Map();
+  globalThis._rahtiHmrComponentReplacements =
+    globalThis._rahtiHmrComponentReplacements || new Map();
+  globalThis._rahtiHmrComponentVersions = globalThis._rahtiHmrComponentVersions || new Map();
+  globalThis._rahtiHmrInstances = globalThis._rahtiHmrInstances || new Map();
+
+  // Save the original version of this module
+  if (!globalThis._rahtiHmrOriginalModules.has(_rahtiFileName)) {
+    // console.log("First glimpse of", _rahtiFileName, thisModule);
+    globalThis._rahtiHmrOriginalModules.set(_rahtiFileName, thisModule);
+
+    // Start registries for components in it
+    for (const name in thisModule) {
+      const feature = thisModule[name];
+      if (seemsLikeComponent(name, feature)) {
+        // console.log("Starting registries for", name);
+        globalThis._rahtiHmrInstances.set(feature, new Set());
+        globalThis._rahtiHmrComponentVersions.set(feature, new Set([feature]));
+      }
+    }
+  }
+
+  import.meta.hot.accept((newModule) => {
     if (!newModule) {
       return import.meta.hot.invalidate("No new module (syntax error?)");
     }
 
-    // Make sure the original module has been fetched
-    let originalModule = await globalThis._rahtiHmrOriginalModules.get(_rahtiFileName);
-    if (!originalModule) {
-      originalModule = await import(/* @vite-ignore */ `./${_rahtiFileName}`);
-      globalThis._rahtiHmrOriginalModules.set(_rahtiFileName, originalModule);
-    }
-
     // Go through the new module
+    const originalModule = globalThis._rahtiHmrOriginalModules.get(_rahtiFileName);
     let featuresChecked = 0;
 
     for (const name in newModule) {
@@ -79,7 +87,7 @@ const hmrCode = () => {
         );
       }
 
-      // console.log("HMR is updating", name);
+      // console.log("HMR is updating", name, globalThis._rahtiHmrInstances.get(originalFeature));
 
       // Mark this as the replacement for the original version
       globalThis._rahtiHmrComponentReplacements.set(originalFeature, newFeature);
@@ -89,28 +97,21 @@ const hmrCode = () => {
       }
 
       // Keep track of Component versions
-      let versions = globalThis._rahtiHmrComponentVersions.get(originalFeature);
-      if (!versions) {
-        versions = new Set();
-        globalThis._rahtiHmrComponentVersions.set(originalFeature, versions);
-        versions.add(originalFeature);
-      }
+      const versions = globalThis._rahtiHmrComponentVersions.get(originalFeature);
+      let instancesUpdated = 0;
 
+      // Tell instances using any of the now outdated versions to update
       for (const version of versions) {
-        // Tell instances using any of the now outdated versions to update
-        // let instancesUpdated = 0;
-
         if (globalThis._rahtiHmrInstances.has(version)) {
           for (const instance of globalThis._rahtiHmrInstances.get(version)) {
-            // instancesUpdated++;
+            instancesUpdated++;
             if (globalThis._rahtiUpdate) globalThis._rahtiUpdate(instance);
           }
         }
-
-        // console.log("HMR told", instancesUpdated, "instances to update");
       }
 
       versions.add(newFeature);
+      // console.log("HMR told", instancesUpdated, "instances to update");
     }
 
     if (featuresChecked === 0) import.meta.hot.invalidate(`No exports`);
