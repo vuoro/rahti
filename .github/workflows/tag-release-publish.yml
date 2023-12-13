@@ -9,14 +9,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checkout your updatd source code
-      - uses: actions/checkout@v2
+      # Checkout your updated source code
+      - uses: actions/checkout@v3
 
         # If the version has changed, create a new git tag for it.
       - name: Tag
         id: autotagger
         uses: butlerlogic/action-autotag@stable
-        with:
+        env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
         # The remaining steps all depend on whether or  not
@@ -35,7 +35,6 @@ jobs:
         with:
           tag_name: ${{ steps.autotagger.outputs.tagname }}
           release_name: ${{ steps.autotagger.outputs.tagname }}
-          body: ${{ steps.autotagger.outputs.tagmessage }}
           draft: false
           prerelease: ${{ steps.autotagger.outputs.prerelease == 'yes' }}
 
