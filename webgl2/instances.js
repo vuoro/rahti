@@ -111,13 +111,16 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     this.cleanup(cleanInstance);
     if (dead) return;
 
+    // FIXME: accursed async programming issues
+    this.defaultNeedsUpdate = true;
+    deletions.delete(this);
+
     const slot = instancesToSlots.get(this);
     datas.set(this, data);
 
     if (slot === undefined) {
       additions.add(this);
       requestPreRenderJob(buildInstances);
-      this.defaultNeedsUpdate = true;
     } else {
       for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
         let value = data?.[key];

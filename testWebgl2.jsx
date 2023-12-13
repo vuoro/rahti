@@ -37,17 +37,17 @@ const TriangleUpdater = function (props, smallTexture) {
   smallTexture.update(
     Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
     Math.random() * 64,
-    Math.random() * 64,
+    Math.random() * 64
   );
 };
 
 const QuadUpdater = function ({ QuadInstance }) {
-  const [max, setMax] = <State>{100}</State>;
-  this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
-  this.cleanup(cleanTimer);
+  // const [max, setMax] = <State>{100}</State>;
+  // this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
+  // this.cleanup(cleanTimer);
 
-  // const max = 100 * (0.5 + Math.random() * 0.5);
-  // <AnimationFrame />;
+  const max = 100 * (0.5 + Math.random() * 0.5);
+  <AnimationFrame />;
 
   for (let index = 0; index < max; index++) {
     if (Math.random() < 0.1) continue;
