@@ -15,7 +15,7 @@ jobs:
         # If the version has changed, create a new git tag for it.
       - name: Tag
         id: autotagger
-        uses: butlerlogic/action-autotag@stable
+        uses: butlerlogic/action-autotag@1.1.2
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
@@ -42,6 +42,6 @@ jobs:
       - name: Publish
         id: publish
         if: steps.autotagger.outputs.tagname != ''
-        uses: author/action-publish@stable
+        uses: author/action-publish@1.0.0
         env:
           REGISTRY_TOKEN: "${{ secrets.NPM_TOKEN }}"
