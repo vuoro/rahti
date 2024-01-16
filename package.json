@@ -1,9 +1,9 @@
 {
   "name": "@vuoro/rahti",
-  "version": "10.3.7",
+  "version": "10.3.8",
   "description": "Write reactive JS <Components> with async/await.",
   "type": "module",
-  "main": "index.js",
+  "main": "./rahti/rahti.js",
   "exports": {
     ".": "./rahti/rahti.js",
     "./webgl2": "./webgl2/webgl2.js",
