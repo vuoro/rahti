@@ -119,7 +119,7 @@ const createInstance = (Component, parent, key) => {
   if (import.meta.hot) {
     // Add this instance into the HMR instance registry,
     // so it can be found when HMR gets new versions of its Component
-    globalThis._rahtiHmrInstances.get(Component)?.add(instance);
+    globalThis._rahtiHmrInstances?.get(Component)?.add(instance);
   }
 
   return instance;
@@ -250,7 +250,7 @@ const run = (instance, newArguments) => {
     let Component = instance.Component;
     if (import.meta.hot) {
       // Use the latest HMR'd version of this component, if available
-      Component = globalThis._rahtiHmrComponentReplacements.get(Component) || Component;
+      Component = globalThis._rahtiHmrComponentReplacements?.get(Component) || Component;
     }
     result = Component.apply(instance, newArguments);
 
@@ -281,7 +281,7 @@ const runAsync = async (instance, newArguments) => {
     let Component = instance.Component;
     if (import.meta.hot) {
       // Use the latest HMR'd version of this component, if available
-      Component = globalThis._rahtiHmrComponentReplacements.get(Component) || Component;
+      Component = globalThis._rahtiHmrComponentReplacements?.get(Component) || Component;
     }
     result = Component.apply(instance, newArguments);
 
@@ -340,7 +340,7 @@ const destroy = async (instance) => {
 
   if (import.meta.hot) {
     // Remove this instance from the HMR instance registry
-    globalThis._rahtiHmrInstances.get(instance.Component)?.delete(instance);
+    globalThis._rahtiHmrInstances?.get(instance.Component)?.delete(instance);
   }
 
   // Clean up instance

@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "10.3.8",
+  "version": "10.3.9",
   "description": "Write reactive JS <Components> with async/await.",
   "type": "module",
   "main": "./rahti/rahti.js",
