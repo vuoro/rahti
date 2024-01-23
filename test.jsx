@@ -9,6 +9,9 @@ import {
 } from "./rahti/rahti.js";
 import { TestGraphics } from "./testGraphics.jsx";
 import { Webgl2App } from "./testWebgl2.jsx";
+import TestWorker from "./TestWorker.js?worker";
+
+new TestWorker();
 
 const [GlobalTest, setGlobalTest, getGlobalTest] = createGlobalState(0);
 setInterval(() => setGlobalTest(getGlobalTest() + 1), 5000);
@@ -31,7 +34,7 @@ const TestWrapper = async function () {
         testComponents.push(
           await (
             <TestItem counter={counter} index={testComponents.length} key={testComponents.length} />
-          ),
+          )
         );
     } catch (e) {}
   }
