@@ -1,14 +1,15 @@
+import { Component, cleanup, getInstance } from "../rahti/component.js";
 import { requestPreRenderJob } from "./animationFrame.js";
 import { Buffer } from "./buffer.js";
 
-export const Instances = function ({ context, attributes: attributeMap }) {
+export const Instances = new Proxy(function ({ context, attributes: attributeMap }) {
   const attributes = new Map();
 
   for (const key in attributeMap) {
     const value = attributeMap[key];
 
     const data = [value];
-    const bufferObject = this.run(Buffer, { context, data, usage: "DYNAMIC_DRAW" });
+    const bufferObject = Buffer({ context, data, usage: "DYNAMIC_DRAW" });
     const { Constructor } = bufferObject;
 
     bufferObject.defaultValue = value.length ? new Constructor(value) : new Constructor(data);
@@ -107,19 +108,18 @@ export const Instances = function ({ context, attributes: attributeMap }) {
     changes.clear();
   };
 
-  const InstanceComponent = function (_, data) {
-    this.cleanup(cleanInstance);
+  const InstanceComponent = new Proxy(function (data) {
+    cleanup(cleanInstance);
     if (dead) return;
 
-    // FIXME: accursed async programming issues
-    this.defaultNeedsUpdate = true;
-    deletions.delete(this);
+    const instance = getInstance();
+    deletions.delete(instance);
 
-    const slot = instancesToSlots.get(this);
-    datas.set(this, data);
+    const slot = instancesToSlots.get(instance);
+    datas.set(instance, data);
 
     if (slot === undefined) {
-      additions.add(this);
+      additions.add(instance);
       requestPreRenderJob(buildInstances);
     } else {
       for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
@@ -141,16 +141,16 @@ export const Instances = function ({ context, attributes: attributeMap }) {
         if (hasChanged) update(value, offset);
       }
     }
-  };
+  }, Component);
 
-  function cleanInstance(_, isBeingDestroyed) {
+  function cleanInstance(_, instance, isBeingDestroyed) {
     if (isBeingDestroyed) {
-      datas.delete(this);
+      datas.delete(instance);
 
-      if (additions.has(this)) {
-        additions.delete(this);
+      if (additions.has(instance)) {
+        additions.delete(instance);
       } else {
-        deletions.add(this);
+        deletions.add(instance);
         requestPreRenderJob(buildInstances);
       }
     }
@@ -158,7 +158,7 @@ export const Instances = function ({ context, attributes: attributeMap }) {
 
   let dead = false;
 
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
   });
 
@@ -166,4 +166,4 @@ export const Instances = function ({ context, attributes: attributeMap }) {
   InstanceComponent._instancesToSlots = instancesToSlots;
 
   return InstanceComponent;
-};
+}, Component);

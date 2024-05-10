@@ -1,4 +1,5 @@
-import { update } from "./../rahti/rahti.js";
+import { Component, cleanup, getInstance, updateImmediately } from "../rahti/component.js";
+import { EventListener } from "../rahti/dom.js";
 import { cancelJobsAndStopFrame, requestRenderJob } from "./animationFrame.js";
 
 const defaultAttributes = {
@@ -10,7 +11,7 @@ const defaultHints = {
   FRAGMENT_SHADER_DERIVATIVE_HINT: "NICEST",
 };
 
-export const Context = function ({
+export const Context = new Proxy(function ({
   canvas,
   attributes: inputAttributes,
   hints: inputHints,
@@ -191,7 +192,7 @@ export const Context = function ({
     observer.observe(canvas);
   }
 
-  const instance = this;
+  const instance = getInstance();
 
   const handleLost = (event) => {
     console.log("context lost");
@@ -201,18 +202,16 @@ export const Context = function ({
   };
   const handleRestored = () => {
     console.log("restoring context");
-    update(instance);
+    updateImmediately(instance);
   };
 
-  canvas.addEventListener("webglcontextlost", handleLost);
-  canvas.addEventListener("webglcontextrestored", handleRestored);
+  EventListener(canvas, "webglcontextlost", handleLost);
+  EventListener(canvas, "webglcontextrestored", handleRestored);
 
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
     cancelJobsAndStopFrame();
     observer.disconnect();
-    canvas.removeEventListener("webglcontextlost", handleLost);
-    canvas.removeEventListener("webglcontextrestored", handleRestored);
   });
 
   let renderFunction;
@@ -257,4 +256,4 @@ export const Context = function ({
     requestRendering,
     debug,
   };
-};
+}, Component);

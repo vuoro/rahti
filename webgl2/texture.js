@@ -1,3 +1,4 @@
+import { Component, cleanup } from "../rahti/component.js";
 import { requestPreRenderJob } from "./animationFrame.js";
 
 const defaultParameters = {
@@ -11,7 +12,7 @@ const defaultMipParameters = {
   TEXTURE_MIN_FILTER: "NEAREST_MIPMAP_LINEAR",
 };
 
-export const Texture = function ({
+export const Texture = new Proxy(function ({
   context,
   shaderType = "sampler2D",
   target = "TEXTURE_2D",
@@ -83,7 +84,7 @@ export const Texture = function ({
 
   let dead = false;
 
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
     gl.deleteTexture(texture);
   });
@@ -92,4 +93,4 @@ export const Texture = function ({
   if (pixels) update(pixels, 0, 0, width, height);
 
   return { shaderType, update, index: textureIndexes.get(texture) };
-};
+}, Component);

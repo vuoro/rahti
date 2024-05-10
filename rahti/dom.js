@@ -166,9 +166,8 @@ const processSlotQueue = () => {
 };
 
 export const EventListener = new Proxy(function (target, type, listener, options) {
-  const finalTarget = target;
-  finalTarget.addEventListener(type, listener, options);
-  save([finalTarget, type, listener, options]);
+  target.addEventListener(type, listener, options);
+  save([target, type, listener, options]);
   cleanup(cleanEventListener);
 }, Component);
 

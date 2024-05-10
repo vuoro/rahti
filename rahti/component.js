@@ -299,9 +299,11 @@ export const update = (instance, quickly = false) => {
 export const updateImmediately = (instance) => {
   runUpdate(instance);
 };
-
 export const updateParent = (instance, quickly = false) => {
   if (instance.parent && instance.parent !== topLevel) update(instance.parent, quickly);
+};
+export const updateParentImmediately = (instance) => {
+  if (instance.parent && instance.parent !== topLevel) runUpdate(instance.parent);
 };
 
 const runFastUpdateQueue = async function () {

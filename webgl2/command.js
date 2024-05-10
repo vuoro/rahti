@@ -1,6 +1,8 @@
+import { Component, cleanup } from "../rahti/component.js";
+
 const blank = {};
 
-export const Command = function ({
+export const Command = new Proxy(function ({
   context,
 
   // Static
@@ -16,8 +18,8 @@ export const Command = function ({
   fragment = frag,
 
   shaderVersion = "#version 300 es",
-  vertexPrecision = ``,
-  fragmentPrecision = `precision mediump float;`,
+  vertexPrecision = "",
+  fragmentPrecision = "precision mediump float;",
 
   // Can be overridden at runtime
   mode = "TRIANGLES",
@@ -44,9 +46,9 @@ export const Command = function ({
   const UNSIGNED_SHORT = gl.UNSIGNED_SHORT;
 
   // Shaders
-  let attributeLines = "",
-    textureLines = "",
-    uniformBlockLines = "";
+  let attributeLines = "";
+  let textureLines = "";
+  let uniformBlockLines = "";
 
   for (const key in attributes) {
     const { shaderType } = attributes[key];
@@ -71,7 +73,7 @@ export const Command = function ({
       const { shaderType } = uniforms[key];
       uniformBlockLines += `  highp ${shaderType} ${key};\n`;
     }
-    uniformBlockLines += `};\n`;
+    uniformBlockLines += "};\n";
   }
 
   const finalVertex = `${shaderVersion}
@@ -121,9 +123,9 @@ ${fragment}`;
   if (usesElements) setBuffer(elements.buffer, gl.ELEMENT_ARRAY_BUFFER);
 
   // Attribute vertex count
-  let count = Infinity;
+  let count = Number.Infinity;
   const measureCount = () => {
-    count = Infinity;
+    count = Number.Infinity;
     for (const key in attributes) {
       const attribute = attributes[key];
       count = Math.min(count, attribute.count);
@@ -138,7 +140,7 @@ ${fragment}`;
   let dead = false;
 
   // Rahti cleanup
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
 
     gl.deleteShader(vertexShader);
@@ -253,7 +255,7 @@ ${fragment}`;
   };
 
   return render;
-};
+}, Component);
 
 const logError = (log, shader) => {
   console.error(log);

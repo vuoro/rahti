@@ -1,7 +1,8 @@
+import { Component, cleanup } from "../rahti/component.js";
 import { cancelPreRenderJob, requestPreRenderJob } from "./animationFrame.js";
 import { dataToTypes } from "./buffer.js";
 
-export const UniformBlock = function ({ context, uniforms: uniformMap }) {
+export const UniformBlock = new Proxy(function ({ context, uniforms: uniformMap }) {
   const { gl, setBuffer, requestRendering } = context;
 
   const offsets = new Map();
@@ -68,7 +69,7 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
 
   gl.bufferData(gl.UNIFORM_BUFFER, allData, gl.DYNAMIC_DRAW);
 
-  let firstDirty = Infinity;
+  let firstDirty = Number.Infinity;
   let lastDirty = 0;
 
   const update = (key, data) => {
@@ -103,7 +104,7 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
       lastDirty - firstDirty,
     );
 
-    firstDirty = Infinity;
+    firstDirty = Number.Infinity;
     lastDirty = 0;
 
     requestRendering();
@@ -111,11 +112,11 @@ export const UniformBlock = function ({ context, uniforms: uniformMap }) {
 
   let dead = false;
 
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
     cancelPreRenderJob(commitUpdate);
     gl.deleteBuffer(buffer);
   });
 
   return { uniforms, update, bindIndex };
-};
+}, Component);

@@ -1,6 +1,7 @@
+import { Component, cleanup } from "../rahti/component.js";
 import { requestPreRenderJob } from "./animationFrame.js";
 
-export const Buffer = function ({
+export const Buffer = new Proxy(function ({
   context,
   data,
   binding = "ARRAY_BUFFER",
@@ -46,7 +47,7 @@ export const Buffer = function ({
     countSubscribers,
   };
 
-  let firstDirty = Infinity;
+  let firstDirty = Number.Infinity;
   let lastDirty = 0;
   let shouldSet = true;
 
@@ -104,7 +105,7 @@ export const Buffer = function ({
       );
     }
 
-    firstDirty = Infinity;
+    firstDirty = Number.Infinity;
     lastDirty = 0;
 
     requestRendering();
@@ -115,13 +116,13 @@ export const Buffer = function ({
 
   let dead = false;
 
-  this.cleanup(() => {
+  cleanup(() => {
     dead = true;
     gl.deleteBuffer(buffer);
   });
 
   return bufferObject;
-};
+}, Component);
 
 export const dataToTypes = (data) => {
   if (typeof data === "number") {

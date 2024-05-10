@@ -1,6 +1,7 @@
-import { create, perspective, ortho, lookAt, multiply, invert } from "gl-mat4-esm";
-import { UniformBlock } from "./uniformBlock.js";
+import { create, invert, lookAt, multiply, ortho, perspective } from "gl-mat4-esm";
+import { Component, cleanup } from "../rahti/component.js";
 import { requestPreRenderJob } from "./animationFrame.js";
+import { UniformBlock } from "./uniformBlock.js";
 
 export const defaultCameraIncludes = new Set([
   // "projection",
@@ -20,7 +21,7 @@ export const defaultCameraIncludes = new Set([
   // "pixelRatio",
 ]);
 
-export const Camera = function ({
+export const Camera = new Proxy(function ({
   context,
   fov = 60,
   near = 0.1,
@@ -84,7 +85,7 @@ export const Camera = function ({
   if (include.has("aspectRatio")) uniforms.aspectRatio = aspectRatio;
   if (include.has("pixelRatio")) uniforms.pixelRatio = pixelRatio;
 
-  const block = this.run(UniformBlock, { context, uniforms });
+  const block = UniformBlock({ context, uniforms });
 
   const update = (key, value) => {
     if (include.has(key)) block.update(key, value);
@@ -166,7 +167,7 @@ export const Camera = function ({
   };
 
   context.subscribe(handleResize);
-  this.cleanup(() => {
+  cleanup(() => {
     context.unsubscribe(handleResize);
   });
 
@@ -258,4 +259,4 @@ export const Camera = function ({
   requestPreRenderJob(updateCamera);
 
   return [camera, block];
-};
+}, Component);

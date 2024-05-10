@@ -3,6 +3,8 @@ import { Component, GlobalComponent, cleanup } from "./rahti/component.js";
 import { EventHandler, EventListener, Mount, html, svg } from "./rahti/dom.js";
 import { GlobalState } from "./rahti/globalState.js";
 import { State } from "./rahti/state.js";
+import { TestGraphics } from "./testGraphics.js";
+import { Webgl2App } from "./testWebgl2.js";
 // import { TestGraphics } from "./testGraphics.js";
 // import { Webgl2App } from "./testWebgl2.js";
 
@@ -83,7 +85,7 @@ const App = new Proxy(function (hello) {
   console.log("========", hello, "world");
 
   const canvas = html.canvas({ style: "width: 100%; height: 25vh" });
-  // const gfx = <TestGraphics>{canvas}</TestGraphics>;
+  const gfx = TestGraphics(canvas);
 
   Mount(
     document.body,
@@ -95,7 +97,7 @@ const App = new Proxy(function (hello) {
     ),
   );
 
-  // // <Webgl2App {...gfx} />;
+  Webgl2App(gfx);
 
   EventListener(document.body, "click", console.log, { passive: true, once: true });
 }, Component);

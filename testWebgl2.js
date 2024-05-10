@@ -1,9 +1,9 @@
-import { update } from "./rahti/component";
+import { Component, load, save, update } from "./rahti/component";
 import { EventListener } from "./rahti/dom";
 import { State } from "./rahti/state";
 import { AnimationFrame } from "./webgl2/animationFrame";
 
-export const Webgl2App = function ({
+export const Webgl2App = new Proxy(function ({
   smallTexture,
   QuadInstance,
   cameraController,
@@ -12,67 +12,62 @@ export const Webgl2App = function ({
   drawTriangle,
   drawQuads,
 }) {
-  <EventListener
-    type="pointermove"
-    listener={({ x, y }) => {
-      cameraController.target[0] = -x * 0.001;
-      cameraController.target[1] = y * 0.001;
-    }}
-  >
-    {document}
-  </EventListener>;
+  EventListener(document, "pointermove", ({ x, y }) => {
+    cameraController.target[0] = -x * 0.001;
+    cameraController.target[1] = y * 0.001;
+  });
+  TriangleUpdater(smallTexture);
 
-  <TriangleUpdater>{smallTexture}</TriangleUpdater>;
-  <QuadUpdater QuadInstance={QuadInstance} />;
+  QuadUpdater(QuadInstance);
 
   frame(() => {
     clear();
     drawTriangle();
     drawQuads();
   });
-};
+}, Component);
 
-const TriangleUpdater = function (props, smallTexture) {
-  <AnimationFrame />;
+const TriangleUpdater = new Proxy(function (smallTexture) {
+  AnimationFrame();
   smallTexture.update(
     Uint8Array.of(Math.random() * 255, Math.random() * 255, Math.random() * 255, 255),
     Math.random() * 64,
-    Math.random() * 64
+    Math.random() * 64,
   );
-};
+}, Component);
 
-const QuadUpdater = function ({ QuadInstance }) {
+const QuadUpdater = new Proxy(function (QuadInstance) {
   // const [max, setMax] = <State>{100}</State>;
-  // this.save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
-  // this.cleanup(cleanTimer);
+  // save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
+  // cleanup(cleanTimer);
 
   const max = 100 * (0.5 + Math.random() * 0.5);
   // <AnimationFrame />;
 
   for (let index = 0; index < max; index++) {
     if (Math.random() < 0.1) continue;
-    <Quad key={index} QuadInstance={QuadInstance} />;
+    Quad(index, QuadInstance);
   }
-};
+}, Component);
 
 const cleanTimer = (timer) => clearTimeout(timer);
 
-const Quad = function ({ key, QuadInstance }) {
+const Quad = new Proxy(function (index, QuadInstance) {
   // const [_, setState] = <State />;
-  // this.save(setTimeout(setState, Math.random() * 2000, Math.random()));
-  // this.cleanup(cleanTimer);
+  // save(setTimeout(setState, Math.random() * 2000, Math.random()));
+  // cleanup(cleanTimer);
 
-  <AnimationFrame />;
+  AnimationFrame();
 
   const data =
-    this.load() ||
-    this.save({
-      offset: Float32Array.of(-key * 0.02, -key * 0.02),
+    load() ||
+    save({
+      offset: Float32Array.of(-index * 0.02, -index * 0.02),
       color: Float32Array.of(Math.random(), Math.random(), Math.random()),
     });
 
   data.offset[0] += (Math.random() * 2 - 1) * 0.003;
   data.offset[1] += (Math.random() * 2 - 1) * 0.003;
 
-  const quadInstance = <QuadInstance>{data}</QuadInstance>;
-};
+  QuadInstance(data);
+}, Component);
