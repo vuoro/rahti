@@ -22,7 +22,8 @@ export const rahtiPlugin = () => {
       )
         return;
 
-      const code = src + getHmrCode(id);
+      const code = src;
+      //  + getHmrCode(id);
       return { code };
     },
   };

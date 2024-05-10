@@ -1,33 +1,37 @@
-import { Component, cleanup, getInstance, load, save } from "./component.js";
+import { Component, cleanup, load, save } from "./component.js";
 
 export const Mount = new Proxy(function (to, ...children) {
-  processChildren(getInstance(), children, to, 0, 0);
+  if (children.length > 0) processChildren(children, to, 0);
   return to;
 }, Component);
 
-const getElement = function (elements, tagName, proxy) {
-  let component = elements.get(tagName);
+const getElement = function ({ components, isSvg }, tagName) {
+  let component = components.get(tagName);
   if (component) return component;
 
   component = new Proxy(function (...children) {
-    const element = Element(tagName, proxy.isSvg);
-    if (children.length > 0) processChildren(getInstance(), children, element, 0, 0);
+    const element = Element(tagName, isSvg);
+    if (children.length > 0) processChildren(children, element, 0);
     return element;
   }, Component);
 
-  elements.set(tagName, component);
+  components.set(tagName, component);
   return component;
 };
 
-export const html = new Proxy(new Map(), {
-  get: getElement,
-  isSvg: false,
-});
+export const html = new Proxy(
+  { components: new Map(), isSvg: false },
+  {
+    get: getElement,
+  },
+);
 
-export const svg = new Proxy(new Map(), {
-  get: getElement,
-  isSvg: true,
-});
+export const svg = new Proxy(
+  { components: new Map(), isSvg: true },
+  {
+    get: getElement,
+  },
+);
 
 const Element = new Proxy(function (tagName, isSvg) {
   const element = isSvg
@@ -38,19 +42,22 @@ const Element = new Proxy(function (tagName, isSvg) {
   return element;
 }, Component);
 
-const processChildren = function (instance, children, element, slotIndex = 0, startIndex = 0) {
-  for (let index = startIndex, { length } = children; index < length; index++) {
+const processChildren = function (children, element, slotIndex) {
+  let currentSlotIndex = slotIndex;
+
+  for (let index = 0, { length } = children; index < length; index++) {
     const child = children[index];
 
     if (child instanceof Node) {
       // it's already an element of some kind, so let's just mount it
-      Slot(child, element, slotIndex++);
+      Slot(child, element, currentSlotIndex);
+      currentSlotIndex++;
     } else if (child instanceof EventOfferer) {
       const { type, listener, options } = child;
       EventListener(element, type, listener, options);
     } else if (Array.isArray(child)) {
       // treat as a list of grandchildren
-      slotIndex = processChildren(instance, child, element, slotIndex);
+      currentSlotIndex = processChildren(child, element, currentSlotIndex);
     } else if (typeof child === "object") {
       // treat as attributes
       Attributes(element, child);
@@ -61,12 +68,13 @@ const processChildren = function (instance, children, element, slotIndex = 0, st
         // treat as Text
         const textNode = TextNode();
         textNode.nodeValue = child;
-        Slot(textNode, element, slotIndex++);
+        Slot(textNode, element, currentSlotIndex);
+        currentSlotIndex++;
       }
     }
   }
 
-  return slotIndex;
+  return currentSlotIndex;
 };
 
 const TextNode = new Proxy(function () {
@@ -82,16 +90,6 @@ function cleanNode(node) {
   node.remove();
   removedNodes.add(node);
 }
-
-const Slot = new Proxy(function (props, child, parent, index) {
-  slotChildren.set(child, parent);
-  slotIndexes.set(child, index);
-
-  if (!slotQueueWillRun) {
-    slotQueueWillRun = true;
-    queueMicrotask(processSlotQueue);
-  }
-}, Component);
 
 const Attributes = new Proxy(function (element, attributes) {
   const newAttributes = new Map();
@@ -136,6 +134,16 @@ let slotQueueWillRun = false;
 const slotChildren = new Map();
 const slotIndexes = new Map();
 
+const Slot = new Proxy(function (child, parent, index) {
+  slotChildren.set(child, parent);
+  slotIndexes.set(child, index);
+
+  if (!slotQueueWillRun) {
+    slotQueueWillRun = true;
+    queueMicrotask(processSlotQueue);
+  }
+}, Component);
+
 const processSlotQueue = () => {
   for (const [child, parent] of slotChildren) {
     const index = slotIndexes.get(child);
@@ -143,10 +151,11 @@ const processSlotQueue = () => {
     if (removedNodes.has(child)) {
       removedNodes.delete(child);
       child.remove();
-    } else if (index > parent.children.length) {
+    } else if (index > parent.childNodes.length) {
       parent.appendChild(child);
-    } else if (parent.children.item(index) !== child) {
-      parent.insertBefore(child, parent.children[index]);
+    } else {
+      const childInTheWay = parent.childNodes.item(index);
+      if (childInTheWay !== child) parent.insertBefore(child, childInTheWay);
     }
 
     slotChildren.delete(child);
@@ -167,7 +176,7 @@ function cleanEventListener([target, type, listener, options]) {
   target.removeEventListener(type, listener, options);
 }
 
-export const Event = new Proxy(function (type, listener, options) {
+export const EventHandler = new Proxy(function (type, listener, options) {
   const offerer = new EventOfferer();
   offerer.type = type;
   offerer.listener = listener;

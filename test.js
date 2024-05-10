@@ -1,6 +1,6 @@
 import TestWorker from "./TestWorker.js?worker";
 import { Component, GlobalComponent, cleanup } from "./rahti/component.js";
-import { EventListener, Mount, html, svg } from "./rahti/dom.js";
+import { EventHandler, EventListener, Mount, html, svg } from "./rahti/dom.js";
 import { GlobalState } from "./rahti/globalState.js";
 import { State } from "./rahti/state.js";
 // import { TestGraphics } from "./testGraphics.js";
@@ -52,38 +52,42 @@ const TestWrapper = new Proxy(function () {
         100% { outline-color: transparent; }
       }
     `),
-    html.ol({ class: "lol" }, Event({ type: "click", listener: console.log }), testComponents),
+    html.ol(
+      { class: "lol" },
+      EventHandler({ type: "click", listener: console.log }),
+      testComponents,
+    ),
   ];
-}, GlobalComponent);
+}, Component);
 
 const TestItem = new Proxy(
   function (counter, index) {
     const [local, setLocal] = State(0);
     const [global] = GlobalTest();
 
-    const timer = setTimeout(setLocal, 200 + Math.random() * 5000, Math.random());
+    const timer = setTimeout(setLocal, 2000 + Math.random() * 5000, Math.random());
     cleanup(() => clearTimeout(timer));
     if (Math.random() < 0.01) throw new Error("intentional test error");
 
     return html.li(
-      index + 1,
+      `(${index + 1})`,
       html.input({ type: "checkbox", checked: local > 0.5 }),
       ` Parent: ${counter} / Global: ${global} / Local: ${local}`,
-      Event({ type: "click", listener: (...args) => console.log(...args), passive: true }),
+      EventHandler({ type: "click", listener: (...args) => console.log(...args), passive: true }),
     );
   },
-  { ...Component, getKey: (counter, index) => index },
+  { ...Component, getKey: (_, index) => index },
 );
 
-const App = async function (hello) {
+const App = new Proxy(function (hello) {
   console.log("========", hello, "world");
 
-  const canvasElement = html.canvas({ style: "width: 100%; height: 25vh" });
-  // const gfx = <TestGraphics>{canvasElement}</TestGraphics>;
+  const canvas = html.canvas({ style: "width: 100%; height: 25vh" });
+  // const gfx = <TestGraphics>{canvas}</TestGraphics>;
 
   Mount(
-    html.body,
-    canvasElement,
+    document.body,
+    canvas,
     TestWrapper(),
     svg.svg(
       svg.rect({ fill: "cyan", stroke: "turquoise", width: "300", height: "150" }),
@@ -91,9 +95,9 @@ const App = async function (hello) {
     ),
   );
 
-  // <Webgl2App {...gfx} />;
+  // // <Webgl2App {...gfx} />;
 
   EventListener(document.body, "click", console.log, { passive: true, once: true });
-};
+}, Component);
 
 App("hello");

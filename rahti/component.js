@@ -40,9 +40,7 @@ class Instance {
 }
 
 export const getInstance = () => {
-  const instance = stack.at(-1);
-  if (instance === topLevel) return undefined;
-  return instance;
+  return stack.at(-1);
 };
 export const save = (dataToSave) => {
   stack.at(-1).savedData = dataToSave;
@@ -86,14 +84,7 @@ const createInstance = (code, parent, key) => {
   // Mark as needing an update
   instance.needsUpdate = true;
 
-  // console.log(
-  //   "created",
-  //   Component.name,
-  //   "for",
-  //   Components.get(parentId).name,
-  //   "at",
-  //   currentIndexes.get(parentId)
-  // );
+  // console.log("created at", parent.currentIndex);
 
   if (import.meta.hot) {
     // Add this instance into the HMR instance registry,
@@ -104,34 +95,34 @@ const createInstance = (code, parent, key) => {
   return instance;
 };
 
-const findInstance = (Component, parent, key) => {
+const findInstance = (code, parent, key) => {
   // console.log("looking for", Component.name, "in", Components.get(parentId).name, "with key:", key);
   if (parent.children) {
     // Find the current child
     const currentIndex = parent.currentIndex;
     const currentChild = parent.children[currentIndex];
 
-    if (currentChild && currentChild.Component === Component && currentChild.key === key) {
+    if (currentChild && currentChild.code === code && currentChild.key === key) {
       // The child looks like what we're looking for
-      // console.log("found here", Component.name, "for", Components.get(parentId).name);
+      // console.log("found here");
       return currentChild;
     }
 
     // Try to find the a matching child further on
     for (let index = currentIndex + 1; index < parent.children.length; index++) {
       const child = parent.children[index];
-      if (child.Component === Component && child.key === key) {
+      if (child.code === code && child.key === key) {
         // This one looks correct, so move it into its new place
         parent.children.splice(index, 1);
         parent.children.splice(currentIndex, 0, child);
-        // console.log("found later", Component.name, "for", Components.get(parentId).name);
+        // console.log("found later");
         return child;
       }
     }
 
-    // console.log("did not find matching children", Component.name);
+    // console.log("did not find matching children");
   } else {
-    // console.log("there were no children for", Components.get(parentId).name);
+    // console.log("there were no children for");
   }
 };
 
@@ -234,7 +225,7 @@ const run = (instance, newArguments) => {
 
 const runCleanup = (instance, isBeingDestroyed = false) => {
   if (instance.cleaner) {
-    instance.cleaner.call(instance.load(), instance, isBeingDestroyed);
+    instance.cleaner.call(null, instance.savedData, instance, isBeingDestroyed);
     instance.cleaner = null;
   }
 };
@@ -343,7 +334,7 @@ const runUpdate = function (instance) {
     const newValue = run(instance, instance.lastArguments);
 
     if (newValue !== lastValue) {
-      // console.log("escalating update to parent from", Component.name);
+      // console.log("escalating update to parent from", instance.code);
       updateParent(instance);
     }
   } catch (error) {
