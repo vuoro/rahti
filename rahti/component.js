@@ -278,17 +278,17 @@ let fastUpdateQueueWillRun = false;
 const slowUpdateQueue = new Set();
 const fastUpdateQueue = new Set();
 
-export const update = (instance, immediately = false) => {
-  const queue = immediately ? fastUpdateQueue : slowUpdateQueue;
-  const willRun = immediately ? fastUpdateQueueWillRun : slowUpdateQueueWillRun;
+export const update = (instance, quickly = false) => {
+  const queue = quickly ? fastUpdateQueue : slowUpdateQueue;
+  const willRun = quickly ? fastUpdateQueueWillRun : slowUpdateQueueWillRun;
   queue.add(instance);
 
   if (!willRun) {
-    const queueFirer = immediately ? queueMicrotask : requestIdleCallback;
-    const queueRunner = immediately ? runFastUpdateQueue : runUpdateQueue;
+    const queueFirer = quickly ? queueMicrotask : requestIdleCallback;
+    const queueRunner = quickly ? runFastUpdateQueue : runSlowUpdateQueue;
     queueFirer(queueRunner);
 
-    if (immediately) {
+    if (quickly) {
       fastUpdateQueueWillRun = true;
     } else {
       slowUpdateQueueWillRun = true;
@@ -296,8 +296,12 @@ export const update = (instance, immediately = false) => {
   }
 };
 
-export const updateParent = (instance, immediately = false) => {
-  if (instance.parent && instance.parent !== topLevel) update(instance.parent, immediately);
+export const updateImmediately = (instance) => {
+  runUpdate(instance);
+};
+
+export const updateParent = (instance, quickly = false) => {
+  if (instance.parent && instance.parent !== topLevel) update(instance.parent, quickly);
 };
 
 const runFastUpdateQueue = async function () {
@@ -309,10 +313,10 @@ const runFastUpdateQueue = async function () {
   fastUpdateQueueWillRun = false;
 };
 
-const runUpdateQueue = async function (deadline) {
+const runSlowUpdateQueue = async function (deadline) {
   for (const instance of slowUpdateQueue) {
     if (deadline?.timeRemaining() === 0) {
-      return requestIdleCallback(runUpdateQueue);
+      return requestIdleCallback(runSlowUpdateQueue);
     }
 
     slowUpdateQueue.delete(instance);
