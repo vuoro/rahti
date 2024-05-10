@@ -29,12 +29,12 @@
   },
   "homepage": "https://github.com/vuoro/rahti#readme",
   "devDependencies": {
-    "vite": "^5.0.8"
+    "vite": "^5.2.11"
   },
   "prettier": {
     "printWidth": 100
   },
-  "packageManager": "pnpm@8.9.2",
+  "packageManager": "pnpm@9.1.0",
   "dependencies": {
     "gl-mat4-esm": "^1.1.4"
   }
