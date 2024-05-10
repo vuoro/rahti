@@ -12,9 +12,13 @@ export const rahtiPlugin = () => {
       if (
         config.command === "build" ||
         config.isProduction ||
-        id.includes("?worker") ||
         id.includes("node_modules") ||
-        !(path.endsWith(".jsx") || path.endsWith(".tsx"))
+        !(
+          path.endsWith(".js") ||
+          path.endsWith(".jsx") ||
+          path.endsWith(".tx") ||
+          path.endsWith(".tsx")
+        )
       )
         return;
 

@@ -1,88 +1,68 @@
-import { DomElement } from "./dom.js";
 import { requestIdleCallback } from "./idle.js";
 
 const reportError = globalThis.reportError || console.error;
 
-const asyncs = new Map();
-const isAsync = (Component) => {
-  const is = asyncs.get(Component);
-  if (is === true) return true;
-  if (is === false) return false;
+export const Component = {
+  getKey: () => undefined,
+  apply: function (code, _, argumentsList) {
+    const parent = stack.at(-1);
+    const key = this.getKey(argumentsList);
+    const instance = findInstance(code, parent, key) || createInstance(code, parent, key);
 
-  const isIt = Component.constructor.name === "AsyncFunction";
-  asyncs.set(Component, isIt);
-  return isIt;
+    if (parent !== topLevel) parent.currentIndex++;
+    return run(instance, argumentsList);
+  },
 };
 
-const dummyProps = {};
+export const GlobalComponent = {
+  apply: function (code, _, argumentsList) {
+    const parent = topLevel;
+    const key = undefined;
+    const instance = findInstance(code, parent, key) || createInstance(code, parent, key);
+
+    return run(instance, argumentsList);
+  },
+};
 
 class Instance {
   currentIndex = 0;
-
-  isAsync = false;
   needsUpdate = false;
-  defaultNeedsUpdate = false;
 
   parent = null;
-  pendingPromise = null;
   lastValue = undefined;
   lastArguments = null;
   savedData = null;
-  cleaners = null;
+  cleaner = null;
 
   key = null;
-  children = null;
-  Component = null;
-
-  save(dataToSave) {
-    this.savedData = dataToSave;
-    return dataToSave;
-  }
-  load() {
-    return this.savedData;
-  }
-  cleanup(cleaner) {
-    if (this.cleaners) {
-      if (!(this.cleaners instanceof Set)) {
-        // 2nd cleanup
-        const firstCleaner = this.cleaners;
-        this.cleaners = new Set();
-        this.cleaners.add(firstCleaner);
-      }
-      // nth cleanup
-      this.cleaners.add(cleaner);
-    } else {
-      // 1st cleanup
-      this.cleaners = cleaner;
-    }
-  }
-
-  run(inputComponent, ...inputArguments) {
-    // DOM components
-    const seemsLikeDom = typeof inputComponent === "string";
-    if (seemsLikeDom && inputComponent === "rahti:fragment") {
-      return inputArguments;
-    }
-
-    // Normal & DOM components
-    const Component = seemsLikeDom ? DomElement : inputComponent;
-    inputArguments[0] = inputArguments[0] || dummyProps;
-    if (seemsLikeDom) inputArguments.splice(1, 0, inputComponent);
-    const parent = this;
-    const key = inputArguments[0].key || null;
-    const instance = getInstance(Component, parent, key) || createInstance(Component, parent, key);
-
-    if (parent !== rahti) parent.currentIndex++;
-
-    return (instance.isAsync ? startAsync : start)(instance, inputArguments);
-  }
+  children = [];
+  code = null;
 }
 
-export const rahti = new Instance();
+export const getInstance = () => {
+  const instance = stack.at(-1);
+  if (instance === topLevel) return undefined;
+  return instance;
+};
+export const save = (dataToSave) => {
+  stack.at(-1).savedData = dataToSave;
+  return dataToSave;
+};
+export const load = () => {
+  return stack.at(-1).savedData;
+};
+export const cleanup = (cleaner) => {
+  const instance = stack.at(-1);
+  if (instance.cleaner) throw new Error("only 1 `cleanup()` allowed per component instance");
+  instance.cleaner = cleaner;
+};
+
+const topLevel = new Instance();
+const stack = [topLevel];
 
 const instancePool = [];
 
-const createInstance = (Component, parent, key) => {
+const createInstance = (code, parent, key) => {
   let instance;
 
   if (instancePool.length) {
@@ -100,9 +80,8 @@ const createInstance = (Component, parent, key) => {
 
   // Save the parent, the key, and the Component
   instance.parent = parent;
-  if (key !== undefined) instance.key = key;
-  instance.Component = Component;
-  instance.isAsync = isAsync(Component);
+  instance.key = key;
+  instance.code = code;
 
   // Mark as needing an update
   instance.needsUpdate = true;
@@ -125,7 +104,7 @@ const createInstance = (Component, parent, key) => {
   return instance;
 };
 
-const getInstance = (Component, parent, key) => {
+const findInstance = (Component, parent, key) => {
   // console.log("looking for", Component.name, "in", Components.get(parentId).name, "with key:", key);
   if (parent.children) {
     // Find the current child
@@ -136,17 +115,17 @@ const getInstance = (Component, parent, key) => {
       // The child looks like what we're looking for
       // console.log("found here", Component.name, "for", Components.get(parentId).name);
       return currentChild;
-    } else {
-      // Try to find the a matching child further on
-      for (let index = currentIndex + 1; index < parent.children.length; index++) {
-        const child = parent.children[index];
-        if (child.Component === Component && child.key === key) {
-          // This one looks correct, so move it into its new place
-          parent.children.splice(index, 1);
-          parent.children.splice(currentIndex, 0, child);
-          // console.log("found later", Component.name, "for", Components.get(parentId).name);
-          return child;
-        }
+    }
+
+    // Try to find the a matching child further on
+    for (let index = currentIndex + 1; index < parent.children.length; index++) {
+      const child = parent.children[index];
+      if (child.Component === Component && child.key === key) {
+        // This one looks correct, so move it into its new place
+        parent.children.splice(index, 1);
+        parent.children.splice(currentIndex, 0, child);
+        // console.log("found later", Component.name, "for", Components.get(parentId).name);
+        return child;
       }
     }
 
@@ -156,22 +135,7 @@ const getInstance = (Component, parent, key) => {
   }
 };
 
-const start = function (instance, newArguments) {
-  return checkForUpdate(instance, newArguments, false);
-};
-
-const startAsync = async function (instance, newArguments) {
-  // If instance is already running, delay this run until it finishes
-  if (instance.pendingPromise) {
-    // console.log("??? waiting for", Components.get(id).name, "to finish before applying");
-    await instance.pendingPromise;
-    // console.log("??? continuing with", Components.get(id).name);
-  }
-
-  return checkForUpdate(instance, newArguments, true);
-};
-
-const checkForUpdate = (instance, newArguments, async = false) => {
+const run = (instance, newArguments) => {
   // See if the instance should re-run
   let needsUpdate = instance.needsUpdate;
 
@@ -213,108 +177,65 @@ const checkForUpdate = (instance, newArguments, async = false) => {
   if (needsUpdate) {
     // Run the instance
     // console.log("+++ start of", instance.Component?.name);
-    // Run the cleanup, if there is one
-    return checkCleanup(instance, newArguments, async);
-  } else {
-    // Skip running and return the previous value
-    // console.log("!!! skipping update for", instance.Component?.name);
-    return instance.lastValue;
-  }
-};
 
-const checkCleanup = (instance, newArguments, async = false) => {
-  runCleanup(instance);
-  return (async ? runAsync : run)(instance, newArguments);
+    // Run the cleanup, if there is one
+    runCleanup(instance, false);
+
+    // Run the instance's Component
+    stack.push(instance);
+    instance.currentIndex = 0;
+    let result;
+
+    try {
+      let code = instance.code;
+      if (import.meta.hot) {
+        // Use the latest HMR'd version of this component, if available
+        code = globalThis._rahtiHmrComponentReplacements?.get(code) || code;
+      }
+
+      result = code.apply(instance, newArguments);
+
+      // Save the new value
+      instance.lastValue = result;
+      instance.needsUpdate = false;
+
+      // any pending update can be cancelled safely, since this is not async
+      fastUpdateQueue.delete(instance);
+      slowUpdateQueue.delete(instance);
+    } catch (error) {
+      // console.log("caught");
+      reportError(error);
+    } finally {
+      stack.pop();
+
+      // Destroy children that were not visited on this execution
+      if (instance.children) {
+        const nextIndex = instance.currentIndex;
+        const { length } = instance.children;
+
+        if (nextIndex < length) {
+          // console.log("/// destroying leftover children in", Component.name, length - nextIndex);
+          for (let index = nextIndex; index < length; index++) {
+            destroy(instance.children[index]);
+          }
+          instance.children.splice(nextIndex);
+        }
+      }
+    }
+
+    // console.log("--- returning", result, "from", Component.name, instance);
+    return result;
+  }
+
+  // Skip running and return the previous value
+  // console.log("!!! skipping update for", instance.Component?.name);
+  return instance.lastValue;
 };
 
 const runCleanup = (instance, isBeingDestroyed = false) => {
-  if (instance.cleaners) {
-    if (instance.cleaners instanceof Set) {
-      for (const cleaner of instance.cleaners) {
-        cleaner.call(instance, instance.load(), isBeingDestroyed);
-        instance.cleaners.delete(cleaner);
-      }
-    } else {
-      instance.cleaners.call(instance, instance.load(), isBeingDestroyed);
-      instance.cleaners = null;
-    }
-  }
-};
-
-const run = (instance, newArguments) => {
-  // Run the instance's Component
-  instance.currentIndex = 0;
-  let result;
-
-  try {
-    let Component = instance.Component;
-    if (import.meta.hot) {
-      // Use the latest HMR'd version of this component, if available
-      Component = globalThis._rahtiHmrComponentReplacements?.get(Component) || Component;
-    }
-    result = Component.apply(instance, newArguments);
-
-    // Save the new value
-    instance.lastValue = result;
-    instance.needsUpdate = instance.defaultNeedsUpdate;
-
-    // any pending update can be cancelled safely, since this is not async
-    fastUpdateQueue.delete(instance);
-    slowUpdateQueue.delete(instance);
-  } catch (error) {
-    // console.log("caught");
-    reportError(error);
-  } finally {
-    finish(instance);
-  }
-
-  // console.log("--- returning", result, "from", Component.name, instance);
-  return result;
-};
-
-const runAsync = async (instance, newArguments) => {
-  // Run the instance's Component
-  instance.currentIndex = 0;
-  let result;
-
-  try {
-    let Component = instance.Component;
-    if (import.meta.hot) {
-      // Use the latest HMR'd version of this component, if available
-      Component = globalThis._rahtiHmrComponentReplacements?.get(Component) || Component;
-    }
-    result = Component.apply(instance, newArguments);
-
-    instance.pendingPromise = result;
-    const finalResult = await result;
-
-    // Save the new value
-    instance.lastValue = finalResult;
-    instance.needsUpdate = instance.defaultNeedsUpdate;
-  } catch (error) {
-    reportError(error);
-  } finally {
-    finish(instance);
-    instance.pendingPromise = null;
-  }
-
-  // console.log("--- returning", result, "from", Component.name, id);
-  return result;
-};
-
-const finish = (instance) => {
-  // Destroy children that were not visited on this execution
-  if (instance.children) {
-    const nextIndex = instance.currentIndex;
-    const { length } = instance.children;
-
-    if (nextIndex < length) {
-      // console.log("/// destroying leftover children in", Component.name, length - nextIndex);
-      for (let index = nextIndex; index < length; index++) {
-        destroy(instance.children[index]);
-      }
-      instance.children.splice(nextIndex);
-    }
+  if (instance.cleaner) {
+    instance.cleaner.call(instance.load(), instance, isBeingDestroyed);
+    instance.cleaner = null;
   }
 };
 
@@ -345,21 +266,17 @@ const destroy = async (instance) => {
 
   // Clean up instance
   instance.currentIndex = 0;
-
-  instance.isAsync = false;
   instance.needsUpdate = false;
-  instance.defaultNeedsUpdate = false;
 
   instance.parent = null;
-  instance.pendingPromise = null;
   instance.lastValue = undefined;
   instance.lastArguments = null;
   instance.savedData = null;
-  instance.cleaners = null;
+  instance.cleaner = null;
 
   instance.key = null;
-  if (instance.children) instance.children.splice(0, Infinity);
-  instance.Component = null;
+  instance.children = null;
+  instance.code = null;
 
   // Add to pool for reuse
   instancePool.push(instance);
@@ -389,13 +306,13 @@ export const update = (instance, immediately = false) => {
 };
 
 export const updateParent = (instance, immediately = false) => {
-  if (instance.parent && instance.parent !== rahti) update(instance.parent, immediately);
+  if (instance.parent && instance.parent !== topLevel) update(instance.parent, immediately);
 };
 
 const runFastUpdateQueue = async function () {
   for (const instance of fastUpdateQueue) {
     fastUpdateQueue.delete(instance);
-    (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
+    runUpdate(instance);
   }
 
   fastUpdateQueueWillRun = false;
@@ -408,16 +325,14 @@ const runUpdateQueue = async function (deadline) {
     }
 
     slowUpdateQueue.delete(instance);
-    (instance.isAsync ? runUpdateAsync : runUpdate)(instance);
+    runUpdate(instance);
   }
 
   slowUpdateQueueWillRun = false;
 };
 
-const ongoingUpdates = new Map();
-
 const runUpdate = function (instance) {
-  if (instance.Component === null) {
+  if (instance.code === null) {
     // console.log("=== cancelling update because instance is gone");
     return;
   }
@@ -425,7 +340,7 @@ const runUpdate = function (instance) {
   try {
     instance.needsUpdate = true;
     const lastValue = instance.lastValue;
-    const newValue = start(instance, instance.lastArguments);
+    const newValue = run(instance, instance.lastArguments);
 
     if (newValue !== lastValue) {
       // console.log("escalating update to parent from", Component.name);
@@ -433,36 +348,6 @@ const runUpdate = function (instance) {
     }
   } catch (error) {
     reportError(error);
-  }
-};
-
-const runUpdateAsync = async function (instance) {
-  if (ongoingUpdates.has(instance)) {
-    // console.log("waiting for previous update to finish in", Component.name);
-    await ongoingUpdates.get(instance);
-  }
-
-  if (instance.Component === null) {
-    // console.log("=== cancelling update because instance is gone");
-    return;
-  }
-
-  try {
-    instance.needsUpdate = true;
-    const lastValue = instance.lastValue;
-    let newValue = startAsync(instance, instance.lastArguments);
-
-    ongoingUpdates.set(instance, newValue);
-    newValue = await newValue;
-
-    if (newValue !== lastValue) {
-      // console.log("escalating update to parent from", Component.name);
-      updateParent(instance);
-    }
-  } catch (error) {
-    reportError(error);
-  } finally {
-    ongoingUpdates.delete(instance);
   }
 };
 

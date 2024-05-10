@@ -47,7 +47,7 @@ const QuadUpdater = function ({ QuadInstance }) {
   // this.cleanup(cleanTimer);
 
   const max = 100 * (0.5 + Math.random() * 0.5);
-  <AnimationFrame />;
+  // <AnimationFrame />;
 
   for (let index = 0; index < max; index++) {
     if (Math.random() < 0.1) continue;

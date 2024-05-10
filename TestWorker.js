@@ -1,4 +1,4 @@
-import { WorkerLogger } from "./WorkerLogger.jsx";
+import { WorkerLogger } from "./WorkerLogger.js";
 import { rahti } from "./rahti/component.js";
 
 console.log("Hello from worker");

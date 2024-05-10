@@ -1,16 +1,104 @@
-export const Mount = function ({ to = globalThis?.document?.body }, ...children) {
-  processChildren(this, children, to, 0, 0);
+import { Component, cleanup, getInstance, load, save } from "./component.js";
+
+export const Mount = new Proxy(function (to, ...children) {
+  processChildren(getInstance(), children, to, 0, 0);
   return to;
+}, Component);
+
+const getElement = function (elements, tagName, proxy) {
+  let component = elements.get(tagName);
+  if (component) return component;
+
+  component = new Proxy(function (...children) {
+    const element = Element(tagName, proxy.isSvg);
+    if (children.length > 0) processChildren(getInstance(), children, element, 0, 0);
+    return element;
+  }, Component);
+
+  elements.set(tagName, component);
+  return component;
 };
 
-export const DomElement = function (props, type, ...children) {
-  const element = this.run(Element, null, type);
+export const html = new Proxy(new Map(), {
+  get: getElement,
+  isSvg: false,
+});
 
+export const svg = new Proxy(new Map(), {
+  get: getElement,
+  isSvg: true,
+});
+
+const Element = new Proxy(function (tagName, isSvg) {
+  const element = isSvg
+    ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
+    : document.createElement(tagName);
+  save(element);
+  cleanup(cleanNode);
+  return element;
+}, Component);
+
+const processChildren = function (instance, children, element, slotIndex = 0, startIndex = 0) {
+  for (let index = startIndex, { length } = children; index < length; index++) {
+    const child = children[index];
+
+    if (child instanceof Node) {
+      // it's already an element of some kind, so let's just mount it
+      Slot(child, element, slotIndex++);
+    } else if (child instanceof EventOfferer) {
+      const { type, listener, options } = child;
+      EventListener(element, type, listener, options);
+    } else if (Array.isArray(child)) {
+      // treat as a list of grandchildren
+      slotIndex = processChildren(instance, child, element, slotIndex);
+    } else if (typeof child === "object") {
+      // treat as attributes
+      Attributes(element, child);
+    } else {
+      const type = typeof child;
+
+      if (type === "string" || type === "number") {
+        // treat as Text
+        const textNode = TextNode();
+        textNode.nodeValue = child;
+        Slot(textNode, element, slotIndex++);
+      }
+    }
+  }
+
+  return slotIndex;
+};
+
+const TextNode = new Proxy(function () {
+  const node = new Text();
+  save(node);
+  cleanup(cleanNode);
+  return node;
+}, Component);
+
+const removedNodes = new Set();
+
+function cleanNode(node) {
+  node.remove();
+  removedNodes.add(node);
+}
+
+const Slot = new Proxy(function (props, child, parent, index) {
+  slotChildren.set(child, parent);
+  slotIndexes.set(child, index);
+
+  if (!slotQueueWillRun) {
+    slotQueueWillRun = true;
+    queueMicrotask(processSlotQueue);
+  }
+}, Component);
+
+const Attributes = new Proxy(function (element, attributes) {
   const newAttributes = new Map();
-  let previousAttributes = this.load();
+  const previousAttributes = load();
 
-  for (const key in props) {
-    const value = props[key];
+  for (const key in attributes) {
+    const value = attributes[key];
     newAttributes.set(key, value);
     if (previousAttributes) previousAttributes.delete(key);
 
@@ -41,81 +129,8 @@ export const DomElement = function (props, type, ...children) {
       }
     }
   }
-  if (newAttributes?.size) this.save(newAttributes);
-
-  if (children.length > 0) processChildren(this, children, element, 0, 0);
-
-  return element;
-};
-
-const Element = function (props, tagName) {
-  const isSvg = tagName.startsWith("svg:");
-  const finalTagName = isSvg ? tagName.slice(4) : tagName;
-  const element = isSvg
-    ? document.createElementNS("http://www.w3.org/2000/svg", finalTagName)
-    : document.createElement(finalTagName);
-
-  this.save(element);
-  this.cleanup(cleanNode);
-
-  return element;
-};
-
-const TextNode = function () {
-  const node = new Text();
-  this.save(node);
-  this.cleanup(cleanNode);
-  return node;
-};
-
-const removedNodes = new Set();
-
-function cleanNode(node) {
-  node.remove();
-  removedNodes.add(node);
-}
-
-const tempProps = {};
-
-const processChildren = function (instance, children, element, slotIndex = 0, startIndex = 0) {
-  for (let index = startIndex, { length } = children; index < length; index++) {
-    const child = children[index];
-
-    if (child instanceof Node) {
-      // it's already an element of some kind, so let's just mount it
-      tempProps.key = child;
-      instance.run(Slot, tempProps, child, element, slotIndex++);
-    } else if (child instanceof EventOfferer) {
-      const { type, listener, options } = child;
-      instance.run(EventListener, { target: element, type, listener, options });
-    } else if (Array.isArray(child)) {
-      // treat as a list of grandchildren
-      slotIndex = processChildren(instance, child, element, slotIndex);
-    } else {
-      const type = typeof child;
-
-      if (type === "string" || type === "number") {
-        // treat as Text
-        const textNode = instance.run(TextNode);
-        textNode.nodeValue = child;
-        tempProps.key = textNode;
-        instance.run(Slot, tempProps, textNode, element, slotIndex++);
-      }
-    }
-  }
-
-  return slotIndex;
-};
-
-const Slot = function (props, child, parent, index) {
-  slotChildren.set(child, parent);
-  slotIndexes.set(child, index);
-
-  if (!slotQueueWillRun) {
-    slotQueueWillRun = true;
-    queueMicrotask(processSlotQueue);
-  }
-};
+  if (newAttributes?.size) save(newAttributes);
+}, Component);
 
 let slotQueueWillRun = false;
 const slotChildren = new Map();
@@ -141,24 +156,24 @@ const processSlotQueue = () => {
   slotQueueWillRun = false;
 };
 
-export const EventListener = function ({ target, type, listener, ...options }, targetChild) {
-  const finalTarget = target || targetChild;
+export const EventListener = new Proxy(function (target, type, listener, options) {
+  const finalTarget = target;
   finalTarget.addEventListener(type, listener, options);
-  this.save([finalTarget, type, listener, options]);
-  this.cleanup(cleanEventListener);
-};
+  save([finalTarget, type, listener, options]);
+  cleanup(cleanEventListener);
+}, Component);
 
 function cleanEventListener([target, type, listener, options]) {
   target.removeEventListener(type, listener, options);
 }
 
-export const Event = function ({ type, listener, ...options }) {
+export const Event = new Proxy(function (type, listener, options) {
   const offerer = new EventOfferer();
   offerer.type = type;
   offerer.listener = listener;
   offerer.options = options;
   return offerer;
-};
+}, Component);
 
 class EventOfferer {
   type = "click";

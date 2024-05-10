@@ -1,13 +1,13 @@
-import { updateParent } from "./component.js";
+import { Component, getInstance, load, save, updateParent } from "./component.js";
 
-export const State = function ({ initialValue }, initialValueFromArgs) {
-  const state = this.load();
+export const State = new Proxy(function (initialValue) {
+  const state = load();
   if (state) return state;
 
-  const instance = this;
+  const instance = getInstance();
 
   const newState = [
-    initialValue === undefined ? initialValueFromArgs : initialValue,
+    initialValue,
     (newValue, immediately = false) => {
       newState[0] = newValue;
       updateParent(instance, immediately);
@@ -15,5 +15,5 @@ export const State = function ({ initialValue }, initialValueFromArgs) {
     () => newState[0],
   ];
 
-  return this.save(newState);
-};
+  return save(newState);
+}, Component);

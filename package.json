@@ -5,7 +5,10 @@
   "type": "module",
   "main": "./rahti/rahti.js",
   "exports": {
-    ".": "./rahti/rahti.js",
+    ".": "./rahti/component.js",
+    "./state": "./rahti/state.js",
+    "./globalState": "./rahti/globalState.js",
+    "./dom": "./rahti/dom.js",
     "./webgl2": "./webgl2/webgl2.js",
     "./vite-plugin-rahti": "./vite-plugin-rahti/vite-plugin-rahti.js"
   },
@@ -16,20 +19,15 @@
     "type": "git",
     "url": "git+https://github.com/vuoro/rahti.git"
   },
-  "keywords": [
-    "reactive",
-    "javascript",
-    "rahti",
-    "jsx",
-    "async"
-  ],
+  "keywords": ["reactive", "javascript", "rahti"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vuoro/rahti/issues"
   },
   "homepage": "https://github.com/vuoro/rahti#readme",
   "devDependencies": {
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "@biomejs/biome": "^1.7.3"
   },
   "prettier": {
     "printWidth": 100

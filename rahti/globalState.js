@@ -1,6 +1,6 @@
-import { updateParent } from "./component.js";
+import { Component, cleanup, getInstance, updateParent } from "./component.js";
 
-export const createGlobalState = (initialValue) => {
+export const GlobalState = new Proxy((initialValue) => {
   const instances = new Set();
   const state = [
     initialValue,
@@ -13,15 +13,15 @@ export const createGlobalState = (initialValue) => {
     () => state[0],
   ];
 
-  const GlobalState = function () {
-    instances.add(this);
-    this.cleanup(cleanGlobalState);
+  const State = new Proxy(function () {
+    instances.add(getInstance());
+    cleanup(cleanState);
     return state;
-  };
+  }, Component);
 
-  function cleanGlobalState() {
-    instances.delete(this);
+  function cleanState(_, instance) {
+    instances.delete(instance);
   }
 
-  return [GlobalState, state[1], state[2]];
-};
+  return [State, state[1], state[2]];
+}, Component);
