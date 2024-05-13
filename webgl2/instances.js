@@ -4,6 +4,8 @@ import { Buffer } from "./buffer.js";
 
 export const Instances = new Proxy(function ({ context, attributes: attributeMap }) {
   const attributes = new Map();
+  const defaultValues = new Map();
+  const attributeViews = new Map();
 
   for (const key in attributeMap) {
     const value = attributeMap[key];
@@ -12,9 +14,9 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
     const bufferObject = Buffer({ context, data, usage: "DYNAMIC_DRAW" });
     const { Constructor } = bufferObject;
 
-    bufferObject.defaultValue = value.length ? new Constructor(value) : new Constructor(data);
-
     attributes.set(key, bufferObject);
+    defaultValues.set(key, value.length ? new Constructor(value) : new Constructor(data));
+    attributeViews.set(key, new Map());
   }
 
   const additions = new Set();
@@ -22,11 +24,10 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
 
   const instancesToSlots = new Map();
   const slotsToInstances = new Map();
-  const datas = new Map();
 
   const freeSlots = [];
   const changes = new Map();
-  const orphans = new Set();
+  const orphans = new Map();
 
   const buildInstances = () => {
     if (dead) return;
@@ -40,6 +41,10 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
       instancesToSlots.delete(instance);
       slotsToInstances.delete(slot);
 
+      for (const [key] of attributes) {
+        attributeViews.get(key).delete(instance);
+      }
+
       if (slot < newSize) {
         freeSlots.push(slot);
       }
@@ -49,8 +54,12 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
     for (let slot = newSize; slot < oldSize; slot++) {
       const instance = slotsToInstances.get(slot);
 
+      for (const [key] of attributes) {
+        attributeViews.get(key).delete(instance);
+      }
+
       if (instance) {
-        orphans.add(instance);
+        orphans.set(instance, slot);
         instancesToSlots.delete(instance);
         slotsToInstances.delete(slot);
       }
@@ -65,7 +74,7 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
     }
 
     // Move orphans into remaining slots
-    for (const instance of orphans) {
+    for (const [instance] of orphans) {
       const slot = freeSlots.pop();
       instancesToSlots.set(instance, slot);
       slotsToInstances.set(slot, instance);
@@ -73,8 +82,9 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
     }
 
     // Resize TypedArrays if needed
-    for (const [key, { allData, Constructor, dimensions, set, defaultValue }] of attributes) {
+    for (const [key, { allData, Constructor, dimensions, set }] of attributes) {
       let newData = allData;
+      const views = attributeViews.get(key);
 
       if (newSize !== oldSize) {
         if (newSize <= oldSize) {
@@ -89,14 +99,31 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
 
       // And fill in the changes
       for (const [instance, slot] of changes) {
-        let value = datas.get(instance)?.[key];
-        if (value === undefined) value = defaultValue;
+        // Orphans use the value from their previous slot
+        if (orphans.has(instance)) {
+          const oldSlot = orphans.get(instance);
 
-        if (dimensions === 1) {
-          newData[slot] = value;
+          if (dimensions === 1) {
+            newData[slot] = allData[oldSlot];
+          } else {
+            newData.set(
+              allData.subarray(oldSlot * dimensions, oldSlot * dimensions + dimensions),
+              slot * dimensions,
+            );
+          }
+          // Others use their already set value or the default value
         } else {
+          const value = views.has(instance) ? views.get(instance) : defaultValues.get(key);
           newData.set(value, slot * dimensions);
         }
+
+        // Delete now invalid views
+        views.delete(instance);
+      }
+
+      // If a new array was created, views are all invalid
+      if (newSize > oldSize) {
+        views.clear();
       }
 
       set(newData);
@@ -108,47 +135,58 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
     changes.clear();
   };
 
-  const InstanceComponent = new Proxy(function (data) {
+  const InstanceComponent = new Proxy(function () {
     cleanup(cleanInstance);
     if (dead) return;
 
     const instance = getInstance();
     deletions.delete(instance);
+    additions.add(instance);
+    requestPreRenderJob(buildInstances);
 
-    const slot = instancesToSlots.get(instance);
-    datas.set(instance, data);
+    return new Proxy(
+      {},
+      {
+        get: function (_, key) {
+          // This poor man's updater proxy assumes the whole attribute will be updated
+          // whenever it's accessed.
+          const { allData, Constructor, dimensions, markAsNeedingUpdate } = attributes.get(key);
+          const views = attributeViews.get(key);
 
-    if (slot === undefined) {
-      additions.add(instance);
-      requestPreRenderJob(buildInstances);
-    } else {
-      for (const [key, { dimensions, update, defaultValue, allData }] of attributes) {
-        let value = data?.[key];
-        if (value === undefined) value = defaultValue;
-        const offset = dimensions * slot;
+          // Additions get a dummy view, which will be deleted later
+          // Buffer will be updated on additions, so no need to mark as needing update
+          if (additions.has(instance)) {
+            if (views.has(instance)) return views.get(instance);
 
-        let hasChanged = false;
-
-        if (dimensions === 1) {
-          hasChanged = allData[offset] !== value;
-        } else {
-          for (let index = 0; index < dimensions; index++) {
-            hasChanged = allData[offset + index] !== value[index];
-            if (hasChanged) break;
+            const view = new Constructor(defaultValues.get(key));
+            views.set(instance, view);
+            return view;
           }
-        }
 
-        if (hasChanged) update(value, offset);
-      }
-    }
+          // Non-additions get a real view, generated on demand
+          // Impacted buffer range will be marked as needing update
+          const slot = instancesToSlots.get(instance);
+          const index = slot * dimensions;
+          markAsNeedingUpdate(index, index + dimensions);
+
+          if (views.has(instance)) return views.get(instance);
+
+          const view = allData.subarray(index, index + dimensions);
+          views.set(instance, view);
+          return view;
+        },
+      },
+    );
   }, Component);
 
   function cleanInstance(_, instance, isBeingDestroyed) {
     if (isBeingDestroyed) {
-      datas.delete(instance);
-
       if (additions.has(instance)) {
+        // Deleted before ever getting added
         additions.delete(instance);
+        for (const [key] of attributes) {
+          attributeViews[key].delete(instance);
+        }
       } else {
         deletions.add(instance);
         requestPreRenderJob(buildInstances);

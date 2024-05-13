@@ -1,4 +1,4 @@
-import { Component, load, save, update } from "./rahti/component";
+import { Component, cleanup, load, save, update } from "./rahti/component";
 import { EventListener } from "./rahti/dom";
 import { State } from "./rahti/state";
 import { AnimationFrame } from "./webgl2/animationFrame";
@@ -18,7 +18,7 @@ export const Webgl2App = new Proxy(function ({
   });
   TriangleUpdater(smallTexture);
 
-  QuadUpdater(QuadInstance);
+  Quads(QuadInstance);
 
   frame(() => {
     clear();
@@ -36,38 +36,38 @@ const TriangleUpdater = new Proxy(function (smallTexture) {
   );
 }, Component);
 
-const QuadUpdater = new Proxy(function (QuadInstance) {
-  // const [max, setMax] = <State>{100}</State>;
-  // save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
-  // cleanup(cleanTimer);
+const Quads = new Proxy(function (QuadInstance) {
+  const [max, setMax] = State(100);
+  save(setTimeout(setMax, Math.random() * 2000, 100 * (0.5 + Math.random() * 0.5)));
+  cleanup(cleanTimer);
 
-  const max = 100 * (0.5 + Math.random() * 0.5);
-  // <AnimationFrame />;
+  // const max = 100 * (0.5 + Math.random() * 0.5);
+  // AnimationFrame();
 
   for (let index = 0; index < max; index++) {
-    if (Math.random() < 0.1) continue;
+    if (Math.random() < 0.01) continue;
     Quad(index, QuadInstance);
   }
 }, Component);
 
 const cleanTimer = (timer) => clearTimeout(timer);
 
-const Quad = new Proxy(function (index, QuadInstance) {
-  // const [_, setState] = <State />;
-  // save(setTimeout(setState, Math.random() * 2000, Math.random()));
-  // cleanup(cleanTimer);
+const Quad = new Proxy(
+  function (index, QuadInstance) {
+    const instance = QuadInstance();
+    instance.offset[0] = -index * 0.02;
+    instance.offset[1] = -index * 0.02;
+    instance.color[0] = Math.random();
+    instance.color[1] = Math.random();
+    instance.color[2] = Math.random();
 
+    QuadUpdater(instance);
+  },
+  { ...Component, getKey: (index) => index },
+);
+
+const QuadUpdater = new Proxy(function (instance) {
   AnimationFrame();
-
-  const data =
-    load() ||
-    save({
-      offset: Float32Array.of(-index * 0.02, -index * 0.02),
-      color: Float32Array.of(Math.random(), Math.random(), Math.random()),
-    });
-
-  data.offset[0] += (Math.random() * 2 - 1) * 0.003;
-  data.offset[1] += (Math.random() * 2 - 1) * 0.003;
-
-  QuadInstance(data);
+  instance.offset[0] += (Math.random() * 2 - 1) * 0.003;
+  instance.offset[1] += (Math.random() * 2 - 1) * 0.003;
 }, Component);

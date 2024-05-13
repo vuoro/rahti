@@ -73,14 +73,18 @@ export const Buffer = new Proxy(function ({
 
     const length = data?.length;
 
-    firstDirty = Math.min(offset, firstDirty);
-    lastDirty = Math.max(offset + length, lastDirty);
-
     if (length) {
       allData.set(data, offset);
     } else {
       allData[offset] = data;
     }
+
+    markAsNeedingUpdate(offset, offset + length);
+  };
+
+  const markAsNeedingUpdate = function (from, to) {
+    firstDirty = Math.min(from, firstDirty);
+    lastDirty = Math.max(to, lastDirty);
 
     requestPreRenderJob(commitUpdates);
   };
@@ -113,6 +117,7 @@ export const Buffer = new Proxy(function ({
 
   bufferObject.set = set;
   bufferObject.update = update;
+  bufferObject.markAsNeedingUpdate = markAsNeedingUpdate;
 
   let dead = false;
 
