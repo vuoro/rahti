@@ -185,7 +185,7 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
         // Deleted before ever getting added
         additions.delete(instance);
         for (const [key] of attributes) {
-          attributeViews[key].delete(instance);
+          attributeViews.get(key).delete(instance);
         }
       } else {
         deletions.add(instance);

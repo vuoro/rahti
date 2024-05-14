@@ -3,10 +3,10 @@ import { requestIdleCallback } from "./idle.js";
 const reportError = globalThis.reportError || console.error;
 
 export const Component = {
-  getKey: () => undefined,
+  getKey: undefined,
   apply: function (code, _, argumentsList) {
     const parent = stack.at(-1);
-    const key = this.getKey.apply(null, argumentsList);
+    const key = this.getKey?.apply(null, argumentsList);
     const instance = findInstance(code, parent, key) || createInstance(code, parent, key);
 
     if (parent !== topLevel) parent.currentIndex++;
