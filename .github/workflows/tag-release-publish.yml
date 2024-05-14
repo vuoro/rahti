@@ -35,8 +35,6 @@ jobs:
         with:
           tag_name: ${{ steps.autotagger.outputs.tagname }}
           release_name: ${{ steps.autotagger.outputs.tagname }}
-          draft: false
-          prerelease: ${{ steps.autotagger.outputs.prerelease == 'yes' }}
       
       - uses: actions/setup-node@v3
         with:
