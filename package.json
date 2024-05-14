@@ -1,9 +1,9 @@
 {
   "name": "@vuoro/rahti",
-  "version": "11.0.0",
+  "version": "11.0.1",
   "description": "Reactive JS components without JSX",
   "type": "module",
-  "main": "./rahti/rahti.js",
+  "main": "./rahti/component.js",
   "exports": {
     ".": "./rahti/component.js",
     "./state": "./rahti/state.js",
