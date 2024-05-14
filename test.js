@@ -1,5 +1,5 @@
 import TestWorker from "./TestWorker.js?worker";
-import { Component, GlobalComponent, cleanup } from "./rahti/component.js";
+import { Component, cleanup } from "./rahti/component.js";
 import { EventHandler, EventListener, Mount, html, svg } from "./rahti/dom.js";
 import { GlobalState } from "./rahti/globalState.js";
 import { State } from "./rahti/state.js";
@@ -67,7 +67,7 @@ const TestItem = new Proxy(
     const [local, setLocal] = State(0);
     const [global] = GlobalTest();
 
-    const timer = setTimeout(setLocal, 2000 + Math.random() * 5000, Math.random());
+    const timer = setTimeout(setLocal, 1000 + Math.random() * 1000, Math.random());
     cleanup(() => clearTimeout(timer));
     if (Math.random() < 0.01) throw new Error("intentional test error");
 

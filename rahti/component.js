@@ -14,16 +14,6 @@ export const Component = {
   },
 };
 
-export const GlobalComponent = {
-  apply: function (code, _, argumentsList) {
-    const parent = topLevel;
-    const key = undefined;
-    const instance = findInstance(code, parent, key) || createInstance(code, parent, key);
-
-    return run(instance, argumentsList);
-  },
-};
-
 class Instance {
   currentIndex = 0;
   needsUpdate = false;
@@ -131,38 +121,25 @@ const run = (instance, newArguments) => {
   let needsUpdate = instance.needsUpdate;
 
   if (!needsUpdate) {
-    if (instance.lastArguments?.length !== newArguments?.length) {
+    if (instance.lastArguments?.length !== newArguments.length) {
       // console.log("argument length changed", instance.lastArguments, newArguments);
       needsUpdate = true;
     } else {
-      // Check props
-      const newProps = newArguments[0];
-      const lastProps = instance.lastArguments[0];
-      for (const key in newProps) {
-        if (!Object.is(newProps[key], lastProps[key])) {
-          // console.log("prop has changed", key, instance.lastProps[key], newProps[key]);
+      // Check arguments
+      for (let index = 0; index < newArguments.length; index++) {
+        const previousArgument = instance.lastArguments[index];
+        const newArgument = newArguments[index];
+
+        if (!Object.is(newArgument, previousArgument)) {
+          // console.log("argument has changed", previousArgument, newArgument);
           needsUpdate = true;
           break;
-        }
-      }
-
-      // Check arguments (skipping over the props object)
-      if (!needsUpdate) {
-        for (let index = 1; index < newArguments.length; index++) {
-          const previousArgument = instance.lastArguments[index];
-          const newArgument = newArguments[index];
-
-          if (!Object.is(newArgument, previousArgument)) {
-            // console.log("argument has changed", previousArgument, newArgument);
-            needsUpdate = true;
-            break;
-          }
         }
       }
     }
   }
 
-  // Save this run's arguments and props for next time
+  // Save this run's arguments for next time
   instance.lastArguments = newArguments;
 
   if (needsUpdate) {
