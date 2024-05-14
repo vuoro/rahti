@@ -9,6 +9,7 @@ export const rahtiPlugin = () => {
     },
     transform(src, id) {
       const path = id.split("?")[0];
+
       if (
         config.command === "build" ||
         config.isProduction ||
@@ -19,11 +20,11 @@ export const rahtiPlugin = () => {
           path.endsWith(".tx") ||
           path.endsWith(".tsx")
         )
-      )
+      ) {
         return;
+      }
 
-      const code = src;
-      //  + getHmrCode(id);
+      const code = src + getHmrCode(id);
       return { code };
     },
   };

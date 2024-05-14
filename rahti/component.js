@@ -79,7 +79,7 @@ const createInstance = (code, parent, key) => {
   if (import.meta.hot) {
     // Add this instance into the HMR instance registry,
     // so it can be found when HMR gets new versions of its Component
-    globalThis._rahtiHmrInstances?.get(Component)?.add(instance);
+    globalThis._rahtiHmrInstances?.get(code)?.add(instance);
   }
 
   return instance;
@@ -229,7 +229,7 @@ const destroy = async (instance) => {
 
   if (import.meta.hot) {
     // Remove this instance from the HMR instance registry
-    globalThis._rahtiHmrInstances?.get(instance.Component)?.delete(instance);
+    globalThis._rahtiHmrInstances?.get(instance.code)?.delete(instance);
   }
 
   // Clean up instance
@@ -327,5 +327,5 @@ const runUpdate = function (instance) {
 
 if (import.meta.hot) {
   // Save the updater, so the HMR code can use it to update instances as needed
-  globalThis._rahtiUpdate = globalThis._rahtiUpdate || update;
+  globalThis._rahtiUpdate = update;
 }

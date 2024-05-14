@@ -184,12 +184,13 @@ export const Instances = new Proxy(function ({ context, attributes: attributeMap
       if (additions.has(instance)) {
         // Deleted before ever getting added
         additions.delete(instance);
-        for (const [key] of attributes) {
-          attributeViews.get(key).delete(instance);
-        }
       } else {
         deletions.add(instance);
         requestPreRenderJob(buildInstances);
+      }
+
+      for (const [key] of attributes) {
+        attributeViews.get(key).delete(instance);
       }
     }
   }
