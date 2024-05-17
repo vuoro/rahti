@@ -89,8 +89,10 @@ const hmrCode = () => {
       const newFeature = newModule[name]?._rahtiCode;
 
       if (!seemsLikeComponent(name, newFeature) || !seemsLikeComponent(name, originalFeature)) {
-        return import.meta.hot.invalidate(
-          `${name} does not seem to be a Component. HMR only works if the module exports nothing but Components.`,
+        // FIXME: I would import.meta.hot.invalidate here,
+        // but the self-import seems to throw it into an infinite loop.
+        return console.warn(
+          `[vite-plugin-rahti] \`${name}\` does not seem to be a Component. HMR only works reliably if the module exports nothing but Components.`,
         );
       }
 
@@ -118,7 +120,7 @@ const hmrCode = () => {
       }
 
       versions.add(newFeature);
-      console.log(`[rahti] HMR updated ${instancesUpdated} instances of ${name}`);
+      console.log(`[vite-plugin-rahti] HMR updated ${instancesUpdated} instances of ${name}`);
     }
 
     if (featuresChecked === 0) import.meta.hot.invalidate("No exports");
