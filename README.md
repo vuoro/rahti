@@ -73,10 +73,14 @@ const App = new Proxy(function () {
 
 App();
 
-// Components can have state, using State.
-// When a component's state changes, it re-runs.
-// If it returns a different value than the last time it ran
+// Components can have `State`.
+// When a component's `State` changes, it re-runs.
+// If the component returns a different value than the last time it ran,
 // it'll tell its parent to re-run too.
+// Any other components that the parent then calls will also try to re-run, 
+// but all components are _memoized_, 
+// meaning they will only re-run if they receive different arguments from when they last ran,
+// otherwise they'll just return their previous return value.
 const StatefulApp = new Proxy(function () {
   const [timestamp, setTimestamp, getTimestamp] = State(performance.now());
   requestAnimationFrame(setTimestamp);
@@ -86,9 +90,9 @@ const StatefulApp = new Proxy(function () {
 
 // The setter function of a State accepts two arguments:
 // 1. the State's new value
-// 2. a boolean: `true` if it should update quickly using `queueMicrotask`, or `false` (the default) if later using `requestIdleCallback`
-setTimestamp(performance.now(), true); // updates as soon as possible
-setTimestamp(performance.now(), false); // updates later
+// 2. a boolean: `true` if it should update immediately, or `false` (the default) if later using `requestIdleCallback`
+setTimestamp(performance.now(), false); // updates on the next `requestIdleCallback`
+setTimestamp(performance.now(), true); // updates immediately
 
 // `createGlobalState` is a helper for sharing the same state between multiple components.
 // It returns a component that works like State, a setter function, and a getter function.
@@ -150,8 +154,8 @@ const Cleanup = new Proxy(function () {
 
 // Cleanups are called with some pieces of data you can use to perform complicated cleanup logic.
 // Be very mindful when using these, as it's easy to introduce bugs with them.
-// - 1st argument = the component instance object also returned by `getInstance`, which can be used for identification (but be mindful that after the component instance gets destroyed the object may be reused by new component instances)
-// - 2st argument = the last data the component has saved with `this.save`, if any
+// - 1st argument = the component instance object also returned by `getInstance`, which can be used for identification (but be keep in mind that after the component instance gets destroyed the object may be reused by new component instances)
+// - 2st argument = the last data the component has saved with `save`, if any
 // - 3nd argument = a boolean indicating whether the component is being destroyed (`true`) or just updating (`false`)
 const CleanupAdvanced = new Proxy(function () {
   const element = document.createElement("div");
@@ -178,17 +182,16 @@ export default {
 };
 ```
 
-HMR will work in files that export nothing but what can be identified as components: functions with a name that starts with an uppercase letter.
+HMR will work best in files that export nothing but Components. Otherwise Vite's HMR system seems to go into an infinite loop sometimes, and I don't know how to fix or even debug it.
 
 ```js
-// These will work
-export const ComponentA = function() {};
-export function ComponentB () {};
-const somethingElseA = "hello";
+// This should work perfectly
+export const SomeComponent = new Proxy(function() {}, Component);
+const somethingElse = "hello";
 
-// These won't
-export const componentC = function() {};
-export const somethingElseB = "hello";
+// This probably won't
+export const SomeComponent = new Proxy(function() {}, Component);
+export const somethingElse = "hello";
 ```
 
 ## WebGL 2 components
