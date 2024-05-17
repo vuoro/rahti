@@ -19,7 +19,7 @@ const TestWrapper = new Proxy(function () {
   const [counter, setState] = State(0);
   const timer = setTimeout(setState, 1000, counter + 1);
   cleanup(() => {
-    console.log("cleaning additional timer", timer);
+    // console.log("cleaning additional timer", timer);
     clearTimeout(timer);
   });
 
@@ -82,7 +82,7 @@ const TestItem = new Proxy(
 );
 
 const App = new Proxy(function (hello) {
-  console.log("========", hello, "world");
+  // console.log("========", hello, "world");
 
   const canvas = html.canvas({ style: "width: 100%; height: 25vh" });
   const gfx = TestGraphics(canvas);

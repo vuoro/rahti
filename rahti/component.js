@@ -12,6 +12,10 @@ export const Component = {
     if (parent !== topLevel) parent.currentIndex++;
     return run(instance, argumentsList);
   },
+  get: function (target, property) {
+    if (property === "_rahtiCode") return target;
+    return target[property];
+  },
 };
 
 class Instance {

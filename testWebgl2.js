@@ -27,6 +27,8 @@ export const Webgl2App = new Proxy(function ({
   });
 }, Component);
 
+// export const lol = "lol";
+
 const TriangleUpdater = new Proxy(function (smallTexture) {
   AnimationFrame();
   smallTexture.update(

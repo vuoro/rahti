@@ -34,7 +34,7 @@ const getHmrCode = (fileId) => {
   let hmrInjection = hmrCode.toString().split("\n");
   hmrInjection = hmrInjection.slice(1, hmrInjection.length - 1).join("\n");
 
-  return `import * as thisModule from /* @vite-ignore */ "${fileId}";
+  return `import * as thisModule from /* @vite-ignore */"${fileId}";
 if (import.meta.hot) {
   // Rahti HMR handler
   const _rahtiFileName = "${fileId}";
@@ -62,7 +62,7 @@ const hmrCode = () => {
 
     // Start registries for components in it
     for (const name in thisModule) {
-      const feature = thisModule[name];
+      const feature = thisModule[name]?._rahtiCode;
       if (seemsLikeComponent(name, feature)) {
         // console.log("Starting registries for", name);
         globalThis._rahtiHmrInstances.set(feature, new Set());
@@ -83,9 +83,10 @@ const hmrCode = () => {
     for (const name in newModule) {
       featuresChecked++;
 
-      const originalFeature = originalModule[name];
-      const previousFeature = globalThis._rahtiHmrComponentReplacements.get(originalFeature);
-      const newFeature = newModule[name];
+      const originalFeature = originalModule[name]?._rahtiCode;
+      const previousFeature =
+        globalThis._rahtiHmrComponentReplacements.get(originalFeature)?._rahtiCode;
+      const newFeature = newModule[name]?._rahtiCode;
 
       if (!seemsLikeComponent(name, newFeature) || !seemsLikeComponent(name, originalFeature)) {
         return import.meta.hot.invalidate(
@@ -117,9 +118,9 @@ const hmrCode = () => {
       }
 
       versions.add(newFeature);
-      // console.log("HMR told", instancesUpdated, "instances to update");
+      console.log(`[rahti] HMR updated ${instancesUpdated} instances of ${name}`);
     }
 
-    if (featuresChecked === 0) import.meta.hot.invalidate(`No exports`);
+    if (featuresChecked === 0) import.meta.hot.invalidate("No exports");
   });
 };
