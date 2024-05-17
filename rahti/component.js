@@ -172,8 +172,7 @@ const run = (instance, newArguments) => {
       instance.needsUpdate = false;
 
       // any pending update can be cancelled safely, since this is not async
-      fastUpdateQueue.delete(instance);
-      slowUpdateQueue.delete(instance);
+      updateQueue.delete(instance);
     } catch (error) {
       // console.log("caught");
       reportError(error);
@@ -254,59 +253,38 @@ const destroy = async (instance) => {
   instancePool.push(instance);
 };
 
-let slowUpdateQueueWillRun = false;
-let fastUpdateQueueWillRun = false;
-const slowUpdateQueue = new Set();
-const fastUpdateQueue = new Set();
+let updateQueueWillRun = false;
+let updateQueueIsRunningImmediately = false;
+const updateQueue = new Set();
 
-export const update = (instance, quickly = false) => {
-  const queue = quickly ? fastUpdateQueue : slowUpdateQueue;
-  const willRun = quickly ? fastUpdateQueueWillRun : slowUpdateQueueWillRun;
-  queue.add(instance);
+export const update = (instance, immediately = false) => {
+  updateQueue.add(instance);
 
-  if (!willRun) {
-    const queueFirer = quickly ? queueMicrotask : requestIdleCallback;
-    const queueRunner = quickly ? runFastUpdateQueue : runSlowUpdateQueue;
-    queueFirer(queueRunner);
-
-    if (quickly) {
-      fastUpdateQueueWillRun = true;
-    } else {
-      slowUpdateQueueWillRun = true;
-    }
+  if (immediately) {
+    updateQueueIsRunningImmediately = true;
+    runUpdateQueue();
+  } else if (!updateQueueWillRun) {
+    updateQueueWillRun = true;
+    requestIdleCallback(runUpdateQueue);
   }
 };
 
-export const updateImmediately = (instance) => {
-  runUpdate(instance);
-};
-export const updateParent = (instance, quickly = false) => {
-  if (instance.parent && instance.parent !== topLevel) update(instance.parent, quickly);
-};
-export const updateParentImmediately = (instance) => {
-  if (instance.parent && instance.parent !== topLevel) runUpdate(instance.parent);
+export const updateParent = (instance, immediately = false) => {
+  if (instance.parent && instance.parent !== topLevel) update(instance.parent, immediately);
 };
 
-const runFastUpdateQueue = async function () {
-  for (const instance of fastUpdateQueue) {
-    fastUpdateQueue.delete(instance);
+const runUpdateQueue = function (deadline) {
+  for (const instance of updateQueue) {
+    if (!updateQueueIsRunningImmediately && deadline?.timeRemaining() === 0) {
+      return requestIdleCallback(runUpdateQueue);
+    }
+
+    updateQueue.delete(instance);
     runUpdate(instance);
   }
 
-  fastUpdateQueueWillRun = false;
-};
-
-const runSlowUpdateQueue = async function (deadline) {
-  for (const instance of slowUpdateQueue) {
-    if (deadline?.timeRemaining() === 0) {
-      return requestIdleCallback(runSlowUpdateQueue);
-    }
-
-    slowUpdateQueue.delete(instance);
-    runUpdate(instance);
-  }
-
-  slowUpdateQueueWillRun = false;
+  updateQueueWillRun = false;
+  updateQueueIsRunningImmediately = false;
 };
 
 const runUpdate = function (instance) {
@@ -322,7 +300,7 @@ const runUpdate = function (instance) {
 
     if (newValue !== lastValue) {
       // console.log("escalating update to parent from", instance.code);
-      updateParent(instance);
+      updateParent(instance, updateQueueIsRunningImmediately);
     }
   } catch (error) {
     reportError(error);

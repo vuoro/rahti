@@ -118,7 +118,7 @@ const hmrCode = () => {
       }
 
       versions.add(newFeature);
-      console.log(`[vite-plugin-rahti] HMR updated ${instancesUpdated} instances of ${name}`);
+      console.log(`[vite-plugin-rahti] hot updated: ${instancesUpdated} instances of ${name}`);
     }
 
     if (featuresChecked === 0) import.meta.hot.invalidate("No exports");

@@ -1,4 +1,4 @@
-import { Component, cleanup, getInstance, updateParentImmediately } from "../rahti/component.js";
+import { Component, cleanup, getInstance, updateParent } from "../rahti/component.js";
 
 export const preRenderJobs = new Set();
 export const renderJobs = new Set();
@@ -33,7 +33,7 @@ const runComponents = (timestamp, sinceLastFrame, frameNumber) => {
   componentProps.frameNumber = frameNumber;
 
   for (const instance of componentSubscribers) {
-    updateParentImmediately(instance, true);
+    updateParent(instance, true);
   }
 };
 

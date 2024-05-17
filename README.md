@@ -31,7 +31,7 @@ Parent("Hello world");
 
 ```js
 import { Component, cleanup, save, load } from "@vuoro/rahti";
-import { getInstance, update, updateParent, updateImmediately, updateParentImmediately } from "@vuoro/rahti";
+import { getInstance, update, updateParent } from "@vuoro/rahti";
 import { State } from "@vuoro/rahti/state";
 import { createGlobalState } from "@vuoro/rahti/globalState";
 import { Mount, html, svg } from "@vuoro/rahti/dom";
@@ -116,7 +116,9 @@ setTimeout(() => console.log("from setTimeout", getGlobalTimestamp()), 1000);
 
 // You can also create custom state mechanisms with `getInstance`, `update` and `updateParent`.
 // (Check out state.js and globalState.js for how they use it.)
-// `updateImmediately` and `updateParentImmediately` are variants that skip the `queueMicrotask` or `requestIdleCallback` parts mentioned earlier.
+// `update(instance)` causes the instance to re-run on the next `requestIdleCallback`. 
+// `update(instance, true)` causes the instance to re-run immediately. 
+// The above goes for `updateParent` too.
 const CustomStateTest = new Proxy(function () {
   const instance = getInstance();
   console.log("ran at", performance.now());

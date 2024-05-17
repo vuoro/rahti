@@ -1,4 +1,4 @@
-import { Component, cleanup, getInstance, updateImmediately } from "../rahti/component.js";
+import { Component, cleanup, getInstance, update } from "../rahti/component.js";
 import { EventListener } from "../rahti/dom.js";
 import { cancelJobsAndStopFrame, requestRenderJob } from "./animationFrame.js";
 
@@ -193,20 +193,25 @@ export const Context = new Proxy(function ({
   }
 
   const instance = getInstance();
+  // const contextLossTester = gl.getExtension("WEBGL_lose_context");
 
   const handleLost = (event) => {
-    console.log("context lost");
+    // console.log("context lost");
     dead = true;
     event.preventDefault();
     cancelJobsAndStopFrame();
+
+    // setTimeout(() => contextLossTester.restoreContext(), 2000);
   };
   const handleRestored = () => {
-    console.log("restoring context");
-    updateImmediately(instance);
+    // console.log("restoring context");
+    update(instance, true);
   };
 
   EventListener(canvas, "webglcontextlost", handleLost);
   EventListener(canvas, "webglcontextrestored", handleRestored);
+
+  // setTimeout(() => contextLossTester.loseContext(), 2000);
 
   cleanup(() => {
     dead = true;
