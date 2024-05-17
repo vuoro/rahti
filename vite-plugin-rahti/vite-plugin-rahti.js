@@ -19,7 +19,9 @@ export const rahtiPlugin = () => {
           path.endsWith(".jsx") ||
           path.endsWith(".tx") ||
           path.endsWith(".tsx")
-        )
+        ) ||
+        !src.includes("Component") ||
+        !src.includes("new Proxy(")
       ) {
         return;
       }
@@ -43,11 +45,6 @@ if (import.meta.hot) {
 };
 
 const hmrCode = () => {
-  const seemsLikeComponent = (name, feature) =>
-    typeof feature === "function" &&
-    name[0] === name[0].toUpperCase() &&
-    feature.toString().indexOf("class") !== 0;
-
   // Create HMR registries, if they haven't been already
   globalThis._rahtiHmrOriginalModules = globalThis._rahtiHmrOriginalModules || new Map();
   globalThis._rahtiHmrComponentReplacements =
@@ -61,9 +58,10 @@ const hmrCode = () => {
     globalThis._rahtiHmrOriginalModules.set(_rahtiFileName, thisModule);
 
     // Start registries for components in it
+
     for (const name in thisModule) {
       const feature = thisModule[name]?._rahtiCode;
-      if (seemsLikeComponent(name, feature)) {
+      if (feature) {
         // console.log("Starting registries for", name);
         globalThis._rahtiHmrInstances.set(feature, new Set());
         globalThis._rahtiHmrComponentVersions.set(feature, new Set([feature]));
@@ -88,7 +86,7 @@ const hmrCode = () => {
         globalThis._rahtiHmrComponentReplacements.get(originalFeature)?._rahtiCode;
       const newFeature = newModule[name]?._rahtiCode;
 
-      if (!seemsLikeComponent(name, newFeature) || !seemsLikeComponent(name, originalFeature)) {
+      if (!newFeature || !originalFeature) {
         // FIXME: I would import.meta.hot.invalidate here,
         // but the self-import seems to throw it into an infinite loop.
         return console.warn(
