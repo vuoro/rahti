@@ -5,6 +5,7 @@ import { cancelJobsAndStopFrame, requestRenderJob } from "./animationFrame.js";
 const defaultAttributes = {
   antialias: false,
   alpha: true,
+  powerPreference: "high-performance",
 };
 
 const defaultHints = {
