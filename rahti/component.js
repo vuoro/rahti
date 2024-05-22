@@ -5,7 +5,7 @@ const reportError = globalThis.reportError || console.error;
 export const Component = {
   getKey: undefined,
   apply: function (code, _, argumentsList) {
-    const parent = stack.at(-1);
+    const parent = getInstance();
     const key = this.getKey?.apply(null, argumentsList);
     const instance = findInstance(code, parent, key) || createInstance(code, parent, key);
 
@@ -37,14 +37,14 @@ export const getInstance = () => {
   return stack.at(-1);
 };
 export const save = (dataToSave) => {
-  stack.at(-1).savedData = dataToSave;
+  getInstance().savedData = dataToSave;
   return dataToSave;
 };
 export const load = () => {
-  return stack.at(-1).savedData;
+  return getInstance().savedData;
 };
 export const cleanup = (cleaner) => {
-  const instance = stack.at(-1);
+  const instance = getInstance();
   if (instance.cleaner) throw new Error("only 1 `cleanup()` allowed per component instance");
   instance.cleaner = cleaner;
 };
@@ -169,9 +169,9 @@ const run = (instance, newArguments) => {
 
       // Save the new value
       instance.lastValue = result;
-      instance.needsUpdate = false;
 
-      // any pending update can be cancelled safely, since this is not async
+      // Mark as no longer needing update
+      instance.needsUpdate = false;
       updateQueue.delete(instance);
     } catch (error) {
       // console.log("caught");
@@ -258,6 +258,7 @@ let updateQueueIsRunningImmediately = false;
 const updateQueue = new Set();
 
 export const update = (instance, immediately = false) => {
+  if (getInstance() === instance) return;
   updateQueue.add(instance);
 
   if (immediately) {
@@ -270,7 +271,8 @@ export const update = (instance, immediately = false) => {
 };
 
 export const updateParent = (instance, immediately = false) => {
-  if (instance.parent && instance.parent !== topLevel) update(instance.parent, immediately);
+  if (instance.parent && instance.parent !== topLevel && getInstance() !== instance.parent)
+    update(instance.parent, immediately);
 };
 
 const runUpdateQueue = function (deadline) {
