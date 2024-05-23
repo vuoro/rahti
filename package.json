@@ -1,6 +1,6 @@
 {
   "name": "@vuoro/rahti",
-  "version": "12.0.3",
+  "version": "12.0.4",
   "description": "Reactive JS components without JSX",
   "type": "module",
   "main": "./rahti/component.js",

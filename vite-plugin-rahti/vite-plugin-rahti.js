@@ -60,11 +60,11 @@ const hmrCode = () => {
     // Start registries for components in it
 
     for (const name in thisModule) {
-      const feature = thisModule[name]?._rahtiCode;
-      if (feature) {
+      const code = thisModule[name]?._rahtiCode;
+      if (code) {
         // console.log("Starting registries for", name);
-        globalThis._rahtiHmrInstances.set(feature, new Set());
-        globalThis._rahtiHmrComponentVersions.set(feature, new Set([feature]));
+        globalThis._rahtiHmrInstances.set(code, new Set());
+        globalThis._rahtiHmrComponentVersions.set(code, new Set([code]));
       }
     }
   }
@@ -81,12 +81,11 @@ const hmrCode = () => {
     for (const name in newModule) {
       featuresChecked++;
 
-      const originalFeature = originalModule[name]?._rahtiCode;
-      const previousFeature =
-        globalThis._rahtiHmrComponentReplacements.get(originalFeature)?._rahtiCode;
-      const newFeature = newModule[name]?._rahtiCode;
+      const originalCode = originalModule[name]?._rahtiCode;
+      const previousCode = globalThis._rahtiHmrComponentReplacements.get(originalCode);
+      const newCode = newModule[name]?._rahtiCode;
 
-      if (!newFeature || !originalFeature) {
+      if (!newCode || !originalCode) {
         // FIXME: I would import.meta.hot.invalidate here,
         // but the self-import seems to throw it into an infinite loop.
         return console.warn(
@@ -94,17 +93,17 @@ const hmrCode = () => {
         );
       }
 
-      // console.log("HMR is updating", name, globalThis._rahtiHmrInstances.get(originalFeature));
+      // console.log("HMR is updating", name, globalThis._rahtiHmrInstances.get(originalCode));
 
       // Mark this as the replacement for the original version
-      globalThis._rahtiHmrComponentReplacements.set(originalFeature, newFeature);
+      globalThis._rahtiHmrComponentReplacements.set(originalCode, newCode);
       // … and same for the previous version, if there is one
-      if (previousFeature) {
-        globalThis._rahtiHmrComponentReplacements.set(previousFeature, newFeature);
+      if (previousCode) {
+        globalThis._rahtiHmrComponentReplacements.set(previousCode, newCode);
       }
 
       // Keep track of Component versions
-      const versions = globalThis._rahtiHmrComponentVersions.get(originalFeature);
+      const versions = globalThis._rahtiHmrComponentVersions.get(originalCode);
       let instancesUpdated = 0;
 
       // Tell instances using any of the now outdated versions to update
@@ -117,7 +116,7 @@ const hmrCode = () => {
         }
       }
 
-      versions.add(newFeature);
+      versions.add(newCode);
       console.log(`[vite-plugin-rahti] hot updated: ${instancesUpdated} instances of ${name}`);
     }
 
