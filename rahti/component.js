@@ -205,7 +205,7 @@ const run = (instance, newArguments) => {
 
 const runCleanup = (instance, isBeingDestroyed = false) => {
   if (instance.cleaner) {
-    instance.cleaner.call(null, instance.savedData, instance, isBeingDestroyed);
+    instance.cleaner(instance.savedData, instance, isBeingDestroyed);
     instance.cleaner = null;
   }
 };
@@ -261,12 +261,15 @@ export const update = (instance, immediately = false) => {
   if (getInstance() === instance) return;
   updateQueue.add(instance);
 
-  if (immediately) {
-    updateQueueIsRunningImmediately = true;
-    runUpdateQueue();
-  } else if (!updateQueueWillRun) {
+  if (immediately) updateQueueIsRunningImmediately = true;
+
+  if (!updateQueueWillRun) {
     updateQueueWillRun = true;
-    requestIdleCallback(runUpdateQueue);
+    if (immediately) {
+      runUpdateQueue();
+    } else {
+      requestIdleCallback(runUpdateQueue);
+    }
   }
 };
 
@@ -302,7 +305,7 @@ const runUpdate = function (instance) {
 
     if (newValue !== lastValue) {
       // console.log("escalating update to parent from", instance.code);
-      updateParent(instance, updateQueueIsRunningImmediately);
+      updateParent(instance);
     }
   } catch (error) {
     reportError(error);
