@@ -298,17 +298,13 @@ const runUpdate = function (instance) {
     return;
   }
 
-  try {
-    instance.needsUpdate = true;
-    const lastValue = instance.lastValue;
-    const newValue = run(instance, instance.lastArguments);
+  instance.needsUpdate = true;
+  const lastValue = instance.lastValue;
+  const newValue = run(instance, instance.lastArguments);
 
-    if (newValue !== lastValue) {
-      // console.log("escalating update to parent from", instance.code);
-      updateParent(instance);
-    }
-  } catch (error) {
-    reportError(error);
+  if (newValue !== lastValue) {
+    // console.log("escalating update to parent from", instance.code);
+    updateParent(instance);
   }
 };
 
